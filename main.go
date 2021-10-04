@@ -54,7 +54,6 @@ func handleMessages() {
 }
 
 func main() {
-	fmt.Println("ip has value ", *port)
 	p := ":" + *port
 	fs := http.FileServer(http.Dir("./client"))
 	http.Handle("/", fs)
