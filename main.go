@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 var clients = make(map[*websocket.Conn]bool)
 var broadcast = make(chan Message)
 var upgrader = websocket.Upgrader{}
+var port = flag.String("port", "80", "provide port number")
 
 type Message struct {
 	Username string `json:"username"`
@@ -52,12 +54,14 @@ func handleMessages() {
 }
 
 func main() {
+	fmt.Println("ip has value ", *port)
+	p := ":" + *port
 	fs := http.FileServer(http.Dir("./client"))
 	http.Handle("/", fs)
 	http.HandleFunc("/ws", handleConnections)
 	go handleMessages()
-	log.Println("http server started on :8000")
-	err := http.ListenAndServe(":8000", nil)
+	log.Println("http server started on port", p)
+	err := http.ListenAndServe(p, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
