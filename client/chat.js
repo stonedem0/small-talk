@@ -13,8 +13,10 @@ const sendMessage = event => {
 
 ws.onmessage = function (event) {
     const chat = document.createElement("div");
-    const username = document.createTextNode(`${document.getElementById('username').value}: `);
-    const message = document.createTextNode(document.getElementById('message').value);
+    console.log(event);
+    const data = JSON.parse(event.data)
+    const username = document.createTextNode(`${data.username}: `);
+    const message = document.createTextNode(data.message);
     chat.appendChild(username);
     chat.appendChild(message);
     const currentDiv = document.getElementById("input_div");
