@@ -5,15 +5,14 @@ const sendMessage = event => {
     const message = document.getElementById('message').value
     ws.send(JSON.stringify({
         username: usersname,
-
         message: message
     }))
     event.preventDefault();
 }
+ws.onopen 
 
-ws.onmessage = function (event) {
+ws.onmessage =  event =>  {
     const chat = document.createElement("div");
-    console.log(event);
     const data = JSON.parse(event.data)
     const username = document.createTextNode(`${data.username}: `);
     const message = document.createTextNode(data.message);
