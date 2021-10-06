@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -27,7 +26,6 @@ var history = map[int]Message{}
 func handleConnections(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	index := 0
-	// var h History
 	clients[ws] = true
 	if err != nil {
 		log.Fatal(err)
@@ -42,12 +40,14 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		broadcast <- msg
-		fmt.Println("message", msg)
 		history[index] = msg
 		index++
 	}
+
+	// writing history to json file WIP
 	b, _ := json.MarshalIndent(history, "", " ")
 	file.Write(b)
+	file.Write([]byte(","))
 
 }
 
@@ -71,9 +71,9 @@ func main() {
 	p := ":" + *port
 	fs := http.FileServer(http.Dir("./client"))
 	http.Handle("/", fs)
+	http.Handle("/leaving_room", fs)
 	http.HandleFunc("/ws", handleConnections)
 	go handleMessages()
-
 	log.Println("http server started on port", p)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {
