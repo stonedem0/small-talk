@@ -22,8 +22,12 @@ type Message struct {
 	Message  string `json:"message"`
 }
 
+var history = map[int]Message{}
+
 func handleConnections(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
+	index := 0
+	// var h History
 	clients[ws] = true
 	if err != nil {
 		log.Fatal(err)
@@ -38,15 +42,16 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		broadcast <- msg
-		b, _ := json.MarshalIndent(msg, "", " ")
-		file.Write(b)
-		file.Write([]byte(","))
+		fmt.Println("message", msg)
+		history[index] = msg
+		index++
 	}
-	file.Write([]byte("}" + "]"))
+	b, _ := json.MarshalIndent(history, "", " ")
+	file.Write(b)
+
 }
 
 func handleMessages() {
-	fmt.Println(len(clients))
 	for {
 		msg := <-broadcast
 		for client := range clients {
@@ -63,13 +68,12 @@ func handleMessages() {
 }
 
 func main() {
-	n3, _ := file.Write([]byte("{" + "\"history\"" + ":" + "["))
-	fmt.Printf("wrote  %d bytes\n", n3)
 	p := ":" + *port
 	fs := http.FileServer(http.Dir("./client"))
 	http.Handle("/", fs)
 	http.HandleFunc("/ws", handleConnections)
 	go handleMessages()
+
 	log.Println("http server started on port", p)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {
