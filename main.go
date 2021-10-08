@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -67,12 +68,44 @@ func handleMessages() {
 
 }
 
+// func cleanHistory() {
+// loop every minute
+// lock history file
+// history.Clean()
+// cap entries to 500
+// unlock history file
+// }
+
+// type History struct {
+// 	enc json.Encoder
+// 	mu  sync.Mutex
+// }
+
+// func (h *History) AddMessage(m *Message) error {
+// 	return nil
+// }
+
+// func (h *History) Clean() error {
+// 	return nil
+// }
+
+func handleHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		file, err := os.Open("history.json")
+		if err != nil {
+			log.Printf("ERROR: %v\n", err)
+		}
+		io.Copy(w, file)
+	}
+
+}
+
 func main() {
 	p := ":" + *port
 	fs := http.FileServer(http.Dir("./client"))
 	http.Handle("/", fs)
-	http.Handle("/leaving_room", fs)
 	http.HandleFunc("/ws", handleConnections)
+	http.HandleFunc("/history", handleHistory)
 	go handleMessages()
 	log.Println("http server started on port", p)
 	err := http.ListenAndServe(p, nil)
