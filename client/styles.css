@@ -1,6 +1,54 @@
-body {background-color:#ffc1cc;}
+body {
+    background-color: #ffc1cc;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
+
+input[type=text] {
+    border: none;
+    border-bottom: 2px solid red;
+}
+
+input[type="text"],
+textarea {
+    background-color: #ffc1cc;
+}
 
 #input_div {
     display: flex;
-    justify-content: center;
+    justify-content: left;
+    /* margin-top: 550px; */
+    margin-left: 40px;
+}
+
+
+#input_display {
+    display: flex;
+    justify-content: left;
+    height: 75%;
+    margin-left: 40px;
+}
+
+#username {
+    width: 150px;
+}
+#message {
+    width: 550px;
+}
+
+#pink_dude {
+    width: 30px;
+    height: 32px;
+    background-image: url(./Pink_Monster_Attack2_6.png);
+    animation: sprite 1s steps(6) infinite;
+}
+
+@keyframes sprite {
+    from {
+        background-position-x: 0px;
+    }
+
+    to {
+        background-position-x: -194px;
+    }
 }
