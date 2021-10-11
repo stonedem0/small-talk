@@ -27,7 +27,6 @@ type Message struct {
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
-	// index := 0
 	clients[ws] = true
 	if err != nil {
 		log.Fatal(err)
@@ -42,18 +41,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		broadcast <- msg
-		// history[index] = msg
 		err1 := json.NewEncoder(file).Encode(msg)
 		if err1 != nil {
 			log.Printf("error: %v", err)
 		}
-		// index++
 	}
-
-	// writing history to json file WIP
-	// b, _ := json.MarshalIndent(history, "", " ")
-	// file.Write(b)
-	// file.Write([]byte(","))
 
 }
 
@@ -74,6 +66,7 @@ func handleMessages() {
 }
 
 func cleanHistory(t time.Time) {
+	// TODO: add lock/unlock
 	file, err := os.Open("history.json")
 	var count int
 	if err != nil {
@@ -92,37 +85,10 @@ func cleanHistory(t time.Time) {
 	}
 	fmt.Println(count)
 	if count > 10 {
-		fmt.Println("YES")
 		os.Truncate("history.json", 0)
-		// err := os.Truncate("/path/to/your/file/crop.csv", 0);
-		//  err != nil {
-		// log.Printf("Failed to truncate: %v", err)
-		// }
 	}
-	// loop every minute
-	// lock history file
-	// history.Clean()
-	// cap entries to 500
 
-	// unlock history file
 }
-
-// func Clean() {
-
-// }
-
-// type History struct {
-// 	enc json.Encoder
-// 	mu  sync.Mutex
-// }
-
-// func (h *History) AddMessage(m *Message) error {
-// 	return nil
-// }
-
-// func (h *History) Clean() error {
-// 	return nil
-// }
 
 func doEvery(d time.Duration, f func(time.Time)) {
 	for x := range time.Tick(d) {
