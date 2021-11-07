@@ -3,11 +3,11 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -17,6 +17,7 @@ var clients = make(map[*websocket.Conn]bool)
 var broadcast = make(chan Message)
 var upgrader = websocket.Upgrader{}
 var port = flag.String("port", "80", "provide port number")
+var mu sync.Mutex
 
 var file, _ = os.OpenFile("history.json", os.O_WRONLY|os.O_APPEND|os.O_RDONLY, 0644)
 
@@ -30,7 +31,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	clients[ws] = true
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("WS error: %v", err)
 	}
 	defer ws.Close()
 	for {
@@ -67,7 +68,7 @@ func handleMessages() {
 
 // Claning chat history for the redability and performance reasons
 func cleanHistory(t time.Time) {
-	// TODO: add lock/unlock
+	mu.Lock()
 	file, err := os.Open("history.json")
 	var count int
 	if err != nil {
@@ -82,12 +83,11 @@ func cleanHistory(t time.Time) {
 			log.Printf("error while decoding history: %v", err)
 		}
 		count++
-		fmt.Printf("%s: %s\n", m.Username, m.Message)
 	}
 	if count > 10 {
 		os.Truncate("history.json", 0)
 	}
-
+	defer mu.Unlock()
 }
 
 // Implanatation for scheduled job
