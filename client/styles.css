@@ -1,7 +1,7 @@
 body {
     background-color: #ffc1cc;
     font-family: 'Courier New', monospace;
-    font-size: 13px;
+    font-size: 15px;
 }
 
 input[type=text] {
@@ -22,11 +22,16 @@ textarea {
 }
 
 
-#input_display {
+#chat {
     display: flex;
-    justify-content: left;
-    height: 75%;
-    margin-left: 40px;
+    flex-direction: column;
+    /* justify-content: left;
+    bottom: 0;
+    position: absolute;
+    margin-left: 40px; */
+}
+.chat {
+    margin-top: auto;
 }
 
 #username {

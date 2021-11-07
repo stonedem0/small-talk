@@ -25,6 +25,7 @@ type Message struct {
 	Message  string `json:"message"`
 }
 
+// Handelling WS confections on the infinity loop
 func handleConnections(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	clients[ws] = true
@@ -36,41 +37,41 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		var msg Message
 		err := ws.ReadJSON(&msg)
 		if err != nil {
-			log.Printf("error: %v", err)
-			delete(clients, ws)
+			log.Printf("error while reading JSON: %v", err)
 			break
 		}
 		broadcast <- msg
 		err1 := json.NewEncoder(file).Encode(msg)
 		if err1 != nil {
-			log.Printf("error: %v", err)
+			log.Printf("error while encoding JSON: %v", err)
 		}
 	}
-
 }
 
+// Processing messages
 func handleMessages() {
 	for {
 		msg := <-broadcast
 		for client := range clients {
 			err := client.WriteJSON(msg)
 			if err != nil {
-				log.Printf("error: %v", err)
+				log.Printf("error while writing JSON: %v", err)
 				client.Close()
 				delete(clients, client)
-
+				break
 			}
 		}
 	}
 
 }
 
+// Claning chat history for the redability and performance reasons
 func cleanHistory(t time.Time) {
 	// TODO: add lock/unlock
 	file, err := os.Open("history.json")
 	var count int
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("error while reading history: %v", err)
 	}
 	dec := json.NewDecoder(file)
 	for {
@@ -78,29 +79,30 @@ func cleanHistory(t time.Time) {
 		if err := dec.Decode(&m); err == io.EOF {
 			break
 		} else if err != nil {
-			log.Fatal(err)
+			log.Printf("error while decoding history: %v", err)
 		}
 		count++
 		fmt.Printf("%s: %s\n", m.Username, m.Message)
 	}
-	fmt.Println(count)
 	if count > 10 {
 		os.Truncate("history.json", 0)
 	}
 
 }
 
+// Implanatation for scheduled job
 func doEvery(d time.Duration, f func(time.Time)) {
 	for x := range time.Tick(d) {
 		f(x)
 	}
 }
 
+// To give new joiners some context, we will save chunk of chat history to display on connections
 func handleHistory(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		file, err := os.Open("history.json")
 		if err != nil {
-			log.Printf("ERROR: %v\n", err)
+			log.Printf("error while reading history: %v", err)
 		}
 		io.Copy(w, file)
 	}

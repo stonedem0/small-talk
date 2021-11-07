@@ -6,23 +6,31 @@ ws.onmessage = event => {
     displayMessages(event)
 };
 
+let savedUsername = '';
+
+//TODO: save username 
+
 ws.onopen = async () => {
+
+    // handling history
     const data = await fetch('./history')
         .then(function (response) {
             return response.text();
+
         }).then(function (payload) {
             const data = payload.trim().split('\n').map(JSON.parse)
             return data
-        });
 
+        });
     const history = document.createElement("div")
     const currentDiv = document.getElementById("input_div");
     data.map(e => {
-        const p = document.createElement('p')
-        const messages = document.createTextNode(`${e.username}: ${ e.message}`)
-        document.body.insertBefore(history, currentDiv)
+        const p = document.createElement('br')
+        const message = document.createTextNode(`${e.username}: ${ e.message}`)
         history.appendChild(p);
-        history.appendChild(messages);
+        history.appendChild(message);
+        document.body.insertBefore(history, currentDiv)
+     
     })
 
 }
