@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +10,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/stonedem0/small-talk/history"
 )
 
 var clients = make(map[*websocket.Conn]bool)
@@ -46,6 +47,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		if err1 != nil {
 			log.Printf("error while encoding JSON: %v", err)
 		}
+		// history.SaveHistory()
 	}
 }
 
@@ -55,6 +57,7 @@ func handleMessages() {
 		msg := <-broadcast
 		for client := range clients {
 			err := client.WriteJSON(msg)
+			// err := SaveHistory(msg)
 			if err != nil {
 				log.Printf("error while writing JSON: %v", err)
 				client.Close()
@@ -66,30 +69,6 @@ func handleMessages() {
 
 }
 
-// Claning chat history for the redability and performance reasons
-func cleanHistory(t time.Time) {
-	mu.Lock()
-	file, err := os.Open("history.json")
-	var count int
-	if err != nil {
-		log.Printf("error while reading history: %v", err)
-	}
-	dec := json.NewDecoder(file)
-	for {
-		var m Message
-		if err := dec.Decode(&m); err == io.EOF {
-			break
-		} else if err != nil {
-			log.Printf("error while decoding history: %v", err)
-		}
-		count++
-	}
-	if count > 10 {
-		os.Truncate("history.json", 0)
-	}
-	defer mu.Unlock()
-}
-
 // Implanatation for scheduled job
 func doEvery(d time.Duration, f func(time.Time)) {
 	for x := range time.Tick(d) {
@@ -97,25 +76,13 @@ func doEvery(d time.Duration, f func(time.Time)) {
 	}
 }
 
-// To give new joiners some context, we will save chunk of chat history to display on connections
-func handleHistory(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		file, err := os.Open("history.json")
-		if err != nil {
-			log.Printf("error while reading history: %v", err)
-		}
-		io.Copy(w, file)
-	}
-
-}
-
 func main() {
 	p := ":" + *port
 	fs := http.FileServer(http.Dir("./client"))
 	http.Handle("/", fs)
 	http.HandleFunc("/ws", handleConnections)
-	http.HandleFunc("/history", handleHistory)
-	go doEvery(5*time.Second, cleanHistory)
+	http.HandleFunc("/history", history.GetHistory)
+	go doEvery(5*time.Second, history.ClearHistory)
 	go handleMessages()
 	log.Println("http server started on port", p)
 	err := http.ListenAndServe(p, nil)

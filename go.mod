@@ -1,4 +1,4 @@
-module a
+module github.com/stonedem0/small-talk
 
 go 1.16
 
