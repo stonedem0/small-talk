@@ -28,13 +28,13 @@ textarea {
     position: fixed;
     left: 10px;
     margin-left: 40px;
-
 }
 
 
 #chat {
     display: flex;
     flex-direction: column;
+}
 .chat {
     margin-top: auto;
 }
@@ -47,10 +47,26 @@ textarea {
     width: 550px;
 }
 
-#pink_dude {
+#rules {
+    display: flex;
+    justify-content: center;
+    left: 700px;
+    top: 20px;
+}
+
+#pink_dude_1 {
     width: 30px;
     height: 32px;
+    display: block;
     background-image: url(./Pink_Monster_Attack2_6.png);
+    animation: sprite 1s steps(6) infinite;
+}
+#pink_dude_2 {
+    width: 30px;
+    height: 32px;
+    display: block;
+    background-image: url(./Pink_Monster_Attack2_6.png);
+    transform: rotateY(180deg);
     animation: sprite 1s steps(6) infinite;
 }
 
