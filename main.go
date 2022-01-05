@@ -14,6 +14,9 @@ import (
 	"github.com/stonedem0/small-talk/history"
 )
 
+// ./cmd/small-talk/main.go - set stuff up, connect them together
+// ./ - library   smalltalk.Message ...
+
 var clients = make(map[*websocket.Conn]bool)
 var broadcast = make(chan Message)
 var upgrader = websocket.Upgrader{}
@@ -43,11 +46,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		broadcast <- msg
-		err1 := json.NewEncoder(file).Encode(msg)
-		if err1 != nil {
+		err = json.NewEncoder(file).Encode(msg)
+		if err != nil {
 			log.Printf("error while encoding JSON: %v", err)
 		}
-		// history.SaveHistory()
+		// history.SaveHistory(history.Message(msg))
 	}
 }
 

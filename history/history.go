@@ -10,18 +10,12 @@ import (
 	"time"
 )
 
-// var mu sync.Mutex
-
 type Message struct {
 	Username string `json:"username"`
 	Message  string `json:"message"`
 }
 
 var mu sync.Mutex
-
-// type History struct {
-// 	mu sync.Mutex
-// }
 
 /* Once in a while (every minute in this case) we will clear history up to 50
 messages. It makes it easy to load and display*/
@@ -49,9 +43,9 @@ func ClearHistory(t time.Time) {
 	defer mu.Unlock()
 }
 
-func SaveHistory() {
+func SaveHistory(msg Message) {
 	var file, _ = os.OpenFile("history.json", os.O_WRONLY|os.O_APPEND|os.O_RDONLY, 0644)
-	var msg Message
+	// var msg Message
 	err := json.NewEncoder(file).Encode(msg)
 	if err != nil {
 		log.Printf("error while encoding history: %v", err)

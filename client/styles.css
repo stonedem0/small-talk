@@ -14,25 +14,31 @@ textarea {
     background-color: #ffc1cc;
 }
 
+#main {
+    display: flex;
+    justify-content: center;
+}
+.container {
+    display: flex;
+}
+
 #input_div {
     display: flex;
-    justify-content: left;
-    /* margin-top: 550px; */
+    bottom: 50px;
+    position: fixed;
+    left: 10px;
     margin-left: 40px;
+
 }
 
 
 #chat {
     display: flex;
     flex-direction: column;
-    /* justify-content: left;
-    bottom: 0;
-    position: absolute;
-    margin-left: 40px; */
-}
 .chat {
     margin-top: auto;
 }
+
 
 #username {
     width: 150px;

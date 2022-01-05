@@ -6,13 +6,6 @@ ws.onmessage = event => {
     displayMessages(event)
 };
 
-let savedUsername = '';
-
-const storage = window.localStorage;
-const username = storage.getItem('username');
-
-//TODO: save username 
-
 ws.onopen = async () => {
 
 
@@ -30,7 +23,7 @@ ws.onopen = async () => {
 
         });
     const history = document.createElement("div")
-    const currentDiv = document.getElementById("input_div");
+    const currentDiv = document.getElementById("main");
     data.map(e => {
         const p = document.createElement('br')
         const message = document.createTextNode(`${e.username}: ${ e.message}`)
@@ -44,6 +37,7 @@ ws.onopen = async () => {
 const sendMessage = event => {
     localStorage.clear();
     const message = document.getElementById('message').value
+    const username = document.getElementById('username').value
     ws.send(JSON.stringify({
         username: username,
         message: message
@@ -54,7 +48,7 @@ const sendMessage = event => {
 const displayMessages = event => {
     const data = JSON.parse(event.data)
     const chat = document.createElement("div")
-    const currentDiv = document.getElementById("input_div");
+    const currentDiv = document.getElementById("main");
     const username = document.createTextNode(`${data.username}: `);
     const message = document.createTextNode(data.message);
     document.body.insertBefore(chat, currentDiv)
@@ -63,10 +57,5 @@ const displayMessages = event => {
     chat.classList.add("chat");
 }
 
-const openForm = () =>  {
-    const username = document.getElementById('username').value
-    console.log("username", username)
-    document.getElementById("popup").style.display = "block";
-  }
 
 submit.addEventListener('submit', sendMessage);
