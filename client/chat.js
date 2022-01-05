@@ -8,9 +8,13 @@ ws.onmessage = event => {
 
 let savedUsername = '';
 
+const storage = window.localStorage;
+const username = storage.getItem('username');
+
 //TODO: save username 
 
 ws.onopen = async () => {
+
 
     // handling history
     const data = await fetch('./history')
@@ -18,8 +22,11 @@ ws.onopen = async () => {
             return response.text();
 
         }).then(function (payload) {
-            const data = payload.trim().split('\n').map(JSON.parse)
-            return data
+            if(payload){
+                const data = payload.trim().split('\n').map(JSON.parse)
+                return data
+            }
+            return []
 
         });
     const history = document.createElement("div")
@@ -35,14 +42,10 @@ ws.onopen = async () => {
 
 }
 const sendMessage = event => {
-    const usersname = document.getElementById('username').value;
-    if (!usersname) {
-        alert('nuh, tell us your username first')
-        // return
-    }
+    localStorage.clear();
     const message = document.getElementById('message').value
     ws.send(JSON.stringify({
-        username: usersname,
+        username: username,
         message: message
     }))
     event.preventDefault();
@@ -57,8 +60,13 @@ const displayMessages = event => {
     document.body.insertBefore(chat, currentDiv)
     chat.appendChild(username);
     chat.appendChild(message);
+    chat.classList.add("chat");
 }
 
-
+const openForm = () =>  {
+    const username = document.getElementById('username').value
+    console.log("username", username)
+    document.getElementById("popup").style.display = "block";
+  }
 
 submit.addEventListener('submit', sendMessage);
