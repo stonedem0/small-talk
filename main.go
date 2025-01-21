@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"log"
@@ -9,21 +10,40 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis/v8"
+
 	"github.com/gorilla/websocket"
 
 	"github.com/stonedem0/small-talk/history"
 )
 
+var ctx = context.Background() // you can also pass contexts around as needed
+
+var rdb *redis.Client
+
+func initRedis() {
+	rdb = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		log.Fatalf("Could not connect to Redis: %v", err)
+	}
+	log.Println("Connected to Redis!")
+}
+
 // ./cmd/small-talk/main.go - set stuff up, connect them together
 // ./ - library   smalltalk.Message ...
 
-var clients = make(map[*websocket.Conn]bool)
-var broadcast = make(chan Message)
-var upgrader = websocket.Upgrader{}
-var port = flag.String("port", "80", "provide port number")
-var mu sync.Mutex
-
-var file, _ = os.OpenFile("history.json", os.O_WRONLY|os.O_APPEND|os.O_RDONLY, 0644)
+var (
+	clients   = make(map[*websocket.Conn]bool)
+	broadcast = make(chan Message)
+	upgrader  = websocket.Upgrader{}
+	port      = flag.String("port", "80", "provide port number")
+	mu        sync.Mutex
+	file, _   = os.OpenFile("history.json", os.O_WRONLY|os.O_APPEND|os.O_RDONLY, 0644)
+)
 
 type Message struct {
 	Username string `json:"username"`
@@ -49,6 +69,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		err = json.NewEncoder(file).Encode(msg)
 		if err != nil {
 			log.Printf("error while encoding JSON: %v", err)
+			break
 		}
 		// history.SaveHistory(history.Message(msg))
 	}

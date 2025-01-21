@@ -2,12 +2,25 @@ const ws = new WebSocket('ws://' + window.location.host + '/ws');
 
 const submit = document.getElementById('submit');
 
+
+const randomAnimals = ["Elephant", "Capybara", "Rat"]
+const randomAdjective = ["shy", "cagy", "sneaky"]
+
+const chooseUsername = () => {
+    animalLength = randomAnimals.length
+    adjectiveLength = randomAdjective.length
+    animalIndex = Math.floor(Math.random() * animalLength);
+    adjectiveIndex =  Math.floor(Math.random() * adjectiveLength)
+        username = randomAdjective[adjectiveIndex] + randomAnimals[animalIndex]
+        return username
+
+}
 ws.onmessage = event => {
     displayMessages(event)
 };
 
-ws.onopen = async () => {
 
+ws.onopen = async () => {
 
     // handling history
     const data = await fetch('./history')
@@ -30,6 +43,7 @@ ws.onopen = async () => {
         history.appendChild(p);
         history.appendChild(message);
         document.body.insertBefore(history, currentDiv)
+        history.classList.add("history")
      
     })
 
@@ -37,7 +51,10 @@ ws.onopen = async () => {
 const sendMessage = event => {
     localStorage.clear();
     const message = document.getElementById('message').value
-    const username = document.getElementById('username').value
+    let username = document.getElementById('username').value
+    if(!username) {
+        username = chooseUsername()
+    }
     ws.send(JSON.stringify({
         username: username,
         message: message

@@ -36,8 +36,12 @@ textarea {
     flex-direction: column;
 }
 .chat {
-    margin-top: auto;
+    margin-left: 35px
 }
+.history{
+    margin-left: 35px
+}
+
 
 
 #username {
@@ -68,6 +72,11 @@ textarea {
     background-image: url(./Pink_Monster_Attack2_6.png);
     transform: rotateY(180deg);
     animation: sprite 1s steps(6) infinite;
+}
+
+::placeholder {
+    font-family: 'Courier New', monospace;
+    font-size: 15px;
 }
 
 @keyframes sprite {

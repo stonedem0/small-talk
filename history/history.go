@@ -26,6 +26,7 @@ func ClearHistory(t time.Time) {
 	var count int
 	if err != nil {
 		log.Printf("error while opening history.json: %v", err)
+		return
 	}
 	dec := json.NewDecoder(file)
 	for {
@@ -34,6 +35,7 @@ func ClearHistory(t time.Time) {
 			break
 		} else if err != nil {
 			log.Printf("error while decoding history.json: %v", err)
+			break
 		}
 		count++
 	}
