@@ -1,90 +1,72 @@
 body {
-    background-color: #ffc1cc;
-    font-family: 'Courier New', monospace;
-    font-size: 15px;
+  background-color: #ffc1cc;
+  font-family: "Source Code Pro", "Monaco", "Menlo", "Courier New", monospace;
+  font-size: 15px;
 }
 
-input[type=text] {
-    border: none;
-    border-bottom: 2px solid red;
+input[type="text"] {
+  border: none;
+  border-bottom: 2px solid red;
 }
 
 input[type="text"],
 textarea {
-    background-color: #ffc1cc;
+  background-color: #ffc1cc;
 }
-
-#main {
-    display: flex;
-    justify-content: center;
-}
-.container {
-    display: flex;
-}
-
-#input_div {
-    display: flex;
-    bottom: 50px;
-    position: fixed;
-    left: 10px;
-    margin-left: 40px;
-}
-
-
-#chat {
-    display: flex;
-    flex-direction: column;
-}
-.chat {
-    margin-left: 35px
-}
-.history{
-    margin-left: 35px
-}
-
-
 
 #username {
-    width: 150px;
+  width: 150px;
 }
 #message {
-    width: 550px;
+  width: 550px;
 }
 
-#rules {
-    display: flex;
-    justify-content: center;
-    left: 700px;
-    top: 20px;
-}
-
-#pink_dude_1 {
-    width: 30px;
-    height: 32px;
-    display: block;
-    background-image: url(./Pink_Monster_Attack2_6.png);
-    animation: sprite 1s steps(6) infinite;
+/* #pink_dude_1 {
+  width: 30px;
+  height: 32px;
+  display: block;
+  background-image: url(./Pink_Monster_Attack2_6.png);
+  animation: sprite 1s steps(6) infinite;
 }
 #pink_dude_2 {
-    width: 30px;
-    height: 32px;
-    display: block;
-    background-image: url(./Pink_Monster_Attack2_6.png);
-    transform: rotateY(180deg);
-    animation: sprite 1s steps(6) infinite;
-}
-
+  width: 30px;
+  height: 32px;
+  display: block;
+  background-image: url(./Pink_Monster_Attack2_6.png);
+  transform: rotateY(180deg);
+  animation: sprite 1s steps(6) infinite;
+} */
 ::placeholder {
-    font-family: 'Courier New', monospace;
-    font-size: 15px;
+  font-family: "Source Code Pro", "Monaco", "Menlo", "Courier New", monospace;
+  font-size: 15px;
+}
+@keyframes sprite {
+  from {
+    background-position-x: 0px;
+  }
+
+  to {
+    background-position-x: -194px;
+  }
 }
 
-@keyframes sprite {
-    from {
-        background-position-x: 0px;
-    }
+.main-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
 
-    to {
-        background-position-x: -194px;
-    }
+#chat-container {
+  height: 600px;
+  width: 770px;
+  background-color: aliceblue;
+}
+
+#messages {
+  padding: 10px;
+  max-height: 500px;
+  min-height: 500px;
+  overflow: scroll;
 }

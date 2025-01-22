@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -23,7 +24,7 @@ var rdb *redis.Client
 
 func initRedis() {
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     "127.0.0.1:6379",
 		Password: "",
 		DB:       0,
 	})
@@ -71,8 +72,17 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			log.Printf("error while encoding JSON: %v", err)
 			break
 		}
-		// history.SaveHistory(history.Message(msg))
+
+		msgBytes, _ := json.Marshal(msg)
+		if err := rdb.LPush(ctx, "chat_history", msgBytes).Err(); err != nil {
+			log.Printf("Redis LPUSH error: %v", err)
+		}
+		if err := rdb.LTrim(ctx, "chat_history", 0, 99).Err(); err != nil {
+			log.Printf("Redis LTRIM error: %v", err)
+		}
 	}
+	// history.SaveHistory(history.Message(msg))
+
 }
 
 // Processing messages
@@ -101,16 +111,43 @@ func doEvery(d time.Duration, f func(time.Time)) {
 }
 
 func main() {
+	flag.Parse()
+	initRedis()
 	p := ":" + *port
 	fs := http.FileServer(http.Dir("./client"))
 	http.Handle("/", fs)
 	http.HandleFunc("/ws", handleConnections)
-	http.HandleFunc("/history", history.GetHistory)
+	// http.HandleFunc("/history", history.GetHistory)
+	http.HandleFunc("/history", func(w http.ResponseWriter, r *http.Request) {
+		getHistoryRedis(w, r)
+	})
 	go doEvery(5*time.Second, history.ClearHistory)
 	go handleMessages()
 	log.Println("http server started on port", p)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
+	}
+}
+
+func getHistoryRedis(w http.ResponseWriter, r *http.Request) {
+	msgBytesArray, err := rdb.LRange(ctx, "chat_history", 0, 50).Result()
+	if err != nil {
+		http.Error(w, "Redis LRange error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	messages := make([]Message, 0, len(msgBytesArray))
+
+	for _, msgStr := range msgBytesArray {
+		var m Message
+		if err := json.Unmarshal([]byte(msgStr), &m); err == nil {
+			messages = append(messages, m)
+		}
+	}
+	fmt.Printf("msgBytesArray: %v\n", messages)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(messages); err != nil {
+		log.Printf("Response encode error: %v", err)
 	}
 }
