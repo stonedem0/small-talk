@@ -5,6 +5,17 @@ const submit = document.getElementById("submit");
 const randomAnimals = ["Elephant", "Capybara", "Rat"];
 const randomAdjective = ["shy", "cagy", "sneaky"];
 
+window.addEventListener("DOMContentLoaded", () => {
+  const storedUsername = localStorage.getItem("username");
+  if (storedUsername) {
+    document.getElementById("popup-overlay").style.display = "none";
+    document.getElementById("chat-container").style.display = "block";
+  } else {
+    document.getElementById("popup-overlay").style.display = "block";
+    document.getElementById("chat-container").style.display = "none";
+  }
+});
+
 const chooseUsername = () => {
   animalLength = randomAnimals.length;
   adjectiveLength = randomAdjective.length;
@@ -13,43 +24,28 @@ const chooseUsername = () => {
   username = randomAdjective[adjectiveIndex] + randomAnimals[animalIndex];
   return username;
 };
-// ws.onmessage = (event) => {
+
+const signIn = () => {
+  const username = document.getElementById("username-input").value.trim();
+  if (username) {
+    document.getElementById("popup-overlay").style.display = "none";
+    document.getElementById("chat-container").style.display = "block";
+    localStorage.setItem("username", username);
+    const storedUsername = localStorage.getItem("username");
+    console.log("Stored username is:", storedUsername);
+  } else {
+    alert("please enter a valid username.");
+  }
+};
+
 ws.onmessage = (event) => {
   const msg = JSON.parse(event.data);
   const historyDiv = document.getElementById("messages");
-
-  // Create a DOM element for this new message
   const p = document.createElement("p");
   p.textContent = `${msg.username}: ${msg.message}`;
   historyDiv.appendChild(p);
-
-  // Scroll to bottom so new message is visible
   historyDiv.scrollTop = historyDiv.scrollHeight;
 };
-// displayMessages(event);
-// };
-
-// ws.onopen = async () => {
-//   const response = await fetch("./history");
-//   if (!response.ok) {
-//     console.error("History fetch error:", response.statusText);
-//     return;
-//   }
-//   const data = await response.json();
-//   console.log(data);
-//   data.reverse();
-//   const historyDiv = document.getElementById("history");
-//   // historyDiv.innerHTML = "";
-//   // const history = document.createElement("div");
-//   // history.classList.add("history");
-//   data.forEach((e) => {
-//     const p = document.createElement("p");
-//     p.textContent = `${e.username}: ${e.message}`;
-//     historyDiv.appendChild(p);
-//   });
-//   const controls = document.getElementById("input-controls");
-//   controls.insertAdjacentElement("beforebegin", history);
-// };
 
 ws.onopen = async () => {
   const response = await fetch("./history");
@@ -59,14 +55,8 @@ ws.onopen = async () => {
   }
   const data = await response.json();
   data.reverse(); // if data was newest->oldest, now it's oldest->newest
-
-  // Grab the history container
   const historyDiv = document.getElementById("messages");
-
-  // Clear existing content (if any)
   historyDiv.innerHTML = "";
-
-  // Append each message in order (oldest to newest)
   data.forEach((msgObj) => {
     const p = document.createElement("p");
     p.textContent = `${msgObj.username}: ${msgObj.message}`;
@@ -74,12 +64,12 @@ ws.onopen = async () => {
   });
 };
 
-// Optionally scroll to bottom
-
 const sendMessage = (event) => {
-  localStorage.clear();
+  // localStorage.clear();
   const message = document.getElementById("message").value;
-  let username = document.getElementById("username").value;
+  // let username = document.getElementById("username").value;
+  let username = localStorage.getItem("username");
+  console.log("username", username);
   if (!username) {
     username = chooseUsername();
   }

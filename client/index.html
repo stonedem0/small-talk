@@ -11,29 +11,24 @@
 </head>
 
 <body>
-    <!-- <div id="rules">
-        <div id="pink_dude_1"></div>
-        <div id="pink_dude_2"></div>
-    </div> -->
-
-    <!-- <div id="rules">
-        <p>*be nice or go away. away from here. in Canada or far there*</p>
-    </div> -->
-    <!-- <div id="main"> -->
     <div id="main-container">
+        <div id="popup-overlay">
+            <div id="popup">
+                <h2>pick the username</h2>
+                <label for="usernameInput">username:</label><br />
+                <input type="text" id="username-input" />
+                <br /><br />
+                <button onclick="signIn()">let me in</button>
+            </div>
+        </div>
         <div id="chat-container">
             <div id="messages"></div>
-
-            <div id="input-controls">
+            <div id="message-controls">
                 <form action="" id="submit">
-                    <input placeholder="username" type="text" id="username">
                     <input placeholder="message" type="text" id="message">
                     <input type="submit" value="send">
                 </form>
             </div>
-            <!-- <div id="displays_div"></div> -->
-            <!-- </div> -->
-            <!-- </div> -->
         </div>
     </div>
     <script src="chat.js"></script>
