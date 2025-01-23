@@ -29,7 +29,7 @@ const signIn = () => {
   const username = document.getElementById("username-input").value.trim();
   if (username) {
     document.getElementById("popup-overlay").style.display = "none";
-    document.getElementById("chat-container").style.display = "block";
+    document.getElementById("chat-container").style.display = "flex";
     localStorage.setItem("username", username);
     const storedUsername = localStorage.getItem("username");
     console.log("Stored username is:", storedUsername);
@@ -59,6 +59,7 @@ ws.onopen = async () => {
   historyDiv.innerHTML = "";
   data.forEach((msgObj) => {
     const p = document.createElement("p");
+    p.style.margin = "1px 1px 1px 1px";
     p.textContent = `${msgObj.username}: ${msgObj.message}`;
     historyDiv.appendChild(p);
   });
