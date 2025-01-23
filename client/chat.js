@@ -9,9 +9,9 @@ window.addEventListener("DOMContentLoaded", () => {
   const storedUsername = localStorage.getItem("username");
   if (storedUsername) {
     document.getElementById("popup-overlay").style.display = "none";
-    document.getElementById("chat-container").style.display = "block";
+    document.getElementById("chat-container").style.display = "flex";
   } else {
-    document.getElementById("popup-overlay").style.display = "block";
+    document.getElementById("popup-overlay").style.display = "flex";
     document.getElementById("chat-container").style.display = "none";
   }
 });
