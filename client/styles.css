@@ -78,6 +78,7 @@ textarea {
   /* height: 600px; */
   width: 770px;
   background-color: aliceblue;
+  border: 5px solid #4a00f7;
 }
 
 #messages {
