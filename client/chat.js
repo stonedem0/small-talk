@@ -59,7 +59,8 @@ ws.onopen = async () => {
   historyDiv.innerHTML = "";
   data.forEach((msgObj) => {
     const p = document.createElement("p");
-    p.style.margin = "1px 1px 1px 1px";
+    p.style.margin = "0";
+    p.padding = "0";
     p.textContent = `${msgObj.username}: ${msgObj.message}`;
     historyDiv.appendChild(p);
   });
