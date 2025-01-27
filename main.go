@@ -49,6 +49,8 @@ var (
 type Message struct {
 	Username string `json:"username"`
 	Message  string `json:"message"`
+	Colour   string `json:"colour"`
+	Style    string `json:"style"`
 }
 
 // Handelling WS confections on the infinity loop
@@ -62,6 +64,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	for {
 		var msg Message
 		err := ws.ReadJSON(&msg)
+		fmt.Printf("msg: %v\n", msg)
 		if err != nil {
 			log.Printf("error while reading JSON: %v", err)
 			break

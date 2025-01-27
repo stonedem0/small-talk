@@ -1,3 +1,7 @@
+:root {
+  --deep-purple: #4a00f7;
+}
+
 body {
   background-color: #ffc1cc;
   /* font-family: "Source Code Pro", "Monaco", "Menlo", "Courier New", monospace; */
@@ -110,7 +114,7 @@ textarea {
   justify-content: space-between;
   width: 100%;
   height: 29px;
-  background-color: #4a00f7;
+  background-color: var(--deep-purple);
 }
 
 .chat-title {
@@ -125,7 +129,7 @@ textarea {
   /* height: 600px; */
   width: 770px;
   background-color: aliceblue;
-  border: 5px solid #4a00f7;
+  border: 5px solid var(--deep-purple);
 }
 
 #messages {
@@ -141,6 +145,47 @@ textarea {
 }
 
 #message-controls {
+  display: flex;
+  flex-direction: column;
   height: 85px;
-  border-top: 5px solid #4a00f7;
+  border-top: 5px solid var(--deep-purple);
+}
+
+#formatting-controls {
+  border-bottom: 5px solid var(--deep-purple);
+  height: 20px;
+}
+.text-formatting-menu {
+  display: flex;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.format-btn {
+  border: none;
+  height: 18px;
+  width: 20px;
+  background-color: var(--deep-purple);
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.format-btn:hover {
+  background-color: green;
+}
+
+.format-btn:active {
+  background-color: green;
+}
+
+#text-color-picker {
+  width: 20px;
+  height: 20px;
+  border: none;
+  cursor: pointer;
+  /* margin-left: 10px; */
 }
