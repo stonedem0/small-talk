@@ -11,28 +11,45 @@
 </head>
 
 <body>
-    <div id="rules">
-    <div id="pink_dude_1"></div>
-    <div id="pink_dude_2"></div>
-</div>
-
-    <div id="rules">
-        <p>*be nice or go away. far away. to Canada or even more far*</p>
+    <div id="main-container">
+        <div id="popup-overlay">
+            <div id="popup">
+                <h2>pick the username</h2>
+                <label for="usernameInput">username:</label><br />
+                <input type="text" id="username-input" />
+                <br /><br />
+                <button onclick="signIn()">let me in</button>
+            </div>
+        </div>
+        <div id="chat-container">
+            <div class="chat-header">
+                <div class="chat-title">
+                    <span class="chat-icon"></span>
+                    <span class="chat-name">chat</span>
+                </div>
+                <div class="window-controls">
+                    <button class="minimize" onclick="minimizeCLI()"></button>
+                    <button class="fullscreen" onclick="fullscreenCLI()""></button>
+                <button class=" close" onclick="closeCLI()"></button>
+                </div>
+            </div>
+            <div id="messages"></div>
+            <div id="message-controls">
+                <div id="formatting-controls">
+                    <button class="format-btn" data-action="bold"><b>B</b></button>
+                    <button class="format-btn" data-action="italic"><i>I</i></button>
+                    <button class="format-btn" data-action="underline"><u>U</u></button>
+                    <button class="format-btn" data-action="strikethrough"><s>S</s></button>
+                    <input type="color" id="text-color-picker" title="Choose text color" />
+                </div>
+                <form action="" id="submit">
+                    <input placeholder="message" type="text" id="message">
+                    <input type="submit" value="send">
+                </form>
+            </div>
+        </div>
     </div>
-    <div id="main">
-    <div id="input_div">
-    <div class="container">
-
-            <form action="" id="submit">
-                <input placeholder="username" type="text" id="username">
-                <input placeholder="message" type="text" id="message">
-                <input type="submit" value="send">
-            </form>
-        <div id="displays_div"></div>
-    </div>
-    </div> 
-
-        <script src="chat.js"></script>
+    <script src="chat.js"></script>
 </body>
 
 </html>

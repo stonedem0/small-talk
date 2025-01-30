@@ -1,33 +1,56 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis/v8"
+
 	"github.com/gorilla/websocket"
 
 	"github.com/stonedem0/small-talk/history"
 )
 
+var ctx = context.Background() // you can also pass contexts around as needed
+
+var rdb *redis.Client
+
+func initRedis() {
+	rdb = redis.NewClient(&redis.Options{
+		Addr:     "127.0.0.1:6379",
+		Password: "",
+		DB:       0,
+	})
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		log.Fatalf("Could not connect to Redis: %v", err)
+	}
+	log.Println("Connected to Redis!")
+}
+
 // ./cmd/small-talk/main.go - set stuff up, connect them together
 // ./ - library   smalltalk.Message ...
 
-var clients = make(map[*websocket.Conn]bool)
-var broadcast = make(chan Message)
-var upgrader = websocket.Upgrader{}
-var port = flag.String("port", "80", "provide port number")
-var mu sync.Mutex
-
-var file, _ = os.OpenFile("history.json", os.O_WRONLY|os.O_APPEND|os.O_RDONLY, 0644)
+var (
+	clients   = make(map[*websocket.Conn]bool)
+	broadcast = make(chan Message)
+	upgrader  = websocket.Upgrader{}
+	port      = flag.String("port", "80", "provide port number")
+	mu        sync.Mutex
+	file, _   = os.OpenFile("history.json", os.O_WRONLY|os.O_APPEND|os.O_RDONLY, 0644)
+)
 
 type Message struct {
 	Username string `json:"username"`
 	Message  string `json:"message"`
+	Colour   string `json:"colour"`
+	Style    string `json:"style"`
 }
 
 // Handelling WS confections on the infinity loop
@@ -41,6 +64,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	for {
 		var msg Message
 		err := ws.ReadJSON(&msg)
+		fmt.Printf("msg: %v\n", msg)
 		if err != nil {
 			log.Printf("error while reading JSON: %v", err)
 			break
@@ -49,9 +73,19 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		err = json.NewEncoder(file).Encode(msg)
 		if err != nil {
 			log.Printf("error while encoding JSON: %v", err)
+			break
 		}
-		// history.SaveHistory(history.Message(msg))
+
+		msgBytes, _ := json.Marshal(msg)
+		if err := rdb.LPush(ctx, "chat_history", msgBytes).Err(); err != nil {
+			log.Printf("Redis LPUSH error: %v", err)
+		}
+		if err := rdb.LTrim(ctx, "chat_history", 0, 99).Err(); err != nil {
+			log.Printf("Redis LTRIM error: %v", err)
+		}
 	}
+	// history.SaveHistory(history.Message(msg))
+
 }
 
 // Processing messages
@@ -80,16 +114,43 @@ func doEvery(d time.Duration, f func(time.Time)) {
 }
 
 func main() {
+	flag.Parse()
+	initRedis()
 	p := ":" + *port
 	fs := http.FileServer(http.Dir("./client"))
 	http.Handle("/", fs)
 	http.HandleFunc("/ws", handleConnections)
-	http.HandleFunc("/history", history.GetHistory)
+	// http.HandleFunc("/history", history.GetHistory)
+	http.HandleFunc("/history", func(w http.ResponseWriter, r *http.Request) {
+		getHistoryRedis(w, r)
+	})
 	go doEvery(5*time.Second, history.ClearHistory)
 	go handleMessages()
 	log.Println("http server started on port", p)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
+	}
+}
+
+func getHistoryRedis(w http.ResponseWriter, r *http.Request) {
+	msgBytesArray, err := rdb.LRange(ctx, "chat_history", 0, 50).Result()
+	if err != nil {
+		http.Error(w, "Redis LRange error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	messages := make([]Message, 0, len(msgBytesArray))
+
+	for _, msgStr := range msgBytesArray {
+		var m Message
+		if err := json.Unmarshal([]byte(msgStr), &m); err == nil {
+			messages = append(messages, m)
+		}
+	}
+	fmt.Printf("msgBytesArray: %v\n", messages)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(messages); err != nil {
+		log.Printf("Response encode error: %v", err)
 	}
 }
