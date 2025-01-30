@@ -45,7 +45,7 @@ ws.onmessage = (event) => {
   const msg = JSON.parse(event.data);
   const historyDiv = document.getElementById("messages");
   const p = document.createElement("p");
-  // styleText(msg.style);
+  styleText(msg.style);
   p.style.color = currentMessageColor;
   p.textContent = `${msg.username}: ${msg.message}`;
   historyDiv.appendChild(p);
@@ -109,7 +109,8 @@ function formatText(command) {
   if (!selection.rangeCount) return;
   const range = selection.getRangeAt(0);
   const message = document.getElementById("message");
-  styleText(command);
+  const property = styleText(command);
+  message.style[property] = currentMessageStyle;
   range.surroundContents(message);
 }
 
@@ -133,23 +134,24 @@ colorPicker.addEventListener("input", (event) => {
 });
 
 const styleText = (command) => {
-  const message = document.getElementById("message");
+  let property;
   switch (command) {
     case "bold":
-      message.style.fontWeight = "bold";
+      property = "fontWeight";
       currentMessageStyle = "bold";
       break;
     case "italic":
-      message.style.fontStyle = "italic";
+      property = "fontStyle";
       currentMessageStyle = "italic";
       break;
     case "underline":
-      message.style.textDecoration = "underline";
+      property = "textDecoration";
       currentMessageStyle = "underline";
       break;
     case "strikethrough":
-      message.style.textDecoration = "line-through";
+      property = "textDecoration";
       currentMessageStyle = "line-through";
       break;
   }
+  return property;
 };
