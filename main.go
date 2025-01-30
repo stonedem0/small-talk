@@ -70,11 +70,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		broadcast <- msg
-		err = json.NewEncoder(file).Encode(msg)
-		if err != nil {
-			log.Printf("error while encoding JSON: %v", err)
-			break
-		}
+		// err = json.NewEncoder(file).Encode(msg)
+		// if err != nil {
+		// 	log.Printf("error while encoding JSON: %v", err)
+		// 	break
+		// }
 
 		msgBytes, _ := json.Marshal(msg)
 		if err := rdb.LPush(ctx, "chat_history", msgBytes).Err(); err != nil {
@@ -99,7 +99,7 @@ func handleMessages() {
 				log.Printf("error while writing JSON: %v", err)
 				client.Close()
 				delete(clients, client)
-				break
+				continue
 			}
 		}
 	}
