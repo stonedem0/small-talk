@@ -45,24 +45,7 @@ ws.onmessage = (event) => {
   const msg = JSON.parse(event.data);
   const historyDiv = document.getElementById("messages");
   const p = document.createElement("p");
-  switch (currentMessageStyle) {
-    case "italic":
-      p.style.fontStyle = "italic";
-      break;
-    case "bold":
-      p.style.fontWeight = "bold";
-      break;
-    case "underline":
-      p.style.textDecoration = "underline";
-      break;
-    case "strikethrough":
-      p.style.textDecoration = "line-through";
-      break;
-    default:
-      p.style.fontStyle = "normal";
-      p.style.fontWeight = "normal";
-      p.style.textDecoration = "none";
-  }
+  // styleText(msg.style);
   p.style.color = currentMessageColor;
   p.textContent = `${msg.username}: ${msg.message}`;
   historyDiv.appendChild(p);
@@ -84,7 +67,7 @@ ws.onopen = async () => {
     p.style.margin = "0";
     p.padding = "0";
     p.style.color = msgObj.colour;
-    p.style.fontStyle = msgObj.style;
+    styleText(msgObj.style);
     p.textContent = `${msgObj.username}: ${msgObj.message}`;
     historyDiv.appendChild(p);
   });
@@ -124,27 +107,9 @@ submit.addEventListener("submit", sendMessage);
 function formatText(command) {
   const selection = window.getSelection();
   if (!selection.rangeCount) return;
-
   const range = selection.getRangeAt(0);
   const message = document.getElementById("message");
-  switch (command) {
-    case "bold":
-      message.style.fontWeight = "bold";
-      currentMessageStyle = "bold";
-      break;
-    case "italic":
-      message.style.fontStyle = "italic";
-      currentMessageStyle = "italic";
-      break;
-    case "underline":
-      message.style.textDecoration = "underline";
-      currentMessageStyle = "underline";
-      break;
-    case "strikethrough":
-      message.style.textDecoration = "line-through";
-      currentMessageStyle = "line-through";
-      break;
-  }
+  styleText(command);
   range.surroundContents(message);
 }
 
@@ -166,3 +131,25 @@ colorPicker.addEventListener("input", (event) => {
   currentMessageColor = event.target.value;
   range.surroundContents(message);
 });
+
+const styleText = (command) => {
+  const message = document.getElementById("message");
+  switch (command) {
+    case "bold":
+      message.style.fontWeight = "bold";
+      currentMessageStyle = "bold";
+      break;
+    case "italic":
+      message.style.fontStyle = "italic";
+      currentMessageStyle = "italic";
+      break;
+    case "underline":
+      message.style.textDecoration = "underline";
+      currentMessageStyle = "underline";
+      break;
+    case "strikethrough":
+      message.style.textDecoration = "line-through";
+      currentMessageStyle = "line-through";
+      break;
+  }
+};

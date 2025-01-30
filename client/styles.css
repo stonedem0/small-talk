@@ -148,6 +148,7 @@ textarea {
   display: flex;
   flex-direction: column;
   height: 85px;
+  /* position: absolute; */
   border-top: 5px solid var(--deep-purple);
 }
 
