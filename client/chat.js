@@ -43,7 +43,8 @@ const styleText = (command) => {
       property = "textDecoration";
       currentMessageStyle = "underline";
       break;
-    case "line-through":
+    case "strikethrough":
+      console.log("strikethrough");
       property = "textDecoration";
       currentMessageStyle = "line-through";
       break;
@@ -71,7 +72,7 @@ ws.onmessage = (event) => {
   const property = styleText(msg.style);
   p.style.color = currentMessageColor;
   p.style[property] = currentMessageStyle;
-
+  console.log("p>>>>>", p);
   p.textContent = `${msg.username}: ${msg.message}`;
   historyDiv.appendChild(p);
   historyDiv.scrollTop = historyDiv.scrollHeight;
@@ -93,7 +94,6 @@ ws.onopen = async () => {
     p.padding = "0";
     p.style.color = msgObj.colour;
     const property = styleText(msgObj.style);
-    console.log("property", property);
     p.style[property] = currentMessageStyle;
     p.textContent = `${msgObj.username}: ${msgObj.message}`;
     historyDiv.appendChild(p);
@@ -135,26 +135,12 @@ submit.addEventListener("submit", sendMessage);
 function formatText(command) {
   const selection = window.getSelection();
   if (!selection.rangeCount) return;
-
   const range = selection.getRangeAt(0);
-  const span = document.createElement("span");
-
-  switch (command) {
-    case "bold":
-      span.style.fontWeight = "bold";
-      break;
-    case "italic":
-      span.style.fontStyle = "italic";
-      break;
-    case "underline":
-      span.style.textDecoration = "underline";
-      break;
-    case "line-through":
-      span.style.textDecoration = "line-through";
-      break;
-  }
-  span.appendChild(range.extractContents());
-  range.insertNode(span);
+  const message = document.getElementById("message");
+  const property = styleText(command);
+  message.style[property] = currentMessageStyle;
+  message.style[property].currentMessageStyle;
+  range.surroundContents(message);
 }
 
 document.querySelectorAll(".format-btn").forEach((button) => {
@@ -168,6 +154,7 @@ const colorPicker = document.getElementById("text-color-picker");
 colorPicker.addEventListener("input", (event) => {
   const selection = window.getSelection();
   if (!selection.rangeCount) return;
+
   const range = selection.getRangeAt(0);
   const message = document.getElementById("message");
   message.style.color = event.target.value;
