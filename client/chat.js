@@ -43,7 +43,7 @@ const styleText = (command) => {
       property = "textDecoration";
       currentMessageStyle = "underline";
       break;
-    case "strikethrough":
+    case "line-through":
       console.log("strikethrough");
       property = "textDecoration";
       currentMessageStyle = "line-through";
@@ -72,7 +72,7 @@ ws.onmessage = (event) => {
   const property = styleText(msg.style);
   p.style.color = currentMessageColor;
   p.style[property] = currentMessageStyle;
-  console.log("p>>>>>", p);
+  // console.log("p>>>>>", p);
   p.textContent = `${msg.username}: ${msg.message}`;
   historyDiv.appendChild(p);
   historyDiv.scrollTop = historyDiv.scrollHeight;
@@ -107,6 +107,7 @@ const sendMessage = (event) => {
   if (!username) {
     username = chooseUsername();
   }
+  console.log("currentMessageStyle,", currentMessageStyle);
   ws.send(
     JSON.stringify({
       username: username,
