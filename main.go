@@ -94,7 +94,6 @@ func handleMessages() {
 		msg := <-broadcast
 		for client := range clients {
 			err := client.WriteJSON(msg)
-			// err := SaveHistory(msg)
 			if err != nil {
 				log.Printf("error while writing JSON: %v", err)
 				client.Close()
@@ -148,7 +147,7 @@ func getHistoryRedis(w http.ResponseWriter, r *http.Request) {
 			messages = append(messages, m)
 		}
 	}
-	fmt.Printf("msgBytesArray: %v\n", messages)
+	// fmt.Printf("msgBytesArray: %v\n", messages)
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(messages); err != nil {
 		log.Printf("Response encode error: %v", err)
