@@ -4,24 +4,24 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/websocket"
-	// "github.com/stonedem0/small-talk/history"
 )
 
 var ctx = context.Background()
 
 var (
-	clients   = make(map[*websocket.Conn]bool)
-	broadcast = make(chan Message)
-	// upgrader  = websocket.Upgrader{}
-	port = flag.String("port", "8080", "provide port number")
+	clients       = make(map[string]map[*websocket.Conn]*sync.Mutex) // Map of rooms -> clients with mutex
+	subscriptions = make(map[string]bool)                            // Track active subscriptions per room
+	subLock       = sync.Mutex{}
+	port          = flag.String("port", "8080", "provide port number")
 )
 
 type Message struct {
+	Room     string `json:"room"`
 	Username string `json:"username"`
 	Message  string `json:"message"`
 	Colour   string `json:"colour"`
@@ -34,67 +34,83 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// handling WS confections on the infinity loop
 func handleConnections(w http.ResponseWriter, r *http.Request) {
+	room := r.URL.Query().Get("room")
+	if room == "" {
+		http.Error(w, "Room parameter is required", http.StatusBadRequest)
+		return
+	}
+
 	ws, err := upgrader.Upgrade(w, r, nil)
-	clients[ws] = true
 	if err != nil {
 		log.Printf("WS error: %v", err)
+		return
 	}
-	defer ws.Close()
+
+	// Ensure clients map is initialized before using
+	if clients == nil {
+		clients = make(map[string]map[*websocket.Conn]*sync.Mutex)
+	}
+	if _, exists := clients[room]; !exists {
+		clients[room] = make(map[*websocket.Conn]*sync.Mutex)
+	}
+	clients[room][ws] = &sync.Mutex{}
+
+	defer func() {
+		ws.Close()
+		delete(clients[room], ws)
+		log.Printf("Client disconnected from room: %s", room)
+	}()
+
+	// Ensure only one subscription per room
+	subLock.Lock()
+	if !subscriptions[room] {
+		subscriptions[room] = true
+		subLock.Unlock()
+
+		go subscribeToRoom(room)
+	} else {
+		subLock.Unlock()
+	}
+
 	for {
 		var msg Message
-		err := ws.ReadJSON(&msg)
-		fmt.Printf("msg: %v\n", msg)
-		if err != nil {
-			log.Printf("error while reading JSON: %v", err)
+		if err := ws.ReadJSON(&msg); err != nil {
+			log.Printf("Error reading JSON or client disconnected: %v", err)
 			break
 		}
-		broadcast <- msg
-		msgBytes, _ := json.Marshal(msg)
-		if err := RDB.LPush(ctx, "chat_history", msgBytes).Err(); err != nil {
-			log.Printf("Redis LPUSH error: %v", err)
-		}
-		if err := RDB.LTrim(ctx, "chat_history", 0, 99).Err(); err != nil {
-			log.Printf("Redis LTRIM error: %v", err)
-		}
-	}
 
+		msg.Room = room // Ensure message is tagged with room
+		msgBytes, _ := json.Marshal(msg)
+		RDB.Publish(ctx, "room:"+room, string(msgBytes)) // Only publish, don't broadcast locally
+	}
 }
 
-// processing messages
-func handleMessages() {
-	for {
-		msg := <-broadcast
-		for client := range clients {
-			err := client.WriteJSON(msg)
-			if err != nil {
-				log.Printf("error while writing JSON: %v", err)
-				client.Close()
-				delete(clients, client)
-				continue
+func subscribeToRoom(room string) {
+	pubsub := RDB.Subscribe(ctx, "room:"+room)
+	defer pubsub.Close()
+	ch := pubsub.Channel()
+
+	for msg := range ch {
+		var receivedMsg Message
+		if err := json.Unmarshal([]byte(msg.Payload), &receivedMsg); err != nil {
+			log.Printf("Error decoding message: %v", err)
+			continue
+		}
+
+		// Save message to history
+		msgBytes, _ := json.Marshal(receivedMsg)
+		RDB.LPush(ctx, "chat_history:"+room, msgBytes)
+		RDB.LTrim(ctx, "chat_history:"+room, 0, 99) // Keep last 100 messages
+
+		// Only forward messages to clients, not re-broadcast to Redis
+		if _, exists := clients[receivedMsg.Room]; exists {
+			for client, mutex := range clients[receivedMsg.Room] {
+				mutex.Lock()
+				client.WriteJSON(receivedMsg)
+				mutex.Unlock()
 			}
 		}
-	}
-
-}
-
-func main() {
-	flag.Parse()
-	InitRedis()
-	p := ":" + *port
-	fs := http.FileServer(http.Dir("./client"))
-	http.Handle("/", fs)
-	http.HandleFunc("/ws", handleConnections)
-	http.HandleFunc("/history", func(w http.ResponseWriter, r *http.Request) {
-		getChatHistory(w, r)
-	})
-	http.HandleFunc("/subscribe", SubscribeToRoomHandler)
-	go handleMessages()
-	log.Println("http server started on port", p)
-	err := http.ListenAndServe(p, nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
 	}
 }
 
@@ -102,16 +118,21 @@ func getChatHistory(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	messages, err := RDB.LRange(ctx, "chat_history", 0, 99).Result()
+	room := r.URL.Query().Get("room")
+	if room == "" {
+		http.Error(w, "Room parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	messages, err := RDB.LRange(ctx, "chat_history:"+room, 0, 99).Result()
 	if err != nil {
-		log.Printf("❌ Error fetching chat history from Redis: %v", err)
+		log.Printf("Error fetching chat history from Redis: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -120,11 +141,26 @@ func getChatHistory(w http.ResponseWriter, r *http.Request) {
 	for _, msg := range messages {
 		var m Message
 		if err := json.Unmarshal([]byte(msg), &m); err != nil {
-			log.Printf("❌ JSON Unmarshal Error: %v", err)
+			log.Printf("JSON Unmarshal Error: %v", err)
 			continue
 		}
 		history = append(history, m)
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(history)
+}
+
+func main() {
+	flag.Parse()
+	InitRedis()
+	p := ":" + *port
+	http.HandleFunc("/ws", handleConnections)
+	http.HandleFunc("/history", getChatHistory)
+
+	log.Println("Server started on port", p)
+	err := http.ListenAndServe(p, nil)
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }

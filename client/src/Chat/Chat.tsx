@@ -19,7 +19,9 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const response = await fetch("http://localhost:8080/history");
+        const response = await fetch(
+          "http://localhost:8080/history?room=default"
+        );
         if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
         const data: Message[] = await response.json();
@@ -34,7 +36,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
 
     if (!ws.current) {
       console.log("🔌 Creating WebSocket connection...");
-      ws.current = new WebSocket("ws://localhost:8080/ws");
+      ws.current = new WebSocket(`ws://localhost:8080/ws?room=default`);
 
       ws.current.onopen = () => {
         console.log("✅ WebSocket connected");
@@ -67,7 +69,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
   const reconnectWebSocket = () => {
     if (!ws.current || ws.current.readyState === WebSocket.CLOSED) {
       console.log("♻️ Reconnecting WebSocket...");
-      ws.current = new WebSocket("ws://localhost:8080/ws");
+      ws.current = new WebSocket("ws://localhost:8080/ws?room=default");
     }
   };
 
