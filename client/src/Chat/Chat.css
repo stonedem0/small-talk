@@ -5,6 +5,7 @@
   width: 770px;
   background-color: aliceblue;
   border: 5px solid var(--deep-purple);
+  color: black;
 }
 
 .chat-header {
