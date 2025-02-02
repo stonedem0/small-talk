@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
 	// "github.com/stonedem0/small-talk/history"
@@ -80,13 +79,6 @@ func handleMessages() {
 
 }
 
-// implanatation for scheduled job
-func doEvery(d time.Duration, f func(time.Time)) {
-	for x := range time.Tick(d) {
-		f(x)
-	}
-}
-
 func main() {
 	flag.Parse()
 	InitRedis()
@@ -98,7 +90,6 @@ func main() {
 		getChatHistory(w, r)
 	})
 	http.HandleFunc("/subscribe", SubscribeToRoomHandler)
-	// go doEvery(5*time.Second, history.ClearHistory)
 	go handleMessages()
 	log.Println("http server started on port", p)
 	err := http.ListenAndServe(p, nil)
@@ -107,26 +98,6 @@ func main() {
 	}
 }
 
-// func getHistoryRedis(w http.ResponseWriter, r *http.Request) {
-// 	msgBytesArray, err := RDB.LRange(ctx, "chat_history", 0, 50).Result()
-// 	if err != nil {
-// 		http.Error(w, "Redis LRange error: "+err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	messages := make([]Message, 0, len(msgBytesArray))
-
-//		for _, msgStr := range msgBytesArray {
-//			var m Message
-//			if err := json.Unmarshal([]byte(msgStr), &m); err == nil {
-//				messages = append(messages, m)
-//			}
-//		}
-//		w.Header().Set("Content-Type", "application/json")
-//		if err := json.NewEncoder(w).Encode(messages); err != nil {
-//			log.Printf("Response encode error: %v", err)
-//		}
-//	}
 func getChatHistory(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
