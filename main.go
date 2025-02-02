@@ -15,6 +15,7 @@ var ctx = context.Background()
 
 var (
 	clients       = make(map[string]map[*websocket.Conn]*sync.Mutex) // Map of rooms -> clients with mutex
+	clientsLock   = sync.Mutex{}                                     // Protects access to the clients map
 	subscriptions = make(map[string]bool)                            // Track active subscriptions per room
 	subLock       = sync.Mutex{}
 	port          = flag.String("port", "8080", "provide port number")
@@ -47,18 +48,18 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure clients map is initialized before using
-	if clients == nil {
-		clients = make(map[string]map[*websocket.Conn]*sync.Mutex)
-	}
-	if _, exists := clients[room]; !exists {
+	clientsLock.Lock()
+	if clients[room] == nil {
 		clients[room] = make(map[*websocket.Conn]*sync.Mutex)
 	}
 	clients[room][ws] = &sync.Mutex{}
+	clientsLock.Unlock()
 
 	defer func() {
+		clientsLock.Lock()
 		ws.Close()
 		delete(clients[room], ws)
+		clientsLock.Unlock()
 		log.Printf("Client disconnected from room: %s", room)
 	}()
 
@@ -67,7 +68,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	if !subscriptions[room] {
 		subscriptions[room] = true
 		subLock.Unlock()
-
 		go subscribeToRoom(room)
 	} else {
 		subLock.Unlock()
@@ -103,7 +103,7 @@ func subscribeToRoom(room string) {
 		RDB.LPush(ctx, "chat_history:"+room, msgBytes)
 		RDB.LTrim(ctx, "chat_history:"+room, 0, 99) // Keep last 100 messages
 
-		// Only forward messages to clients, not re-broadcast to Redis
+		clientsLock.Lock()
 		if _, exists := clients[receivedMsg.Room]; exists {
 			for client, mutex := range clients[receivedMsg.Room] {
 				mutex.Lock()
@@ -111,6 +111,7 @@ func subscribeToRoom(room string) {
 				mutex.Unlock()
 			}
 		}
+		clientsLock.Unlock()
 	}
 }
 
