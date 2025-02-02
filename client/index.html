@@ -49,8 +49,21 @@
                 </form>
             </div>
         </div>
-    </div>
-    <script src="chat.js"></script>
+        <div id="rooms-container">
+            <div class="rooms-header">
+                <div class="rooms-title">
+                    <span class="rooms-icon"></span>
+                    <span class="rooms-name">rooms</span>
+                </div>
+            </div>
+            <ul class="rooms-list">
+                <li class="room-item"><button onclick="openChatWindow('Room 1')">cool room 1</button></li>
+                <li class="room-item"><button onclick="openChatWindow('Room 2')">cool room 2</button></li>
+                <li class="room-item"><button onclick="openChatWindow('Room 3')">cool room 3</button></li>
+            </ul>
+
+        </div>
+        <script src="chat.js"></script>
 </body>
 
 </html>

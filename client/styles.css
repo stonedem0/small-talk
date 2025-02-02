@@ -9,6 +9,12 @@ body {
   font-size: 15px;
 }
 
+#main-container {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 15px;
+}
+
 #popup-overlay {
   position: fixed;
   /* top: 0;

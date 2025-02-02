@@ -9,37 +9,17 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-redis/redis/v8"
-
 	"github.com/gorilla/websocket"
-
-	"github.com/stonedem0/small-talk/history"
+	// "github.com/stonedem0/small-talk/history"
 )
 
 var ctx = context.Background()
-
-var rdb *redis.Client
-
-func initRedis() {
-	rdb = redis.NewClient(&redis.Options{
-		Addr:     "127.0.0.1:6379",
-		Password: "cCq!qRG7iMdZKdUg_r*kY",
-		DB:       0,
-	})
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Fatalf("Could not connect to Redis: %v", err)
-	}
-	log.Println("Connected to Redis!")
-}
-
-// ./cmd/small-talk/main.go - set stuff up, connect them together
-// ./ - library   smalltalk.Message ...
 
 var (
 	clients   = make(map[*websocket.Conn]bool)
 	broadcast = make(chan Message)
 	upgrader  = websocket.Upgrader{}
-	port      = flag.String("port", "80", "provide port number")
+	port      = flag.String("port", "8080", "provide port number")
 )
 
 type Message struct {
@@ -67,10 +47,10 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		}
 		broadcast <- msg
 		msgBytes, _ := json.Marshal(msg)
-		if err := rdb.LPush(ctx, "chat_history", msgBytes).Err(); err != nil {
+		if err := RDB.LPush(ctx, "chat_history", msgBytes).Err(); err != nil {
 			log.Printf("Redis LPUSH error: %v", err)
 		}
-		if err := rdb.LTrim(ctx, "chat_history", 0, 99).Err(); err != nil {
+		if err := RDB.LTrim(ctx, "chat_history", 0, 99).Err(); err != nil {
 			log.Printf("Redis LTRIM error: %v", err)
 		}
 	}
@@ -103,7 +83,7 @@ func doEvery(d time.Duration, f func(time.Time)) {
 
 func main() {
 	flag.Parse()
-	initRedis()
+	InitRedis()
 	p := ":" + *port
 	fs := http.FileServer(http.Dir("./client"))
 	http.Handle("/", fs)
@@ -111,7 +91,8 @@ func main() {
 	http.HandleFunc("/history", func(w http.ResponseWriter, r *http.Request) {
 		getHistoryRedis(w, r)
 	})
-	go doEvery(5*time.Second, history.ClearHistory)
+	http.HandleFunc("/subscribe", SubscribeToRoomHandler)
+	// go doEvery(5*time.Second, history.ClearHistory)
 	go handleMessages()
 	log.Println("http server started on port", p)
 	err := http.ListenAndServe(p, nil)
@@ -121,7 +102,7 @@ func main() {
 }
 
 func getHistoryRedis(w http.ResponseWriter, r *http.Request) {
-	msgBytesArray, err := rdb.LRange(ctx, "chat_history", 0, 50).Result()
+	msgBytesArray, err := RDB.LRange(ctx, "chat_history", 0, 50).Result()
 	if err != nil {
 		http.Error(w, "Redis LRange error: "+err.Error(), http.StatusInternalServerError)
 		return
