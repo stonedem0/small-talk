@@ -11,6 +11,12 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+func init() {
+	clients["general"] = make(map[*websocket.Conn]*sync.Mutex)
+	clients["random"] = make(map[*websocket.Conn]*sync.Mutex)
+	clients["gaming"] = make(map[*websocket.Conn]*sync.Mutex)
+}
+
 var ctx = context.Background()
 
 var (
@@ -152,12 +158,34 @@ func getChatHistory(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(history)
 }
 
+func getRooms(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	clientsLock.Lock()
+	rooms := make([]string, 0, len(clients))
+	for room := range clients {
+		rooms = append(rooms, room)
+	}
+	clientsLock.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(rooms)
+}
+
 func main() {
 	flag.Parse()
 	InitRedis()
 	p := ":" + *port
 	http.HandleFunc("/ws", handleConnections)
 	http.HandleFunc("/history", getChatHistory)
+	http.HandleFunc("/rooms", getRooms)
 
 	log.Println("Server started on port", p)
 	err := http.ListenAndServe(p, nil)
