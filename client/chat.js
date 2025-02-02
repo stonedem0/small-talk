@@ -169,7 +169,13 @@ function openChatWindow(roomName) {
     .then((response) => response.text())
     .then((data) => {
       console.log(data);
-      alert(data);
+      const chatContainer = document.getElementById("chat-container");
+      chatContainer.innerHTML = "";
+      const iframe = document.createElement("iframe");
+      iframe.src = `/?room=${roomName}`;
+      iframe.width = "100%";
+      iframe.height = "500px";
+      chatContainer.appendChild(iframe);
     })
     .catch((error) => {
       console.error("Error:", error);
