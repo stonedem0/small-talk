@@ -17,8 +17,11 @@ type Message struct {
 
 var mu sync.Mutex
 
-/* Once in a while (every minute in this case) we will clear history up to 50
-messages. It makes it easy to load and display*/
+/*
+	Once in a while (every minute in this case) we will clear history up to 50
+
+messages. It makes it easy to load and display
+*/
 func ClearHistory(t time.Time) {
 	// Tru hard to avid deadlocks ☠️
 	mu.Lock()
@@ -54,8 +57,11 @@ func SaveHistory(msg Message) {
 	}
 }
 
-/* To give new joiners some context, we will get chunk of chat history
-(last 50 messages in this case) to display on connections */
+/*
+	To give new joiners some context, we will get chunk of chat history
+
+(last 50 messages in this case) to display on connections
+*/
 func GetHistory(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		file, err := os.Open("history.json")

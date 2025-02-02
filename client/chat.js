@@ -28,6 +28,30 @@ const chooseUsername = () => {
   return username;
 };
 
+const styleText = (command) => {
+  let property;
+  switch (command) {
+    case "bold":
+      property = "fontWeight";
+      currentMessageStyle = "bold";
+      break;
+    case "italic":
+      property = "fontStyle";
+      currentMessageStyle = "italic";
+      break;
+    case "underline":
+      property = "textDecoration";
+      currentMessageStyle = "underline";
+      break;
+    case "line-through":
+      console.log("strikethrough");
+      property = "textDecoration";
+      currentMessageStyle = "line-through";
+      break;
+  }
+  return property;
+};
+
 const signIn = () => {
   const username = document.getElementById("username-input").value.trim();
   if (username) {
@@ -45,8 +69,10 @@ ws.onmessage = (event) => {
   const msg = JSON.parse(event.data);
   const historyDiv = document.getElementById("messages");
   const p = document.createElement("p");
-  styleText(msg.style);
+  const property = styleText(msg.style);
   p.style.color = currentMessageColor;
+  p.style[property] = currentMessageStyle;
+  // console.log("p>>>>>", p);
   p.textContent = `${msg.username}: ${msg.message}`;
   historyDiv.appendChild(p);
   historyDiv.scrollTop = historyDiv.scrollHeight;
@@ -67,7 +93,8 @@ ws.onopen = async () => {
     p.style.margin = "0";
     p.padding = "0";
     p.style.color = msgObj.colour;
-    styleText(msgObj.style);
+    const property = styleText(msgObj.style);
+    p.style[property] = currentMessageStyle;
     p.textContent = `${msgObj.username}: ${msgObj.message}`;
     historyDiv.appendChild(p);
   });
@@ -80,6 +107,7 @@ const sendMessage = (event) => {
   if (!username) {
     username = chooseUsername();
   }
+  console.log("currentMessageStyle,", currentMessageStyle);
   ws.send(
     JSON.stringify({
       username: username,
@@ -104,6 +132,7 @@ const displayMessages = (event) => {
 };
 
 submit.addEventListener("submit", sendMessage);
+
 function formatText(command) {
   const selection = window.getSelection();
   if (!selection.rangeCount) return;
@@ -111,6 +140,7 @@ function formatText(command) {
   const message = document.getElementById("message");
   const property = styleText(command);
   message.style[property] = currentMessageStyle;
+  message.style[property].currentMessageStyle;
   range.surroundContents(message);
 }
 
@@ -132,26 +162,3 @@ colorPicker.addEventListener("input", (event) => {
   currentMessageColor = event.target.value;
   range.surroundContents(message);
 });
-
-const styleText = (command) => {
-  let property;
-  switch (command) {
-    case "bold":
-      property = "fontWeight";
-      currentMessageStyle = "bold";
-      break;
-    case "italic":
-      property = "fontStyle";
-      currentMessageStyle = "italic";
-      break;
-    case "underline":
-      property = "textDecoration";
-      currentMessageStyle = "underline";
-      break;
-    case "strikethrough":
-      property = "textDecoration";
-      currentMessageStyle = "line-through";
-      break;
-  }
-  return property;
-};

@@ -144,6 +144,11 @@ textarea {
   margin: 0;
 }
 
+#send-message {
+  width: 100px;
+  height: 45px;
+}
+
 #message-controls {
   display: flex;
   flex-direction: column;

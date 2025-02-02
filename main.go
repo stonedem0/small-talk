@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"sync"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -18,14 +16,14 @@ import (
 	"github.com/stonedem0/small-talk/history"
 )
 
-var ctx = context.Background() // you can also pass contexts around as needed
+var ctx = context.Background()
 
 var rdb *redis.Client
 
 func initRedis() {
 	rdb = redis.NewClient(&redis.Options{
 		Addr:     "127.0.0.1:6379",
-		Password: "",
+		Password: "cCq!qRG7iMdZKdUg_r*kY",
 		DB:       0,
 	})
 	if err := rdb.Ping(ctx).Err(); err != nil {
@@ -42,8 +40,6 @@ var (
 	broadcast = make(chan Message)
 	upgrader  = websocket.Upgrader{}
 	port      = flag.String("port", "80", "provide port number")
-	mu        sync.Mutex
-	file, _   = os.OpenFile("history.json", os.O_WRONLY|os.O_APPEND|os.O_RDONLY, 0644)
 )
 
 type Message struct {
@@ -53,7 +49,7 @@ type Message struct {
 	Style    string `json:"style"`
 }
 
-// Handelling WS confections on the infinity loop
+// handling WS confections on the infinity loop
 func handleConnections(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	clients[ws] = true
@@ -70,12 +66,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		broadcast <- msg
-		// err = json.NewEncoder(file).Encode(msg)
-		// if err != nil {
-		// 	log.Printf("error while encoding JSON: %v", err)
-		// 	break
-		// }
-
 		msgBytes, _ := json.Marshal(msg)
 		if err := rdb.LPush(ctx, "chat_history", msgBytes).Err(); err != nil {
 			log.Printf("Redis LPUSH error: %v", err)
@@ -84,17 +74,15 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Redis LTRIM error: %v", err)
 		}
 	}
-	// history.SaveHistory(history.Message(msg))
 
 }
 
-// Processing messages
+// processing messages
 func handleMessages() {
 	for {
 		msg := <-broadcast
 		for client := range clients {
 			err := client.WriteJSON(msg)
-			// err := SaveHistory(msg)
 			if err != nil {
 				log.Printf("error while writing JSON: %v", err)
 				client.Close()
@@ -106,7 +94,7 @@ func handleMessages() {
 
 }
 
-// Implanatation for scheduled job
+// implanatation for scheduled job
 func doEvery(d time.Duration, f func(time.Time)) {
 	for x := range time.Tick(d) {
 		f(x)
@@ -120,7 +108,6 @@ func main() {
 	fs := http.FileServer(http.Dir("./client"))
 	http.Handle("/", fs)
 	http.HandleFunc("/ws", handleConnections)
-	// http.HandleFunc("/history", history.GetHistory)
 	http.HandleFunc("/history", func(w http.ResponseWriter, r *http.Request) {
 		getHistoryRedis(w, r)
 	})
@@ -148,7 +135,6 @@ func getHistoryRedis(w http.ResponseWriter, r *http.Request) {
 			messages = append(messages, m)
 		}
 	}
-	fmt.Printf("msgBytesArray: %v\n", messages)
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(messages); err != nil {
 		log.Printf("Response encode error: %v", err)
