@@ -1,0 +1,19 @@
+:root {
+  --deep-purple: #4a00f7;
+}
+
+html,
+body {
+  height: 100%; /* Ensures full height coverage */
+  margin: 0;
+  padding: 0;
+  background-color: #ffc1cc; /* Pink background */
+  font-family: "Trebuchet MS";
+  font-size: 15px;
+}
+
+#main-container {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 15px;
+}

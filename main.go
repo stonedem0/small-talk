@@ -18,8 +18,8 @@ var ctx = context.Background()
 var (
 	clients   = make(map[*websocket.Conn]bool)
 	broadcast = make(chan Message)
-	upgrader  = websocket.Upgrader{}
-	port      = flag.String("port", "8080", "provide port number")
+	// upgrader  = websocket.Upgrader{}
+	port = flag.String("port", "8080", "provide port number")
 )
 
 type Message struct {
@@ -27,6 +27,12 @@ type Message struct {
 	Message  string `json:"message"`
 	Colour   string `json:"colour"`
 	Style    string `json:"style"`
+}
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true // Allow all origins (for dev mode)
+	},
 }
 
 // handling WS confections on the infinity loop
@@ -89,7 +95,7 @@ func main() {
 	http.Handle("/", fs)
 	http.HandleFunc("/ws", handleConnections)
 	http.HandleFunc("/history", func(w http.ResponseWriter, r *http.Request) {
-		getHistoryRedis(w, r)
+		getChatHistory(w, r)
 	})
 	http.HandleFunc("/subscribe", SubscribeToRoomHandler)
 	// go doEvery(5*time.Second, history.ClearHistory)
@@ -101,23 +107,53 @@ func main() {
 	}
 }
 
-func getHistoryRedis(w http.ResponseWriter, r *http.Request) {
-	msgBytesArray, err := RDB.LRange(ctx, "chat_history", 0, 50).Result()
-	if err != nil {
-		http.Error(w, "Redis LRange error: "+err.Error(), http.StatusInternalServerError)
+// func getHistoryRedis(w http.ResponseWriter, r *http.Request) {
+// 	msgBytesArray, err := RDB.LRange(ctx, "chat_history", 0, 50).Result()
+// 	if err != nil {
+// 		http.Error(w, "Redis LRange error: "+err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	messages := make([]Message, 0, len(msgBytesArray))
+
+//		for _, msgStr := range msgBytesArray {
+//			var m Message
+//			if err := json.Unmarshal([]byte(msgStr), &m); err == nil {
+//				messages = append(messages, m)
+//			}
+//		}
+//		w.Header().Set("Content-Type", "application/json")
+//		if err := json.NewEncoder(w).Encode(messages); err != nil {
+//			log.Printf("Response encode error: %v", err)
+//		}
+//	}
+func getChatHistory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	messages := make([]Message, 0, len(msgBytesArray))
+	messages, err := RDB.LRange(ctx, "chat_history", 0, 99).Result()
+	if err != nil {
+		log.Printf("❌ Error fetching chat history from Redis: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 
-	for _, msgStr := range msgBytesArray {
+	var history []Message
+	for _, msg := range messages {
 		var m Message
-		if err := json.Unmarshal([]byte(msgStr), &m); err == nil {
-			messages = append(messages, m)
+		if err := json.Unmarshal([]byte(msg), &m); err != nil {
+			log.Printf("❌ JSON Unmarshal Error: %v", err)
+			continue
 		}
+		history = append(history, m)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(messages); err != nil {
-		log.Printf("Response encode error: %v", err)
-	}
+
+	json.NewEncoder(w).Encode(history)
 }

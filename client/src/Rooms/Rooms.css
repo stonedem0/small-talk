@@ -1,0 +1,39 @@
+#rooms-container {
+  display: flex;
+  flex-direction: column;
+  width: 250px;
+  background-color: white;
+  border: 5px solid var(--deep-purple);
+}
+
+.rooms-header {
+  background-color: var(--deep-purple);
+  color: white;
+  padding: 10px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.rooms-list {
+  list-style-type: none;
+  padding: 10px;
+  margin: 0;
+}
+
+.room-item {
+  margin: 5px 0;
+}
+
+.room-item button {
+  width: 100%;
+  background: var(--deep-purple);
+  color: white;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.room-item button:hover {
+  background: #3600b7;
+}
