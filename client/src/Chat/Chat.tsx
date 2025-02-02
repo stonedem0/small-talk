@@ -23,7 +23,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
         if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
         const data: Message[] = await response.json();
-        console.log("📜 Loaded chat history:", data);
+        // console.log("📜 Loaded chat history:", data);
         setMessages(data.reverse()); // ✅ Reverse order so oldest messages appear first
       } catch (error) {
         console.error("❌ Error fetching chat history:", error);
@@ -90,7 +90,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
         message: message.trim(),
       };
 
-      console.log("📨 Sending:", msgObject);
+      // console.log("📨 Sending:", msgObject);
       ws.current.send(JSON.stringify(msgObject));
       setMessage("");
     } else {
@@ -104,15 +104,10 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  console.log(
-    "📦 Chat messages:",
-    messages.map((msg) => msg.message)
-  );
-
   return (
     <div id="chat-container">
       <div className="chat-header">
-        <span className="chat-name">Chat</span>
+        <span className="chat-name">main chat</span>
       </div>
       <div id="messages">
         {messages.map((msg, index) => (

@@ -14,12 +14,14 @@ const rooms: Room[] = [
 const openChatWindow = (roomName: string) => {
   fetch(`/subscribe?room=${roomName}`, { method: "POST" })
     .then(() => {
-      window.location.href = `/?room=${roomName}`;
+      //   window.location.href = `/?room=${roomName}`;
+      console.log("🚪 Opening chat window for room:", roomName);
     })
     .catch((error) => console.error("Error:", error));
 };
 
 const Rooms: React.FC = () => {
+  console.log("🚪 Opening chat window for room:");
   return (
     <div id="rooms-container">
       <div className="rooms-header">
@@ -28,7 +30,14 @@ const Rooms: React.FC = () => {
       <ul className="rooms-list">
         {rooms.map((room, index) => (
           <li key={index} className="room-item">
-            <button onClick={() => openChatWindow(room.name)}>{room.name}</button>
+            <button
+              onClick={() => {
+                console.log("🚪 Opening chat window for room:", room.name);
+                openChatWindow(room.name);
+              }}
+            >
+              {room.name}
+            </button>
           </li>
         ))}
       </ul>
