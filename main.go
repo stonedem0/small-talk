@@ -179,6 +179,40 @@ func getRooms(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rooms)
 }
 
+func subscribeToRoomHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	println("subscribeToRoomHandler")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	room := r.URL.Query().Get("room")
+	if room == "" {
+		http.Error(w, "Room parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	clientsLock.Lock()
+	_, exists := clients[room]
+	clientsLock.Unlock()
+
+	if !exists {
+		http.Error(w, "Room does not exist", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Subscribed successfully"))
+}
+
 func main() {
 	flag.Parse()
 	InitRedis()
@@ -186,6 +220,7 @@ func main() {
 	http.HandleFunc("/ws", handleConnections)
 	http.HandleFunc("/history", getChatHistory)
 	http.HandleFunc("/rooms", getRooms)
+	http.HandleFunc("/subscribe", subscribeToRoomHandler)
 
 	log.Println("Server started on port", p)
 	err := http.ListenAndServe(p, nil)
