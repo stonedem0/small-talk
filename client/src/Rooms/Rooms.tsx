@@ -18,6 +18,7 @@ const Rooms: React.FC = () => {
 
   return (
     <div id="chat-app">
+      <Chat roomName={selectedRoom} username="Anonymous" />
       <div id="rooms-container">
         <div className="rooms-header">
           <div className="rooms-title">
@@ -39,11 +40,6 @@ const Rooms: React.FC = () => {
             </li>
           ))}
         </ul>
-      </div>
-
-      {/* Always render Chat, but update the room dynamically */}
-      <div id="chat-container">
-        <Chat roomName={selectedRoom} username="Anonymous" />
       </div>
     </div>
   );

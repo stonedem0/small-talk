@@ -37,3 +37,8 @@
 .room-item button:hover {
   background: #3600b7;
 }
+
+#chat-app {
+  display: flex;
+  gap: 15px;
+}

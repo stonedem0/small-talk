@@ -88,6 +88,8 @@ const Chat: React.FC<ChatProps> = ({ username, roomName }) => {
       message: message.trim(),
     };
 
+    console.log("📤 Sending message:", msgObject);
+
     ws.current.send(JSON.stringify(msgObject));
     setMessage("");
   };
@@ -98,36 +100,32 @@ const Chat: React.FC<ChatProps> = ({ username, roomName }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const room = roomName ? roomName : "general";
   return (
     <div id="chat-container">
-      {roomName ? (
-        <>
-          <div className="chat-header">
-            <span className="chat-name">{roomName}</span>
-          </div>
-          <div id="messages">
-            {messages.map((msg, index) => (
-              <p key={index}>
-                <strong>{msg.username}:</strong> {msg.message}
-              </p>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-          <form onSubmit={sendMessage} id="message-controls">
-            <input
-              type="text"
-              placeholder="Message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              disabled={!isConnected}
-            />
-            <input type="submit" value="Send" disabled={!isConnected} />
-          </form>
-        </>
-      ) : (
-        // 🔥 Make sure this is inside the main div so it does NOT cause extra renders
-        <p className="chat-placeholder">Select a room to start chatting.</p>
-      )}
+      <>
+        <div className="chat-header">
+          <span className="chat-name">{room}</span>
+        </div>
+        <div id="messages">
+          {messages.map((msg, index) => (
+            <p key={index}>
+              <strong>{msg.username}:</strong> {msg.message}
+            </p>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+        <form onSubmit={sendMessage} id="message-controls">
+          <input
+            type="text"
+            placeholder="Message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            disabled={!isConnected}
+          />
+          <input type="submit" value="Send" disabled={!isConnected} />
+        </form>
+      </>
     </div>
   );
 };
