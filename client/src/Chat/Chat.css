@@ -69,12 +69,14 @@
 }
 
 #message-controls input[type="text"] {
+  width: 500px;
   padding: 10px;
   border: none;
   border-radius: 5px;
 }
 
 #send-message {
+  width: 100px;
   background-color: var(--deep-purple);
   color: white;
   border: none;
