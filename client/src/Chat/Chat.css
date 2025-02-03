@@ -11,11 +11,17 @@
 .chat-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   height: 29px;
   background-color: var(--deep-purple);
   color: white;
   padding: 5px 10px;
   font-weight: bold;
+}
+
+.header-controls {
+  display: flex;
+  gap: 10px;
 }
 
 #messages {

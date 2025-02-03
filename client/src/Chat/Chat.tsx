@@ -109,6 +109,28 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
         <>
           <div className="chat-header">
             <span className="chat-name">{roomName}</span>
+            <div className="header-controls">
+              <button
+                id="leave-room"
+                onClick={() => {
+                  navigate("/");
+                }}
+              >
+                leave room
+              </button>
+              <button
+                id="change-username"
+                onClick={() => {
+                  const newUsername = prompt("Enter your new username:");
+                  if (newUsername) {
+                    localStorage.setItem("username", newUsername);
+                    window.location.reload();
+                  }
+                }}
+              >
+                change username
+              </button>
+            </div>
           </div>
           <div id="messages">
             {messages.map((msg, index) => (
