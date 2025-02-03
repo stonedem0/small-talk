@@ -5,6 +5,7 @@
   width: 770px;
   background-color: aliceblue;
   border: 5px solid var(--deep-purple);
+  border-radius: 6px;
   color: black;
 }
 
@@ -12,16 +13,27 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 29px;
+  height: 21px;
   background-color: var(--deep-purple);
   color: white;
   padding: 5px 10px;
   font-weight: bold;
 }
 
-.header-controls {
+.chat-menu {
   display: flex;
   gap: 10px;
+  height: 36px;
+  border-bottom: 1px solid grey;
+}
+
+.menu-button {
+  background-color: white;
+  color: black;
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+  border-radius: 5px;
 }
 
 #messages {

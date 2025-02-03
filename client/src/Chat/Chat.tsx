@@ -30,12 +30,11 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
           throw new Error(`HTTP error! Status: ${response.status}`);
         const data: string[] = await response.json();
         setValidRooms(data);
-
         if (data.includes(roomName || "")) {
           setIsValidRoom(true);
         } else {
           console.warn("🚫 Invalid room:", roomName);
-          navigate("/"); // Redirect to home if the room doesn't exist
+          navigate("/");
         }
       } catch (error) {
         console.error("❌ Error fetching rooms:", error);
@@ -109,28 +108,30 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
         <>
           <div className="chat-header">
             <span className="chat-name">{roomName}</span>
-            <div className="header-controls">
-              <button
-                id="leave-room"
-                onClick={() => {
-                  navigate("/");
-                }}
-              >
-                leave room
-              </button>
-              <button
-                id="change-username"
-                onClick={() => {
-                  const newUsername = prompt("Enter your new username:");
-                  if (newUsername) {
-                    localStorage.setItem("username", newUsername);
-                    window.location.reload();
-                  }
-                }}
-              >
-                change username
-              </button>
-            </div>
+          </div>
+          <div className="chat-menu">
+            <button
+              id="leave-room"
+              className="menu-button"
+              onClick={() => {
+                navigate("/");
+              }}
+            >
+              Leave room
+            </button>
+            <button
+              id="change-username"
+              className="menu-button"
+              onClick={() => {
+                const newUsername = prompt("Enter your new username:");
+                if (newUsername) {
+                  localStorage.setItem("username", newUsername);
+                  window.location.reload();
+                }
+              }}
+            >
+              Change username
+            </button>
           </div>
           <div id="messages">
             {messages.map((msg, index) => (
