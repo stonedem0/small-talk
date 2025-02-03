@@ -139,7 +139,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
           </form>
         </>
       ) : (
-        <p>Checking room validity...</p> // This shows briefly before redirecting
+        <p>Loading the room...</p>
       )}
     </div>
   );
