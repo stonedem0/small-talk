@@ -14,8 +14,10 @@ const Rooms: React.FC<RoomsProps> = ({ username }) => {
     fetch("http://localhost:8080/rooms")
       .then((response) => response.json())
       .then((data) => {
-        console.log("Setting rooms:", data);
-        setRooms([...data]);
+        const sortedData = data.sort((a: string, b: string) =>
+          a.toLowerCase() > b.toLowerCase() ? 1 : -1
+        );
+        setRooms([...sortedData]);
       })
       .catch((error) => console.error("Fetch error:", error));
   }, []);
