@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
+import Spinner from "../Spinner/Spinner";
 
 interface ChatProps {
   username: string;
@@ -12,10 +13,11 @@ interface Message {
 }
 
 const Chat: React.FC<ChatProps> = ({ username }) => {
-  const { roomName } = useParams<{ roomName: string }>(); // Read from URL
-  const navigate = useNavigate(); // For redirecting invalid rooms
+  const { roomName } = useParams<{ roomName: string }>();
+  const navigate = useNavigate();
   const [validRooms, setValidRooms] = useState<string[]>([]);
   const [isValidRoom, setIsValidRoom] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -38,6 +40,8 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
         }
       } catch (error) {
         console.error("❌ Error fetching rooms:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -45,7 +49,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
   }, [roomName, navigate]);
 
   useEffect(() => {
-    if (!isValidRoom || !roomName) return;
+    if (!isValidRoom) return;
 
     const fetchHistory = async () => {
       try {
@@ -55,63 +59,50 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
         if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
         const data: Message[] = await response.json();
-        setMessages(data.reverse());
+        setMessages(data.reverse()); // Reverse order so oldest messages appear first
       } catch (error) {
-        console.error("❌ Error fetching chat history:", error);
+        console.error("Failed to fetch chat history:", error);
       }
     };
 
     fetchHistory();
 
-    if (ws.current) {
-      ws.current.close();
-    }
-
-    console.log("🔌 Connecting WebSocket for room:", roomName);
     ws.current = new WebSocket(`ws://localhost:8080/ws?room=${roomName}`);
-
     ws.current.onopen = () => {
-      console.log("✅ WebSocket connected");
       setIsConnected(true);
     };
-
-    ws.current.onmessage = (event: MessageEvent) => {
-      const msg: Message = JSON.parse(event.data);
-      setMessages((prev) => [...prev, msg]);
+    ws.current.onmessage = (event) => {
+      const newMessage: Message = JSON.parse(event.data);
+      setMessages((prevMessages) => [newMessage, ...prevMessages]);
     };
-
-    ws.current.onerror = (error) => {
-      console.error("❌ WebSocket Error:", error);
-    };
-
     ws.current.onclose = () => {
-      console.warn("⚠️ WebSocket closed");
       setIsConnected(false);
     };
 
     return () => {
-      ws.current?.close();
-      ws.current = null;
+      if (ws.current) {
+        ws.current.close();
+      }
     };
-  }, [isValidRoom, roomName]);
+  }, [roomName, isValidRoom]);
 
-  const sendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (
-      !message.trim() ||
-      !ws.current ||
-      ws.current.readyState !== WebSocket.OPEN
-    ) {
-      console.warn(
-        "⚠️ Cannot send message: WebSocket is not connected or message is empty."
-      );
-      return;
+  const sendMessage = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (ws.current && message.trim()) {
+      ws.current.send(JSON.stringify({ username, message }));
+      setMessage("");
     }
-
-    const msgObject = { username, message: message.trim() };
-    ws.current.send(JSON.stringify(msgObject));
-    setMessage("");
   };
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  if (isLoading) {
+    return <Spinner />;
+  }
 
   return (
     <div id="chat-container">
@@ -126,20 +117,23 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
                 <strong>{msg.username}:</strong> {msg.message}
               </p>
             ))}
+            <div ref={messagesEndRef} />
           </div>
-          <form onSubmit={sendMessage} id="message-controls">
-            <input
-              type="text"
-              placeholder="Message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              disabled={!isConnected}
-            />
-            <input type="submit" value="Send" disabled={!isConnected} />
-          </form>
+          <div id="message-controls">
+            <form onSubmit={sendMessage} id="submit">
+              <input
+                placeholder="message"
+                type="text"
+                id="message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+              <input type="submit" value="send" id="send-message" />
+            </form>
+          </div>
         </>
       ) : (
-        <p>Loading the room...</p>
+        <Spinner />
       )}
     </div>
   );
