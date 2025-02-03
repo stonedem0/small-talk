@@ -28,12 +28,23 @@
 }
 
 .menu-button {
-  background-color: white;
   color: black;
   border: none;
-  padding: 5px;
   cursor: pointer;
-  border-radius: 5px;
+}
+
+#leave-room {
+  background-image: url("../assets/leave.png");
+  background-size: 22px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+#change-username {
+  background-image: url("../assets/edit.png");
+  background-size: 22px;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 #messages {

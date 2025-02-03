@@ -113,15 +113,15 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
             <button
               id="leave-room"
               className="menu-button"
+              title="Leave room"
               onClick={() => {
                 navigate("/");
               }}
-            >
-              Leave room
-            </button>
+            ></button>
             <button
               id="change-username"
               className="menu-button"
+              title="Change username"
               onClick={() => {
                 const newUsername = prompt("Enter your new username:");
                 if (newUsername) {
@@ -129,9 +129,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
                   window.location.reload();
                 }
               }}
-            >
-              Change username
-            </button>
+            ></button>
           </div>
           <div id="messages">
             {messages.map((msg, index) => (
