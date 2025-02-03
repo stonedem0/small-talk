@@ -3,7 +3,7 @@
   flex-direction: column;
   justify-content: space-between;
   width: 770px;
-  background-color: aliceblue;
+  background-color: white;
   border: 5px solid var(--deep-purple);
   border-radius: 6px;
   color: black;
@@ -29,8 +29,13 @@
 
 .menu-button {
   color: black;
+  background: white;
   border: none;
   cursor: pointer;
+}
+
+.menu-button:focus {
+  outline: none;
 }
 
 #leave-room {
