@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
 
 interface ChatProps {
@@ -13,13 +13,39 @@ interface Message {
 
 const Chat: React.FC<ChatProps> = ({ username }) => {
   const { roomName } = useParams<{ roomName: string }>(); // Read from URL
+  const navigate = useNavigate(); // For redirecting invalid rooms
+  const [validRooms, setValidRooms] = useState<string[]>([]);
+  const [isValidRoom, setIsValidRoom] = useState<boolean>(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    if (!roomName) return;
+    const fetchRooms = async () => {
+      try {
+        const response = await fetch("http://localhost:8080/rooms");
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        const data: string[] = await response.json();
+        setValidRooms(data);
+
+        if (data.includes(roomName || "")) {
+          setIsValidRoom(true);
+        } else {
+          console.warn("🚫 Invalid room:", roomName);
+          navigate("/"); // Redirect to home if the room doesn't exist
+        }
+      } catch (error) {
+        console.error("❌ Error fetching rooms:", error);
+      }
+    };
+
+    fetchRooms();
+  }, [roomName, navigate]);
+
+  useEffect(() => {
+    if (!isValidRoom || !roomName) return;
 
     const fetchHistory = async () => {
       try {
@@ -67,11 +93,10 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
       ws.current?.close();
       ws.current = null;
     };
-  }, [roomName]);
+  }, [isValidRoom, roomName]);
 
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (
       !message.trim() ||
       !ws.current ||
@@ -90,7 +115,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
 
   return (
     <div id="chat-container">
-      {roomName ? (
+      {isValidRoom ? (
         <>
           <div className="chat-header">
             <span className="chat-name">{roomName}</span>
@@ -114,7 +139,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
           </form>
         </>
       ) : (
-        <p>Invalid room.</p>
+        <p>Checking room validity...</p> // This shows briefly before redirecting
       )}
     </div>
   );
