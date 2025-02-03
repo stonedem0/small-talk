@@ -12,9 +12,9 @@ import (
 )
 
 func init() {
-	clients["general"] = make(map[*websocket.Conn]*sync.Mutex)
-	clients["random"] = make(map[*websocket.Conn]*sync.Mutex)
-	clients["gaming"] = make(map[*websocket.Conn]*sync.Mutex)
+	clients["backrooms"] = make(map[*websocket.Conn]*sync.Mutex)
+	clients["political"] = make(map[*websocket.Conn]*sync.Mutex)
+	clients["overwatch is dead"] = make(map[*websocket.Conn]*sync.Mutex)
 }
 
 var ctx = context.Background()

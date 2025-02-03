@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
-import Spinner from "../Spinner/Spinner";
 
 interface ChatProps {
   username: string;
@@ -59,7 +58,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
         if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
         const data: Message[] = await response.json();
-        setMessages(data.reverse()); // Reverse order so oldest messages appear first
+        setMessages(data.reverse()); // Do not reverse the order
       } catch (error) {
         console.error("Failed to fetch chat history:", error);
       }
@@ -73,7 +72,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
     };
     ws.current.onmessage = (event) => {
       const newMessage: Message = JSON.parse(event.data);
-      setMessages((prevMessages) => [newMessage, ...prevMessages]);
+      setMessages((prevMessages) => [...prevMessages, newMessage]); // Add new messages to the end
     };
     ws.current.onclose = () => {
       setIsConnected(false);
@@ -101,7 +100,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
   }, [messages]);
 
   if (isLoading) {
-    return <Spinner />;
+    return <div className="spinner"></div>;
   }
 
   return (
@@ -133,7 +132,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
           </div>
         </>
       ) : (
-        <Spinner />
+        <div>Invalid room</div>
       )}
     </div>
   );
