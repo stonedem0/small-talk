@@ -108,6 +108,11 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
         <>
           <div className="chat-header">
             <span className="chat-name">{roomName}</span>
+            <div className="header-controls">
+              <button className="minimize"></button>
+              <button className="fullscreen"></button>
+              <button className="close"></button>
+            </div>
           </div>
           <div className="chat-menu">
             <button

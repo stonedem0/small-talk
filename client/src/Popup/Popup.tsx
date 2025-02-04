@@ -21,8 +21,11 @@ const Popup: React.FC<PopupProps> = ({ setUsername }) => {
     <div id="popup-overlay">
       <div id="popup">
         <h2>Pick a username</h2>
-        <label>Username:</label>
-        <input type="text" value={input} onChange={(e) => setInput(e.target.value)} />
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+        />
         <br />
         <button onClick={signIn}>Let me in</button>
       </div>
