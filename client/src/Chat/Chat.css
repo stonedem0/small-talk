@@ -4,9 +4,17 @@
   justify-content: space-between;
   width: 770px;
   background-color: white;
-  border: 5px solid var(--deep-purple);
+  /* border: 5px solid var(--deep-purple); */
+  border-top: none;
   border-radius: 6px;
   color: black;
+}
+
+.chat-room {
+  background-color: var(--deep-purple);
+  border-radius: 5px 5px 5px 5px;
+  box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .chat-header {
@@ -14,18 +22,26 @@
   width: 100%;
   justify-content: space-between;
   align-items: flex-end;
-  height: 21px;
+  height: 26px;
   background-color: var(--deep-purple);
   color: white;
   padding: 5px 0px;
   font-weight: bold;
+  box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+  border-radius: 5px 5px 0 0;
+}
+
+.chat-name {
+  margin-left: 7px;
 }
 
 .header-controls {
   display: grid;
-  grid-template-columns: repeat(3, 26px);
-  height: 26px;
-  margin-left: 10px;
+  gap: 2px;
+  grid-template-columns: repeat(3, 25px);
+  height: 25px;
+  margin-right: 7px;
 }
 
 .header-controls button {
@@ -127,13 +143,16 @@
   display: flex;
   gap: 10px;
   height: 36px;
+  margin-left: 5px;
+  margin-right: 5px;
+  background-color: white;
   border-bottom: 1px solid grey;
 }
 
 .menu-button {
   width: 36px;
   color: black;
-  background: white;
+  background: transparent;
   border: none;
   cursor: pointer;
 }
@@ -157,6 +176,8 @@
 }
 
 #messages {
+  margin: 0px 5px 5px 5px;
+  background-color: white;
   padding: 10px;
   max-height: 430px;
   min-height: 430px;
@@ -171,7 +192,9 @@
 #message-controls {
   display: flex;
   flex-direction: column;
-  border-top: 5px solid var(--deep-purple);
+  margin: 0px 5px 5px 5px;
+  /* border-top: 5px solid var(--deep-purple); */
+  background-color: white;
   padding: 10px;
 }
 

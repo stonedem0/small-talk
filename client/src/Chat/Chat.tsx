@@ -105,7 +105,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
   return (
     <div id="chat-container">
       {isValidRoom ? (
-        <>
+        <div className="chat-room">
           <div className="chat-header">
             <span className="chat-name">{roomName}</span>
             <div className="header-controls">
@@ -156,7 +156,8 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
               <input type="submit" value="send" id="send-message" />
             </form>
           </div>
-        </>
+          {/* </> */}
+        </div>
       ) : (
         <div>Invalid room</div>
       )}
