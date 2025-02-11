@@ -24,7 +24,7 @@ var (
 	clientsLock   = sync.Mutex{}                                     // Protects access to the clients map
 	subscriptions = make(map[string]bool)                            // Track active subscriptions per room
 	subLock       = sync.Mutex{}
-	port          = flag.String("port", "8080", "provide port number")
+	port          = "8080"
 )
 
 type Message struct {
@@ -121,107 +121,15 @@ func subscribeToRoom(room string) {
 	}
 }
 
-func getChatHistory(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	room := r.URL.Query().Get("room")
-	if room == "" {
-		http.Error(w, "Room parameter is required", http.StatusBadRequest)
-		return
-	}
-
-	messages, err := RDB.LRange(ctx, "chat_history:"+room, 0, 99).Result()
-	if err != nil {
-		log.Printf("Error fetching chat history from Redis: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	var history []Message
-	for _, msg := range messages {
-		var m Message
-		if err := json.Unmarshal([]byte(msg), &m); err != nil {
-			log.Printf("JSON Unmarshal Error: %v", err)
-			continue
-		}
-		history = append(history, m)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(history)
-}
-
-func getRooms(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	clientsLock.Lock()
-	rooms := make([]string, 0, len(clients))
-	for room := range clients {
-		rooms = append(rooms, room)
-	}
-	clientsLock.Unlock()
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(rooms)
-}
-
-func subscribeToRoomHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if r.Method != "POST" {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-
-	room := r.URL.Query().Get("room")
-	if room == "" {
-		http.Error(w, "Room parameter is required", http.StatusBadRequest)
-		return
-	}
-
-	clientsLock.Lock()
-	_, exists := clients[room]
-	clientsLock.Unlock()
-
-	if !exists {
-		http.Error(w, "Room does not exist", http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Subscribed successfully"))
-}
-
 func main() {
 	flag.Parse()
 	InitRedis()
-	p := ":" + *port
+	p := ":" + port
 	http.HandleFunc("/ws", handleConnections)
-	http.HandleFunc("/history", getChatHistory)
-	http.HandleFunc("/rooms", getRooms)
+	http.HandleFunc("/history", getChatHistoryHandler)
+	http.HandleFunc("/rooms", getRoomsHandler)
 	http.HandleFunc("/subscribe", subscribeToRoomHandler)
-
-	log.Println("Server started on port", p)
+	log.Println("Server started on port", port)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
