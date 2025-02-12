@@ -25,3 +25,25 @@ server-prod:
 # Preview built React app in production
 client-prod:
   cd client && npm run preview
+
+# Deploy React client (dist folder) to EC2
+deploy-client:
+  just build
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/client'
+  scp -i $SSH_KEY -r client/dist/ ubuntu@$EC2_IP:/home/ubuntu/small-talk/client/
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'sudo systemctl restart react-client'
+
+# Deploy Go server to EC2
+deploy-server:
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/server'
+  scp -i $SSH_KEY -r server/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/server/
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/server && GO111MODULE=on /usr/local/go/bin/go build -o chat-server && sudo systemctl restart chat-server'
+
+# Deploy both frontend (dist) and backend simultaneously
+deploy:
+  just build
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/client /home/ubuntu/small-talk/server'
+  scp -i $SSH_KEY -r client/dist/ ubuntu@$EC2_IP:/home/ubuntu/small-talk/client/
+  scp -i $SSH_KEY -r server/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/server/
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/server && GO111MODULE=on /usr/local/go/bin/go build -o chat-server && sudo systemctl restart chat-server && sudo systemctl restart react-client'
+
