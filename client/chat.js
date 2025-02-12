@@ -103,7 +103,6 @@ ws.onopen = async () => {
 const sendMessage = (event) => {
   const message = document.getElementById("message").value;
   let username = localStorage.getItem("username");
-  console.log("username", username);
   if (!username) {
     username = chooseUsername();
   }
@@ -151,14 +150,34 @@ document.querySelectorAll(".format-btn").forEach((button) => {
   });
 });
 
-const colorPicker = document.getElementById("text-color-picker");
-colorPicker.addEventListener("input", (event) => {
-  const selection = window.getSelection();
-  if (!selection.rangeCount) return;
+// const colorPicker = document.getElementById("text-color-picker");
+// colorPicker.addEventListener("input", (event) => {
+//   const selection = window.getSelection();
+//   if (!selection.rangeCount) return;
 
-  const range = selection.getRangeAt(0);
-  const message = document.getElementById("message");
-  message.style.color = event.target.value;
-  currentMessageColor = event.target.value;
-  range.surroundContents(message);
-});
+//   const range = selection.getRangeAt(0);
+//   const message = document.getElementById("message");
+//   message.style.color = event.target.value;
+//   currentMessageColor = event.target.value;
+//   range.surroundContents(message);
+// });
+
+function openChatWindow(roomName) {
+  fetch(`/subscribe?room=${roomName}`, {
+    method: "POST",
+  })
+    .then((response) => response.text())
+    .then((data) => {
+      console.log(data);
+      const chatContainer = document.getElementById("chat-container");
+      chatContainer.innerHTML = "";
+      const iframe = document.createElement("iframe");
+      iframe.src = `/?room=${roomName}`;
+      iframe.width = "100%";
+      iframe.height = "500px";
+      chatContainer.appendChild(iframe);
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
+}
