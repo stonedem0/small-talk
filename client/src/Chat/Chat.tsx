@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
+import { API_URL, WS_URL } from "../config";
 
 interface ChatProps {
   username: string;
@@ -25,7 +26,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await fetch("http://localhost:8080/rooms");
+        const response = await fetch(`${API_URL}/rooms`);
         if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
         const data: string[] = await response.json();
@@ -33,7 +34,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
         if (data.includes(roomName || "")) {
           setIsValidRoom(true);
         } else {
-          console.warn("🚫 Invalid room:", roomName);
+          console.warn("🚫 Invalid room:", roomName, validRooms);
           navigate("/");
         }
       } catch (error) {
@@ -51,9 +52,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
 
     const fetchHistory = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:8080/history?room=${roomName}`
-        );
+        const response = await fetch(`${API_URL}/history?room=${roomName}`);
         if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
         const data: Message[] = await response.json();
@@ -65,9 +64,10 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
 
     fetchHistory();
 
-    ws.current = new WebSocket(`ws://localhost:8080/ws?room=${roomName}`);
+    ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}`);
     ws.current.onopen = () => {
       setIsConnected(true);
+      console.log(isConnected);
     };
     ws.current.onmessage = (event) => {
       const newMessage: Message = JSON.parse(event.data);

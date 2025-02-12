@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Rooms.css";
+import { API_URL } from "../config";
 
 interface RoomsProps {
   username: string;
 }
 
-const Rooms: React.FC<RoomsProps> = ({ username }) => {
+const Rooms: React.FC<RoomsProps> = () => {
   const [rooms, setRooms] = useState<string[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch("http://localhost:8080/rooms")
+    fetch(`${API_URL}/rooms`)
       .then((response) => response.json())
       .then((data) => {
         const sortedData = data.sort((a: string, b: string) =>
