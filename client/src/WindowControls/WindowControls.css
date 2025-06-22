@@ -3,7 +3,7 @@
     gap: 2px;
     grid-template-columns: repeat(3, 25px);
     height: 25px;
-    /* margin-right: 7px; */
+    margin-right: 7px;
   }
   
   .window-controls button {

@@ -31,7 +31,7 @@ const App: React.FC = () => {
       {username && (
         <>
           <div className="user-header">
-            <span className="username">Welcome, {username}!</span>
+            <span className="username">oh hai, {username}!</span>
             <button onClick={handleSignOut} className="sign-out-btn">
               Sign out
             </button>
