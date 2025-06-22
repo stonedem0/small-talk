@@ -44,20 +44,22 @@ const Popup: React.FC<PopupProps> = ({ setUsername }) => {
     <div id="popup-overlay">
       <div id="popup">
         <div className="popup-header">
-            <WindowControls 
-                onMinimize={handleMinimize}
-                onFullscreen={handleFullscreen}
-                onClose={handleClose}
-            />
+          <span className="popup-title">Pick a username</span>
+          <WindowControls
+            onMinimize={handleMinimize}
+            onFullscreen={handleFullscreen}
+            onClose={handleClose}
+          />
         </div>
-        <h2>Pick a username</h2>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <br />
-        <button onClick={signIn}>Let me in</button>
+        <div className="popup-body">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="username"
+          />
+          <button onClick={signIn}>Let me in</button>
+        </div>
       </div>
     </div>
   );
