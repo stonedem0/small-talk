@@ -20,17 +20,30 @@ const App: React.FC = () => {
     setUsername(name);
   };
 
+  const handleSignOut = () => {
+    localStorage.removeItem("username");
+    setUsername(null);
+  };
+
   return (
     <div id="main-container">
       {!username && <Popup setUsername={handleSetUsername} />}
       {username && (
-        <Routes>
-          {/* Home Page with Room List */}
-          <Route path="/" element={<Rooms username={username} />} />
+        <>
+          <div className="user-header">
+            <span className="username">Welcome, {username}!</span>
+            <button onClick={handleSignOut} className="sign-out-btn">
+              Sign out
+            </button>
+          </div>
+          <Routes>
+            {/* Home Page with Room List */}
+            <Route path="/" element={<Rooms username={username} />} />
 
-          {/* Dynamic Route for Chat Room */}
-          <Route path="/:roomName" element={<Chat username={username} />} />
-        </Routes>
+            {/* Dynamic Route for Chat Room */}
+            <Route path="/:roomName" element={<Chat username={username} />} />
+          </Routes>
+        </>
       )}
     </div>
   );
