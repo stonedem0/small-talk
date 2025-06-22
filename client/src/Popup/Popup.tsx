@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./Popup.css";
+import WindowControls from "../WindowControls/WindowControls";
 
 interface PopupProps {
   setUsername: (username: string) => void;
@@ -17,9 +18,38 @@ const Popup: React.FC<PopupProps> = ({ setUsername }) => {
     }
   };
 
+  const handleMinimize = () => {
+    console.log("Minimize clicked");
+  };
+
+  const handleFullscreen = () => {
+    console.log("Fullscreen clicked");
+    // if (!document.fullscreenElement) {
+    //   document.documentElement.requestFullscreen().catch(err => {
+    //     console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+    //   });
+    // } else {
+    //   document.exitFullscreen();
+    // }
+  };
+
+  const handleClose = () => {
+    console.log("Close clicked");
+    // In this context, there's nothing to "close", so we can leave this blank
+    // or maybe clear the input
+    // setInput("");
+  };
+
   return (
     <div id="popup-overlay">
       <div id="popup">
+        <div className="popup-header">
+            <WindowControls 
+                onMinimize={handleMinimize}
+                onFullscreen={handleFullscreen}
+                onClose={handleClose}
+            />
+        </div>
         <h2>Pick a username</h2>
         <input
           type="text"

@@ -37,10 +37,7 @@ const App: React.FC = () => {
             </button>
           </div>
           <Routes>
-            {/* Home Page with Room List */}
             <Route path="/" element={<Rooms username={username} />} />
-
-            {/* Dynamic Route for Chat Room */}
             <Route path="/:roomName" element={<Chat username={username} />} />
           </Routes>
         </>

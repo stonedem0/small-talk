@@ -15,6 +15,13 @@
   border-radius: 10px;
   text-align: center;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  width: 300px;
+}
+
+.popup-header {
+    display: flex;
+    justify-content: flex-end;
+    padding-bottom: 10px;
 }
 
 #popup input {
@@ -22,6 +29,7 @@
   background-color: #ffc1cc;
   padding: 5px;
   margin: 10px 0;
+  width: 80%;
 }
 
 #popup button {
