@@ -30,7 +30,6 @@
   box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
     0 2px 4px rgba(0, 0, 0, 0.2);
   border-radius: 5px 5px 0 0;
-  padding-right: 7px;
 }
 
 .popup-title {
@@ -55,17 +54,3 @@
   border-radius: 5px;
 }
 
-/* #popup button {
-  background-color: var(--deep-purple);
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  cursor: pointer;
-  border-radius: 5px;
-  width: calc(80% + 20px);
-  margin-top: 10px;
-}
-
-#popup button:hover {
-  background-color: #3600b7;
-} */
