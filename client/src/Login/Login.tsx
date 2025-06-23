@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "./Login.css";
 import WindowControls from "../WindowControls/WindowControls";
 import PrimaryButton from "../components/PrimaryButton";
+import logo from "../assets/fella.png"; 
 
 interface PopupProps {
   setUsername: (username: string) => void;
@@ -53,6 +54,9 @@ const Popup: React.FC<PopupProps> = ({ setUsername }) => {
           />
         </div>
         <div className="popup-body">
+          <div className="icon">
+            <img src={logo} alt="logo" />
+          </div>
           <div className="input-group">
             <label htmlFor="username-input" className="form-label">
               Username:
@@ -65,8 +69,7 @@ const Popup: React.FC<PopupProps> = ({ setUsername }) => {
               onChange={(e) => setInput(e.target.value)}
             />
           </div>
-          {/* <button onClick={signIn}>Let me in</button> */}
-          <PrimaryButton onClick={signIn}>Let me in</PrimaryButton>
+          <PrimaryButton onClick={signIn}>Log In</PrimaryButton>
         </div>
       </div>
     </div>
