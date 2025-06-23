@@ -1,4 +1,4 @@
-#popup-overlay {
+#login-overlay {
   background-color: #ffc1cc;
   display: flex;
   justify-content: center;
@@ -9,7 +9,7 @@
   height: 100%;
 }
 
-#popup {
+#login-container {
   background-color: var(--deep-purple);
   border-radius: 5px;
   box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
@@ -17,7 +17,7 @@
   width: 350px;
 }
 
-.popup-header {
+.login-header {
   display: flex;
   /* width: 100%; */
   justify-content: space-between;
@@ -32,13 +32,13 @@
   border-radius: 5px 5px 0 0;
 }
 
-.popup-title {
+.login-title {
   margin-left: 7px;
   color: white;
   font-weight: bold;
 }
 
-.popup-body {
+.login-body {
   background: white;
   padding: 30px 20px;
   text-align: center;
@@ -75,7 +75,7 @@
 }
 
 
-#popup input {
+#login-container input {
   border: 1.4px solid var(--deep-purple);
   width: 100%;
   height: 25px;

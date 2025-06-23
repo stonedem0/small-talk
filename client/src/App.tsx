@@ -4,7 +4,7 @@ import Popup from "./Login/Login";
 import Rooms from "./Rooms/Rooms";
 import Chat from "./Chat/Chat";
 import "./App.css";
-
+import PrimaryButton from "./components/PrimaryButton";
 const App: React.FC = () => {
   const [username, setUsername] = useState<string | null>(null);
 
@@ -32,9 +32,7 @@ const App: React.FC = () => {
         <>
           <div className="user-header">
             <span className="username">oh hai, {username}!</span>
-            <button onClick={handleSignOut} className="sign-out-btn">
-              Sign out
-            </button>
+            <PrimaryButton onClick={handleSignOut}>Sign out</PrimaryButton>
           </div>
           <Routes>
             <Route path="/" element={<Rooms username={username} />} />

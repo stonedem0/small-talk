@@ -26,34 +26,24 @@ const Popup: React.FC<PopupProps> = ({ setUsername }) => {
 
   const handleFullscreen = () => {
     console.log("Fullscreen clicked");
-    // if (!document.fullscreenElement) {
-    //   document.documentElement.requestFullscreen().catch(err => {
-    //     console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-    //   });
-    // } else {
-    //   document.exitFullscreen();
-    // }
   };
 
   const handleClose = () => {
     console.log("Close clicked");
-    // In this context, there's nothing to "close", so we can leave this blank
-    // or maybe clear the input
-    // setInput("");
   };
 
   return (
-    <div id="popup-overlay">
-      <div id="popup">
-        <div className="popup-header">
-          <span className="popup-title">Fella connect</span>
+    <div id="login-overlay">
+      <div id="login-container">
+        <div className="login-header">
+          <span className="login-title">Fella connect</span>
           <WindowControls
             onMinimize={handleMinimize}
             onFullscreen={handleFullscreen}
             onClose={handleClose}
           />
         </div>
-        <div className="popup-body">
+        <div className="login-body">
           <div className="icon">
             <img src={logo} alt="logo" />
           </div>
