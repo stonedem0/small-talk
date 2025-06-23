@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./Popup.css";
+import "./Login.css";
 import WindowControls from "../WindowControls/WindowControls";
 
 interface PopupProps {
@@ -44,7 +44,7 @@ const Popup: React.FC<PopupProps> = ({ setUsername }) => {
     <div id="popup-overlay">
       <div id="popup">
         <div className="popup-header">
-          <span className="popup-title">Pick a username</span>
+          <span className="popup-title">Fella connect</span>
           <WindowControls
             onMinimize={handleMinimize}
             onFullscreen={handleFullscreen}
@@ -52,12 +52,18 @@ const Popup: React.FC<PopupProps> = ({ setUsername }) => {
           />
         </div>
         <div className="popup-body">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="username"
-          />
+          <div className="input-group">
+            <label htmlFor="username-input" className="form-label">
+              Username:
+            </label>
+            <input
+              id="username-input"
+              type="text"
+              className="form-input"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+            />
+          </div>
           <button onClick={signIn}>Let me in</button>
         </div>
       </div>

@@ -45,12 +45,40 @@
   margin: 5px;
 }
 
-#popup input {
-  border: none;
-  background-color: #ffc1cc;
+.input-group {
+  text-align: left;
+  width: calc(80% + 20px);
+  margin: 15px auto;
+}
+
+.form-label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 14px;
+}
+
+.form-input {
+  width: 100%;
   padding: 10px;
-  margin: 10px 0;
+  border: 1px solid #ccc;
+  box-sizing: border-box; /* Ensures padding doesn't add to width */
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--deep-purple);
+  box-shadow: 0 0 0 2px rgba(74, 0, 247, 0.2);
+}
+
+#popup button {
+  /* background-color: var(--deep-purple); */
+}
+
+#popup input {
+  border: 1.4px solid var(--deep-purple);
   width: 80%;
-  border-radius: 5px;
+  height: 25px;
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
-import Popup from "./Popup/Popup";
+import Popup from "./Login/Login";
 import Rooms from "./Rooms/Rooms";
 import Chat from "./Chat/Chat";
 import "./App.css";
