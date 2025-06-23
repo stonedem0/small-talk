@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
-import Popup from "./Popup/Popup";
+import Popup from "./Login/Login";
 import Rooms from "./Rooms/Rooms";
 import Chat from "./Chat/Chat";
 import "./App.css";
-
+import PrimaryButton from "./components/PrimaryButton";
 const App: React.FC = () => {
   const [username, setUsername] = useState<string | null>(null);
 
@@ -20,17 +20,25 @@ const App: React.FC = () => {
     setUsername(name);
   };
 
+  const handleSignOut = () => {
+    localStorage.removeItem("username");
+    setUsername(null);
+  };
+
   return (
     <div id="main-container">
       {!username && <Popup setUsername={handleSetUsername} />}
       {username && (
-        <Routes>
-          {/* Home Page with Room List */}
-          <Route path="/" element={<Rooms username={username} />} />
-
-          {/* Dynamic Route for Chat Room */}
-          <Route path="/:roomName" element={<Chat username={username} />} />
-        </Routes>
+        <>
+          <div className="user-header">
+            <span className="username">oh hai, {username}!</span>
+            <PrimaryButton onClick={handleSignOut}>Sign out</PrimaryButton>
+          </div>
+          <Routes>
+            <Route path="/" element={<Rooms username={username} />} />
+            <Route path="/:roomName" element={<Chat username={username} />} />
+          </Routes>
+        </>
       )}
     </div>
   );

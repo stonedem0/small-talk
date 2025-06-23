@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { API_URL, WS_URL } from "../config";
+import WindowControls from "../WindowControls/WindowControls";
 
 interface ChatProps {
   username: string;
@@ -98,6 +99,29 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const handleMinimize = () => {
+    console.log("Chat minimize clicked");
+  };
+
+  const handleFullscreen = () => {
+    const chatContainer = document.getElementById("chat-container");
+    if (chatContainer) {
+      if (!document.fullscreenElement) {
+        chatContainer.requestFullscreen().catch((err) => {
+          console.error(
+            `Error attempting to enable full-screen mode: ${err.message} (${err.name})`
+          );
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  const handleClose = () => {
+    navigate("/");
+  };
+
   if (isLoading) {
     return <div className="spinner"></div>;
   }
@@ -108,11 +132,11 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
         <div className="chat-room">
           <div className="chat-header">
             <span className="chat-name">{roomName}</span>
-            <div className="header-controls">
-              <button className="minimize"></button>
-              <button className="fullscreen"></button>
-              <button className="close"></button>
-            </div>
+            <WindowControls
+            onMinimize={handleMinimize}
+            onFullscreen={handleFullscreen}
+            onClose={handleClose}
+          />
           </div>
           <div className="chat-menu">
             <button
