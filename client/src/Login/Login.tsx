@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./Login.css";
 import WindowControls from "../WindowControls/WindowControls";
+import PrimaryButton from "../components/PrimaryButton";
 
 interface PopupProps {
   setUsername: (username: string) => void;
@@ -64,7 +65,8 @@ const Popup: React.FC<PopupProps> = ({ setUsername }) => {
               onChange={(e) => setInput(e.target.value)}
             />
           </div>
-          <button onClick={signIn}>Let me in</button>
+          {/* <button onClick={signIn}>Let me in</button> */}
+          <PrimaryButton onClick={signIn}>Let me in</PrimaryButton>
         </div>
       </div>
     </div>
