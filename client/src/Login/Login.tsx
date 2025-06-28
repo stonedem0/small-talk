@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import "./Login.css";
-import WindowControls from "../components/WindowControls";
 import PrimaryButton from "../components/PrimaryButton";
 import logo from "../assets/fella.png"; 
 

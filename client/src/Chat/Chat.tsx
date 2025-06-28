@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { API_URL, WS_URL } from "../config";
-import WindowControls from "../components/WindowControls";
 
 interface ChatProps {
   username: string;
@@ -22,6 +21,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {

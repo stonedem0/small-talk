@@ -4,10 +4,10 @@
 
 html,
 body {
-  height: 100%; /* Ensures full height coverage */
+  height: 100%; 
   margin: 0;
   padding: 0;
-  background-color: #ffc1cc; /* Pink background */
+  background-color: #ffc1cc;
   font-family: "Trebuchet MS";
   font-size: 15px;
 }
@@ -18,13 +18,6 @@ body {
   gap: 39px;
 }
 
-.user-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  width: 55%;
-  /* margin-top: 100px; */
-}
 
 .username {
   color: var(--deep-purple);

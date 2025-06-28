@@ -1,6 +1,5 @@
 import WindowControls from "./WindowControls";
 import "./Window.css";
-import PrimaryButton from "./PrimaryButton";
 
 type WindowProps = {
     title: string;

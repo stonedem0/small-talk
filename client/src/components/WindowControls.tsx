@@ -17,13 +17,11 @@ const WindowControls: React.FC<WindowControlsProps> = ({
   onClose = defaultClose,
 }) => {
   return (
-    // <div className="window-header">
       <div className="window-controls">
       <button className="minimize" onClick={onMinimize}></button>
       <button className="fullscreen" onClick={onFullscreen}></button>
       <button className="close" onClick={onClose}></button>
     </div>
-    // </div>
   );
 };
 

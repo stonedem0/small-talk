@@ -19,7 +19,6 @@
 
 .login-header {
   display: flex;
-  /* width: 100%; */
   justify-content: space-between;
   align-items: center;
   height: 26px;
@@ -65,7 +64,7 @@
   width: 100%;
   padding: 10px;
   border: 1px solid #ccc;
-  box-sizing: border-box; /* Ensures padding doesn't add to width */
+  box-sizing: border-box; 
 }
 
 .form-input:focus {

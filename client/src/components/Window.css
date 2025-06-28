@@ -10,8 +10,6 @@
     border-top: none;
     border-radius: 6px;
     color: black;
-    /* background-color: var(--deep-purple); */
-    /* border: 5px solid var(--deep-purple); */
     border-radius: 5px 5px 5px 5px;
     box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -23,7 +21,6 @@
     height: 26px;
     background-color: var(--deep-purple);
     color: white;
-    /* padding: 5px 0px; */
     padding: 8px;
     font-weight: bold;
     box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
