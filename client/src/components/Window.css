@@ -3,12 +3,21 @@
     top: 30%;
     left: 50%;
     transform: translate(-50%, -30%);
-    /* Add your width, height, or max-width as needed */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background-color: white;
+    border-top: none;
+    border-radius: 6px;
+    color: black;
+    /* background-color: var(--deep-purple); */
+    /* border: 5px solid var(--deep-purple); */
+    border-radius: 5px 5px 5px 5px;
+    box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .window-header {
     display: flex;
-    /* width: 100%; */
     justify-content: space-between;
     align-items: center;
     height: 26px;

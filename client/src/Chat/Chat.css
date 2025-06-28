@@ -179,8 +179,8 @@
   margin: 0px 5px 5px 5px;
   background-color: white;
   padding: 10px;
-  max-height: 430px;
-  min-height: 430px;
+  max-height: 330px;
+  /* min-height: 430px; */
   overflow-y: auto;
 }
 

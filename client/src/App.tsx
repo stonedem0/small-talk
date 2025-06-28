@@ -89,9 +89,11 @@ const App = () => {
       <Window
        title="Fella connect"
        width={600}
-       height={500}
+       height={400}
+       top="25%"
+       left="50%"
        username={username}
-      onSignOut={handleSignOut}
+       onSignOut={handleSignOut}
    >
     <Routes>
       <Route path="/" element={<Rooms username={username} />} />
