@@ -1,0 +1,23 @@
+.window {
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -30%);
+    /* Add your width, height, or max-width as needed */
+}
+
+.window-header {
+    display: flex;
+    /* width: 100%; */
+    justify-content: space-between;
+    align-items: center;
+    height: 26px;
+    background-color: var(--deep-purple);
+    color: white;
+    padding: 5px 0px;
+    font-weight: bold;
+    box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.2);
+    border-radius: 5px 5px 0 0;
+}
+

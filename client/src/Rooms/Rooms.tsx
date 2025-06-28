@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Rooms.css";
 import { API_URL } from "../config";
-
+import WindowControls from "../components/WindowControls";
 interface RoomsProps {
   username: string;
 }
@@ -25,13 +25,13 @@ const Rooms: React.FC<RoomsProps> = () => {
 
   return (
     <div id="rooms-container">
-      <div className="rooms-header">
+      {/* <div className="rooms-header">
         <div className="rooms-title">
-          <span className="rooms-icon"></span>
-          <span className="rooms-name">Rooms</span>
+          <WindowControls />
         </div>
-      </div>
-      <ul className="rooms-list">
+      </div> */}
+      <div className="rooms-body">
+        <ul className="rooms-list">
         {rooms.map((room, index) => (
           <li key={index} className="room-item">
             <button
@@ -45,6 +45,7 @@ const Rooms: React.FC<RoomsProps> = () => {
           </li>
         ))}
       </ul>
+      </div>
     </div>
   );
 };

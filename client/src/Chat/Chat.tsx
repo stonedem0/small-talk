@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { API_URL, WS_URL } from "../config";
-import WindowControls from "../WindowControls/WindowControls";
+import WindowControls from "../components/WindowControls";
 
 interface ChatProps {
   username: string;
@@ -68,7 +68,6 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
     ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}`);
     ws.current.onopen = () => {
       setIsConnected(true);
-      console.log(isConnected);
     };
     ws.current.onmessage = (event) => {
       const newMessage: Message = JSON.parse(event.data);
@@ -130,14 +129,14 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
     <div id="chat-container">
       {isValidRoom ? (
         <div className="chat-room">
-          <div className="chat-header">
+          {/* <div className="chat-header">
             <span className="chat-name">{roomName}</span>
             <WindowControls
             onMinimize={handleMinimize}
             onFullscreen={handleFullscreen}
             onClose={handleClose}
           />
-          </div>
+          </div> */}
           <div className="chat-menu">
             <button
               id="leave-room"

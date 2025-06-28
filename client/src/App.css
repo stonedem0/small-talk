@@ -15,14 +15,15 @@ body {
 #main-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 39px;
 }
 
 .user-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: start;
   width: 55%;
+  /* margin-top: 100px; */
 }
 
 .username {
@@ -44,3 +45,4 @@ body {
 .sign-out-btn:hover {
   background-color: #ff5252;
 }
+

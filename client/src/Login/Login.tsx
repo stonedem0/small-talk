@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./Login.css";
-import WindowControls from "../WindowControls/WindowControls";
+import WindowControls from "../components/WindowControls";
 import PrimaryButton from "../components/PrimaryButton";
 import logo from "../assets/fella.png"; 
 
@@ -35,14 +35,6 @@ const Popup: React.FC<PopupProps> = ({ setUsername }) => {
   return (
     <div id="login-overlay">
       <div id="login-container">
-        <div className="login-header">
-          <span className="login-title">Fella connect</span>
-          <WindowControls
-            onMinimize={handleMinimize}
-            onFullscreen={handleFullscreen}
-            onClose={handleClose}
-          />
-        </div>
         <div className="login-body">
           <div className="icon">
             <img src={logo} alt="logo" />

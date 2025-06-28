@@ -1,10 +1,14 @@
 #rooms-container {
   display: flex;
   flex-direction: column;
-  width: 250px;
-  background-color: white;
+  /* width: 250px; */
   border: 5px solid var(--deep-purple);
+  background-color: var(--deep-purple);
+  border-radius: 5px;
+  box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2);
 }
+
 
 .rooms-header {
   background-color: var(--deep-purple);
@@ -12,6 +16,13 @@
   padding: 10px;
   font-weight: bold;
   text-align: center;
+}
+
+.rooms-body {
+  background: white;
+  padding: 30px 20px;
+  text-align: center;
+  margin: 5px;
 }
 
 .rooms-list {

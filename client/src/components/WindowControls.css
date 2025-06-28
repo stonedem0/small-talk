@@ -1,0 +1,103 @@
+.window-controls {
+    display: grid;
+    gap: 2px;
+    grid-template-columns: repeat(3, 25px);
+    height: 25px;
+    margin-right: 7px;
+  }
+  
+  .window-controls button {
+    cursor: pointer;
+    background-position: center;
+    background-size: 100%;
+    background-repeat: no-repeat;
+    border-radius: 4px;
+    border: 0.5px solid white;
+  }
+  
+  .window-controls button:focus {
+    outline: none;
+  }
+  
+  .window-controls button:hover {
+    outline: none;
+  }
+  
+  .minimize {
+    background: linear-gradient(
+      to bottom,
+      rgba(74, 0, 247, 1) 47%,
+      rgba(120, 44, 255, 1) 75%
+    );
+    box-shadow: inset 0 3px 5px rgba(255, 255, 255, 0.6),
+      0 2px 4px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"> <rect width="40" height="40" fill="none"/> <line x1="7" y1="30" x2="27" y2="30" style="stroke:white;stroke-width:7" /> </svg>');
+  }
+  
+  .minimize:active {
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.4);
+  }
+  
+  .fullscreen {
+    background: linear-gradient(
+      to bottom,
+      rgba(74, 0, 247, 1) 47%,
+      rgba(120, 44, 255, 1) 75%
+    );
+    box-shadow: inset 0 3px 5px rgba(255, 255, 255, 0.6),
+      0 2px 4px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"> <rect width="30" height="30" x="10" y="10" style="fill:rgb(74, 0, 247);stroke-width:3;stroke:white" /> <line x1="9" y1="14" x2="41" y2="14" style="stroke:white;stroke-width:7" /> </svg>');
+  }
+  
+  .fullscreen ::before {
+    content: "";
+    width: 100%;
+    height: 100%;
+    /* background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"> <rect width="30" height="30" x="10" y="10" style="fill:rgb(74, 0, 247);stroke-width:3;stroke:white" /> <line x1="9" y1="14" x2="41" y2="14" style="stroke:white;stroke-width:7" /> </svg>'); */
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5);
+  }
+  
+  .fullscreen:active {
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.4);
+  }
+  
+  .close {
+    background: linear-gradient(
+      to bottom,
+      rgba(199, 1, 149, 1) 0%,
+      rgba(247, 37, 133, 1) 35%,
+      rgba(247, 88, 88, 1) 100%
+    );
+    box-shadow: inset 0 3px 5px rgba(255, 255, 255, 0.6),
+      0 2px 4px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+  
+  .close::before {
+    content: "";
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40px' height='40px' viewBox='0 0 40 40'%3E%3Cdefs%3E%3Cfilter id='shadow' x='-50%' y='-50%' width='200%' height='200%'%3E%3CfeDropShadow dx='2' dy='2' stdDeviation='2' flood-color='black' flood-opacity='0.3' /%3E%3C/filter%3E %3C/defs%3E%3Cpath d='M 10,10 L 30,30 M 30,10 L 10,30' stroke='white' stroke-width='5' stroke-linecap='butt' filter='url(%23shadow)' /%3E%3C/svg%3E");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5);
+  }
+  
+  .close:active {
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.4);
+  }
