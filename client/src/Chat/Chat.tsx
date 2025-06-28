@@ -3,6 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { API_URL, WS_URL } from "../config";
 
+import Loader from "../components/Loader";
+
+
 interface ChatProps {
   username: string;
 }
@@ -122,7 +125,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
   };
 
   if (isLoading) {
-    return <div className="spinner"></div>;
+    return <Loader text="Loading chat..." />;
   }
 
   return (
