@@ -32,15 +32,23 @@ type WindowProps = {
         </div>
         <div className="window-content">
           {username && onSignOut && (
-            <div className="window-menu">
-            <div className="user-header">
+            <div className="window-menu-container">
+              <div className="window-menu">
+                {/* <div className="window-menu-item">
+                  <span>File</span>
+                </div>
+                <div className="window-menu-item">
+                  <span>Edit</span>
+                </div> */}
+            <div className="sign-out">
               <span className="username">oh hai, {username}!</span>
               <PrimaryButton onClick={onSignOut}>Sign out</PrimaryButton>
               </div>
             </div>
+            </div>
           )}
           {children}
-        </div>
+        </div>  
       </div>
     );
   };
