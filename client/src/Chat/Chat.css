@@ -199,13 +199,15 @@
 }
 
 #message-controls input[type="text"] {
-  width: 500px;
+  font-family: inherit;
+  width: 420px;
   padding: 10px;
   border: none;
   border-radius: 5px;
 }
 
 #send-message {
+  font-family: inherit;
   width: 100px;
   background-color: var(--deep-purple);
   color: white;
