@@ -18,7 +18,7 @@ type WindowProps = {
     title,
     children,
     width = 400,
-    height = 300,
+    height = 200,
     top = '30%',
     left = '50%',
     username,

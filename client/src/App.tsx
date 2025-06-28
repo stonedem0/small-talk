@@ -89,7 +89,7 @@ const App = () => {
       <Window
        title="Fella connect"
        width={600}
-       height={400}
+      //  height={400}
        top="25%"
        left="50%"
        username={username}
