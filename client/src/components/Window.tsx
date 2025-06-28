@@ -42,7 +42,7 @@ type WindowProps = {
                 </div> */}
             <div className="sign-out">
               <span className="username">oh hai, {username}!</span>
-              <PrimaryButton onClick={onSignOut}>Sign out</PrimaryButton>
+              <button onClick={onSignOut}>Sign out</button>
               </div>
             </div>
             </div>

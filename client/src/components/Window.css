@@ -33,15 +33,14 @@
 
 
 .window-menu-container {
-  /* display: flex; */
+  display: flex; 
   gap: 10px;
   padding: 5px;
   justify-content: flex-end;
   align-items: center;
-  height: 26px;
   background-color: var(--deep-purple);
   color: white;
-   padding: 5px 0px;
+  padding: 0px 0px;
   font-weight: bold;
   box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
   0 2px 4px rgba(0, 0, 0, 0.2);
@@ -49,12 +48,12 @@
 }
 
 .window-menu {
-  display: flex;
-  gap: 10px;
-  padding: 2px;
+  width: 100%;
+  display: flex; 
+  padding: 3px;
   justify-content: flex-end;
   align-items: center;
-  height: 26px;
+  height: 24px;
   background-color: white;
   color: white;
   margin-left: 5px;
