@@ -27,7 +27,6 @@ body {
 }
 
 .username {
-  font-weight: bold;
   color: var(--deep-purple);
 }
 
