@@ -44,12 +44,13 @@
   font-weight: bold;
   box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
   0 2px 4px rgba(0, 0, 0, 0.2);
+
 }
 
 .window-menu {
   display: flex;
   gap: 10px;
-  padding: 5px;
+  padding: 2px;
   justify-content: flex-end;
   align-items: center;
   height: 26px;
@@ -58,10 +59,12 @@
   margin-left: 5px;
   margin-right: 5px;
   font-weight: bold;
- 
+  border-bottom: 1px solid grey;
 }
 
 .sign-out {
-  
+  gap: 11px;
+  display: flex;
+  align-items: center;
  padding: 5px;
 }
