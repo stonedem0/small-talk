@@ -4,10 +4,10 @@
 
 html,
 body {
-  height: 100%; /* Ensures full height coverage */
+  height: 100%; 
   margin: 0;
   padding: 0;
-  background-color: #ffc1cc; /* Pink background */
+  background-color: #ffc1cc;
   font-family: "Trebuchet MS";
   font-size: 15px;
 }
@@ -15,18 +15,11 @@ body {
 #main-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 39px;
 }
 
-.user-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 55%;
-}
 
 .username {
-  font-weight: bold;
   color: var(--deep-purple);
 }
 
@@ -44,3 +37,4 @@ body {
 .sign-out-btn:hover {
   background-color: #ff5252;
 }
+
