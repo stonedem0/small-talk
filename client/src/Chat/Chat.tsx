@@ -122,9 +122,7 @@ const Chat = ({ username }: ChatProps) => {
 
   return (
     <div id="chat-container">
-      {!isValidRoom ? (
-        <div>Invalid room</div>
-      ) : !isRoomReady ? (
+      {isValidRoom && !isRoomReady ? (
         <ChatSkeleton />
       ) : (
         <div className="chat-room">
