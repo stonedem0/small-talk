@@ -1,0 +1,44 @@
+.skeleton .menu-button-skeleton,
+.skeleton .message-skeleton,
+.skeleton .input-skeleton,
+.skeleton .button-skeleton {
+  background: linear-gradient(90deg, #ccc, #eee, #ccc);
+  background-size: 200% 100%;
+  animation: pulse 1.2s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+.menu-button-skeleton {
+  width: 32px;
+  height: 32px;
+  margin: 0 4px;
+  display: inline-block;
+}
+
+.message-skeleton {
+  height: 20px;
+  margin: 8px;
+  width: 80%;
+}
+
+.input-skeleton {
+  height: 36px;
+  width: 70%;
+  margin-right: 10px;
+  display: inline-block;
+}
+
+.button-skeleton {
+  height: 36px;
+  width: 20%;
+  display: inline-block;
+}
+
+@keyframes pulse {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

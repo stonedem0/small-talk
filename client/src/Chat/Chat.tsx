@@ -4,7 +4,7 @@ import "./Chat.css";
 import { API_URL, WS_URL } from "../config";
 
 import Loader from "../components/Loader";
-
+import ChatSkeleton from "../components/ChatSkeleton";
 
 interface ChatProps {
   username: string;
@@ -20,7 +20,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
   const navigate = useNavigate();
   const [validRooms, setValidRooms] = useState<string[]>([]);
   const [isValidRoom, setIsValidRoom] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  // const [isLoading, setIsLoading] = useState<boolean>(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -44,7 +44,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
       } catch (error) {
         console.error("❌ Error fetching rooms:", error);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
@@ -64,17 +64,21 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
       } catch (error) {
         console.error("Failed to fetch chat history:", error);
       }
+      setLoading(false);
     };
 
     fetchHistory();
-
     ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}`);
     ws.current.onopen = () => {
+      console.log("WebSocket connection established");
       setIsConnected(true);
     };
     ws.current.onmessage = (event) => {
+      console.log("Message received:", event.data);
       const newMessage: Message = JSON.parse(event.data);
       setMessages((prevMessages) => [...prevMessages, newMessage]); // Add new messages to the end
+      console.log("New message received:", newMessage);
+      setLoading(false);
     };
     ws.current.onclose = () => {
       setIsConnected(false);
@@ -124,9 +128,10 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
     navigate("/");
   };
 
-  if (isLoading) {
-    return <Loader text="Loading chat..." />;
-  }
+  // if (isLoading) {
+  //   console.log("Loading chat...");
+  //   return <Loader text="Loading chat..." />;
+  // }
 
   return (
     <div id="chat-container">
@@ -162,14 +167,37 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
               }}
             ></button>
           </div>
-          <div id="messages">
-            {messages.map((msg, index) => (
-              <p key={index}>
-                <strong>{msg.username}:</strong> {msg.message}
-              </p>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
+          {loading ? (
+            <>
+              {/* {console.log("Loading chat...")}
+              {console.log(loading)} */}
+              <ChatSkeleton />
+            </>
+          ) : (
+            <>
+              <div id="messages">
+                {messages.map((msg, index) => (
+                  <p key={index}>
+                    <strong>{msg.username}:</strong> {msg.message}
+                  </p>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+              <div id="message-controls">
+                <form onSubmit={sendMessage} id="submit">
+                  <input
+                    placeholder="message"
+                    type="text"
+                    id="message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                  />
+                  <input type="submit" value="send" id="send-message" />
+                </form>
+              </div>
+            </>
+          )}
+
           <div id="message-controls">
             <form onSubmit={sendMessage} id="submit">
               <input
