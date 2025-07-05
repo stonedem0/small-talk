@@ -222,7 +222,7 @@
 }
 
 .message-skeleton {
-  height: 16px;
+  height: 14px;
   margin: 8px 0;
   width: 80%;
   background: linear-gradient(90deg, #ccc, #eee, #ccc);
