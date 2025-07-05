@@ -28,6 +28,8 @@ const App = () => {
     setUsername(null);
   };
 
+  const [tab, setTab] = useState("General");
+
   return (
     <div id="main-container">
       {!username && (
@@ -45,11 +47,13 @@ const App = () => {
         <Window
           title="Fella connect"
           width={600}
-          //  height={400}
           top="25%"
           left="50%"
           username={username}
           onSignOut={handleSignOut}
+          tabs={["File", "Appearance", "Settings", "Chat"]}
+          activeTab={tab}
+          onTabClick={setTab}
         >
           <Routes>
             <Route path="/" element={<Rooms username={username} />} />

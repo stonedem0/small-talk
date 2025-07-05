@@ -141,7 +141,6 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
             }}
           ></button>
         </div>
-
         <div id="messages">
           {isLoadingMessages ? (
             <MessageSkeleton />
