@@ -49,20 +49,22 @@ const Window = ({
       </div>
 
       {tabs && tabs.length > 0 && (
-        <div className="chat-tabs">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              className={`tab ${
-                tab === activeTab || (!activeTab && tab === tabs[0])
-                  ? "active"
-                  : ""
-              }`}
-              onClick={() => onTabClick?.(tab)}
-            >
-              {tab.startsWith("_") ? tab : <u>{tab}</u>}
-            </button>
-          ))}
+        <div className="window-tabs-container">
+          <div className="window-tabs">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                className={`tab ${
+                  tab === activeTab || (!activeTab && tab === tabs[0])
+                    ? "active"
+                    : ""
+                }`}
+                onClick={() => onTabClick?.(tab)}
+              >
+                {tab.startsWith("_") ? tab : <u>{tab}</u>}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
