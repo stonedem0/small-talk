@@ -1,6 +1,4 @@
-
-
-import  { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import Popup from "./Login/Login";
 import Rooms from "./Rooms/Rooms";
@@ -33,27 +31,32 @@ const App = () => {
   return (
     <div id="main-container">
       {!username && (
-        <Window title="Fella connect" width={300} height={200} username={username}
-        onSignOut={handleSignOut}>
+        <Window
+          title="Fella connect"
+          width={300}
+          height={200}
+          username={username}
+          onSignOut={handleSignOut}
+        >
           <Popup setUsername={handleSetUsername} />
         </Window>
       )}
-  {username && (
-      <Window
-       title="Fella connect"
-       width={600}
-      //  height={400}
-       top="25%"
-       left="50%"
-       username={username}
-       onSignOut={handleSignOut}
-   >
-    <Routes>
-      <Route path="/" element={<Rooms username={username} />} />
-      <Route path="/:roomName" element={<Chat username={username} />} />
-    </Routes>
-  </Window>
-)}
+      {username && (
+        <Window
+          title="Fella connect"
+          width={600}
+          //  height={400}
+          top="25%"
+          left="50%"
+          username={username}
+          onSignOut={handleSignOut}
+        >
+          <Routes>
+            <Route path="/" element={<Rooms username={username} />} />
+            <Route path="/:roomName" element={<Chat username={username} />} />
+          </Routes>
+        </Window>
+      )}
     </div>
   );
 };
