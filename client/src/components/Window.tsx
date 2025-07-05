@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import WindowControls from "./WindowControls";
 import "./Window.css";
 
@@ -10,9 +11,10 @@ type WindowProps = {
   left?: string;
   username?: string | null;
   onSignOut?: () => void;
-  tabs?: string[]; // ✅ NEW
-  activeTab?: string; // ✅ Optional: control current tab externally
-  onTabClick?: (tab: string) => void; // ✅ Optional: allow tab switch
+  onClose?: () => void; // ✅ NEW
+  tabs?: string[];
+  activeTab?: string;
+  onTabClick?: (tab: string) => void;
 };
 
 const Window = ({
@@ -24,10 +26,21 @@ const Window = ({
   left = "50%",
   username,
   onSignOut,
+  onClose,
   tabs,
   activeTab,
   onTabClick,
 }: WindowProps) => {
+  const navigate = useNavigate();
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      navigate("/"); // ✅ fallback navigation
+    }
+  };
+
   return (
     <div className="window" style={{ width, height, top, left }}>
       <div className="window-header">
@@ -35,7 +48,6 @@ const Window = ({
         <WindowControls />
       </div>
 
-      {/* ✅ Optional Tabs Bar */}
       {tabs && tabs.length > 0 && (
         <div className="chat-tabs">
           {tabs.map((tab) => (
@@ -58,6 +70,24 @@ const Window = ({
         {username && onSignOut && (
           <div className="window-menu-container">
             <div className="window-menu">
+              <button
+                id="leave-room"
+                className="menu-button"
+                title="Leave room"
+                onClick={handleClose}
+              ></button>
+              <button
+                id="change-username"
+                className="menu-button"
+                title="Change username"
+                onClick={() => {
+                  const newUsername = prompt("Enter your new username:");
+                  if (newUsername) {
+                    localStorage.setItem("username", newUsername);
+                    window.location.reload();
+                  }
+                }}
+              ></button>
               <div className="sign-out">
                 <span className="username">
                   oh hai, <strong>{username}</strong>!
@@ -65,6 +95,7 @@ const Window = ({
                 <button onClick={onSignOut}>Sign out</button>
               </div>
             </div>
+            {/* <div className="window-menu"></div> */}
           </div>
         )}
         {children}

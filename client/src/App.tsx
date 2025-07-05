@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Popup from "./Login/Login";
 import Rooms from "./Rooms/Rooms";
 import Chat from "./Chat/Chat";
@@ -8,6 +8,9 @@ import "./App.css";
 
 const App = () => {
   const [username, setUsername] = useState<string | null>(null);
+  const [tab, setTab] = useState("Chat");
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const storedUsername = localStorage.getItem("username");
@@ -17,18 +20,24 @@ const App = () => {
   }, []);
 
   const handleSetUsername = (name: string) => {
-    console.log("setting username", name);
     localStorage.setItem("username", name);
     setUsername(name);
   };
 
   const handleSignOut = () => {
-    console.log("signing out");
     localStorage.removeItem("username");
     setUsername(null);
+    navigate("/");
   };
 
-  const [tab, setTab] = useState("General");
+  // Sync tab state with route (for room URLs)
+  useEffect(() => {
+    if (location.pathname === "/" || location.pathname === "/") {
+      setTab("Chat");
+    } else if (location.pathname.includes("/")) {
+      setTab("Chat");
+    }
+  }, [location.pathname]);
 
   return (
     <div id="main-container">
@@ -43,6 +52,7 @@ const App = () => {
           <Popup setUsername={handleSetUsername} />
         </Window>
       )}
+
       {username && (
         <Window
           title="Fella connect"
@@ -51,14 +61,42 @@ const App = () => {
           left="50%"
           username={username}
           onSignOut={handleSignOut}
-          tabs={["File", "Appearance", "Settings", "Chat"]}
+          tabs={["Chat", "Appearance", "Settings"]}
           activeTab={tab}
-          onTabClick={setTab}
+          onTabClick={(selected) => {
+            setTab(selected);
+
+            // Optional: Reset routing for tabs that are not Chat
+            if (selected !== "Chat") {
+              navigate("/");
+            }
+          }}
         >
-          <Routes>
-            <Route path="/" element={<Rooms username={username} />} />
-            <Route path="/:roomName" element={<Chat username={username} />} />
-          </Routes>
+          {/* Tab-driven conditional content */}
+          {tab === "Chat" && (
+            <Routes>
+              <Route path="/" element={<Rooms username={username} />} />
+              <Route path="/:roomName" element={<Chat username={username} />} />
+            </Routes>
+          )}
+          {tab === "Settings" && (
+            <div style={{ padding: "1rem" }}>
+              <h2>Settings</h2>
+              <p>Coming soon...</p>
+            </div>
+          )}
+          {tab === "Appearance" && (
+            <div style={{ padding: "1rem" }}>
+              <h2>Appearance</h2>
+              <p>Change themes and styles</p>
+            </div>
+          )}
+          {tab === "_General" && (
+            <div style={{ padding: "1rem" }}>
+              <h2>Welcome</h2>
+              <p>This is a general info panel.</p>
+            </div>
+          )}
         </Window>
       )}
     </div>

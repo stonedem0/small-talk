@@ -12,7 +12,7 @@ interface Message {
   message: string;
 }
 
-const Chat: React.FC<ChatProps> = ({ username }) => {
+const Chat = ({ username }: ChatProps) => {
   const { roomName } = useParams<{ roomName: string }>();
   const navigate = useNavigate();
 
@@ -95,7 +95,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
     }
   };
 
-  const handleClose = () => navigate("/");
+  // const handleClose = () => navigate("/");
 
   const handleFullscreen = () => {
     const container = document.getElementById("chat-container");
@@ -121,7 +121,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
   return (
     <div id="chat-container">
       <div className="chat-room">
-        <div className="chat-menu">
+        {/* <div className="chat-menu">
           <button
             id="leave-room"
             className="menu-button"
@@ -140,7 +140,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
               }
             }}
           ></button>
-        </div>
+        </div> */}
         <div id="messages">
           {isLoadingMessages ? (
             <MessageSkeleton />
