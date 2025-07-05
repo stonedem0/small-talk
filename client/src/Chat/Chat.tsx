@@ -126,9 +126,6 @@ const Chat = ({ username }: ChatProps) => {
         <ChatSkeleton />
       ) : (
         <div className="chat-room">
-          {/* Optional window controls here */}
-          {/* <WindowControls onMinimize={handleMinimize} onFullscreen={handleFullscreen} onClose={handleClose} /> */}
-
           <div className="chat-menu">
             <button
               id="leave-room"
