@@ -26,15 +26,17 @@ const Rooms = () => {
           <p>Choose a room to start chatting with others.</p>
           <p>Available rooms:</p>
         </div>
-        <ul className="rooms-list">
-        {rooms.map((room, index) => (
-          <li key={index} className="room-item">
-            <Link to={`/${encodeURIComponent(room)}`}>
-              {room}
-            </Link>
-          </li>
-        ))}
-      </ul>
+        <div className="rooms-scroll-container">
+          <ul className="rooms-list">
+          {rooms.map((room, index) => (
+            <li key={index} className="room-item">
+              <Link to={`/${encodeURIComponent(room)}`}>
+                {room}
+              </Link>
+            </li>
+          ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

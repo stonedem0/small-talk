@@ -6,15 +6,18 @@
 }
 .rooms-body {
   background: white;
-  padding: 30px 20px;
-  text-align: center;
+  padding: 20px;
   margin: 0px 5px 5px;
   display: flex;
-  flex-direction: column;
+  gap: 20px;
+  height: 100%;
 }
 
 .welcome {
-  margin-bottom: 20px;
+  flex: 1;
+  text-align: left;
+  padding-right: 20px;
+  border-right: 1px solid #eee;
 }
 
 .welcome p {
@@ -29,22 +32,33 @@
   color: var(--deep-purple);
 }
 
+.rooms-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
 .rooms-list {
   font-family: inherit;
   list-style-type: none;
-  padding: 10px;
+  padding: 0;
   margin: 0;
+}
+
+.room-item {
+  margin: 3px 0;
 }
 
 .room-item a {
   display: block;
-  width: 100%;
   font-family: inherit;
-  color: black;
-  border: none;
-  padding: 2px;
-  cursor: pointer;
-  border-radius: 5px;
+  color: #0066cc;
   text-decoration: none;
-  text-align: center;
+  padding: 4px 0;
+  transition: color 0.2s;
+}
+
+.room-item a:hover {
+  color: #003366;
+  text-decoration: underline;
 }
