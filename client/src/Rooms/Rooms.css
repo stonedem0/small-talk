@@ -20,7 +20,6 @@
   flex: 1 1 0;
   text-align: left;
   padding-right: 20px;
-  border-right: 1px solid #eee;
   min-height: 0;
 }
 
@@ -42,12 +41,13 @@
   max-height: 250px;
   min-width: 180px;
   overflow: scroll;
+  border: 1px solid #cecccc;
 }
 
 .rooms-list {
   font-family: inherit;
   list-style-type: none;
-  padding: 0;
+  padding: 8px;
   margin: 0;
 }
 
@@ -58,6 +58,7 @@
 .room-item a {
   display: block;
   font-family: inherit;
+  font-size: 14px;
   text-decoration: none;
   transition: color 0.2s;
   color: var(--deep-purple);

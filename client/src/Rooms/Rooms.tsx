@@ -57,6 +57,11 @@ const Rooms = () => {
           <p>Welcome to Small Talk!</p>
           <p>Choose a room to start chatting with others.</p>
           <p>Available rooms:</p>
+          <p>
+            Small Talk is a place to connect, share, and have fun conversations on any topic you like.<br />
+            Select a room from the list to join a discussion, or just browse to see what others are talking about.<br />
+            Don't see a topic you like? Feel free to suggest a new room to the community!
+          </p>
         </div>
         <div className="rooms-scroll-container">
           <ul className="rooms-list">
