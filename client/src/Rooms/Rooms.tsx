@@ -7,15 +7,42 @@ const Rooms = () => {
   const [rooms, setRooms] = useState<string[]>([]);
 
   useEffect(() => {
+    // Add dummy rooms for testing
+    const dummyRooms = [
+      "general",
+      "random",
+      "tech",
+      "music",
+      "movies",
+      "books",
+      "sports",
+      "gaming",
+      "food",
+      "travel",
+      "art",
+      "science",
+      "politics",
+      "humor",
+      "news"
+    ];
+
     fetch(`${API_URL}/rooms`)
       .then((response) => response.json())
       .then((data) => {
         const sortedData = data.sort((a: string, b: string) =>
           a.toLowerCase() > b.toLowerCase() ? 1 : -1
         );
-        setRooms([...sortedData]);
+        // Combine server rooms with dummy rooms, removing duplicates
+        const allRooms = [...new Set([...sortedData, ...dummyRooms])].sort((a, b) =>
+          a.toLowerCase() > b.toLowerCase() ? 1 : -1
+        );
+        setRooms(allRooms);
       })
-      .catch((error) => console.error("Fetch error:", error));
+      .catch((error) => {
+        console.error("Fetch error:", error);
+        // If fetch fails, use dummy rooms
+        setRooms(dummyRooms.sort((a, b) => a.toLowerCase() > b.toLowerCase() ? 1 : -1));
+      });
   }, []);
 
   return (
