@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Popup from "./Login/Login";
 import Rooms from "./Rooms/Rooms";
 import Chat from "./Chat/Chat";
@@ -8,6 +8,9 @@ import "./App.css";
 
 const App = () => {
   const [username, setUsername] = useState<string | null>(null);
+  const [tab, setTab] = useState("Chat");
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const storedUsername = localStorage.getItem("username");
@@ -17,16 +20,23 @@ const App = () => {
   }, []);
 
   const handleSetUsername = (name: string) => {
-    console.log("setting username", name);
     localStorage.setItem("username", name);
     setUsername(name);
   };
 
   const handleSignOut = () => {
-    console.log("signing out");
     localStorage.removeItem("username");
     setUsername(null);
+    navigate("/");
   };
+
+  useEffect(() => {
+    if (location.pathname === "/" || location.pathname === "/") {
+      setTab("Chat");
+    } else if (location.pathname.includes("/")) {
+      setTab("Chat");
+    }
+  }, [location.pathname]);
 
   return (
     <div id="main-container">
@@ -41,20 +51,46 @@ const App = () => {
           <Popup setUsername={handleSetUsername} />
         </Window>
       )}
+
       {username && (
         <Window
           title="Fella connect"
           width={600}
-          //  height={400}
           top="25%"
           left="50%"
           username={username}
           onSignOut={handleSignOut}
+          tabs={["File", "Chat", "Appearance", "Settings"]}
+          activeTab={tab}
+          onTabClick={(selected) => {
+            setTab(selected);
+            if (selected !== "Chat") {
+              navigate("/");
+            }
+          }}
         >
-          <Routes>
-            <Route path="/" element={<Rooms username={username} />} />
-            <Route path="/:roomName" element={<Chat username={username} />} />
-          </Routes>
+          {tab === "File" && (
+            <div style={{ padding: "1rem" }}>
+              <h2>File</h2>
+            </div>
+          )}
+          {tab === "Chat" && (
+            <Routes>
+              <Route path="/" element={<Rooms username={username} />} />
+              <Route path="/:roomName" element={<Chat username={username} />} />
+            </Routes>
+          )}
+          {tab === "Settings" && (
+            <div style={{ padding: "1rem" }}>
+              <h2>Settings</h2>
+            </div>
+          )}
+          {tab === "Appearance" && (
+            <div style={{ padding: "1rem" }}>
+              <h2>Appearance</h2>
+  
+            </div>
+          )}
         </Window>
       )}
     </div>

@@ -12,7 +12,7 @@ interface Message {
   message: string;
 }
 
-const Chat: React.FC<ChatProps> = ({ username }) => {
+const Chat = ({ username }: ChatProps) => {
   const { roomName } = useParams<{ roomName: string }>();
   const navigate = useNavigate();
 
@@ -93,9 +93,7 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
       ws.current.send(JSON.stringify({ username, message }));
       setMessage("");
     }
-  };
-
-  const handleClose = () => navigate("/");
+  }
 
   const handleFullscreen = () => {
     const container = document.getElementById("chat-container");
@@ -121,27 +119,6 @@ const Chat: React.FC<ChatProps> = ({ username }) => {
   return (
     <div id="chat-container">
       <div className="chat-room">
-        <div className="chat-menu">
-          <button
-            id="leave-room"
-            className="menu-button"
-            title="Leave room"
-            onClick={handleClose}
-          ></button>
-          <button
-            id="change-username"
-            className="menu-button"
-            title="Change username"
-            onClick={() => {
-              const newUsername = prompt("Enter your new username:");
-              if (newUsername) {
-                localStorage.setItem("username", newUsername);
-                window.location.reload();
-              }
-            }}
-          ></button>
-        </div>
-
         <div id="messages">
           {isLoadingMessages ? (
             <MessageSkeleton />
