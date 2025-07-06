@@ -1,50 +1,79 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import "./Rooms.css";
 import { API_URL } from "../config";
-import WindowControls from "../components/WindowControls";
-interface RoomsProps {
-  username: string;
-}
 
-const Rooms: React.FC<RoomsProps> = () => {
+const Rooms = () => {
   const [rooms, setRooms] = useState<string[]>([]);
-  const navigate = useNavigate();
 
   useEffect(() => {
+    // Add dummy rooms for testing
+    const dummyRooms = [
+      "general",
+      "random",
+      "tech",
+      "music",
+      "movies",
+      "books",
+      "sports",
+      "gaming",
+      "food",
+      "travel",
+      "art",
+      "science",
+      "politics",
+      "humor",
+      "news",
+      "art",
+      "science",
+      "politics",
+      "humor",
+      "news"
+    ];
+
     fetch(`${API_URL}/rooms`)
       .then((response) => response.json())
       .then((data) => {
         const sortedData = data.sort((a: string, b: string) =>
           a.toLowerCase() > b.toLowerCase() ? 1 : -1
         );
-        setRooms([...sortedData]);
+
+        const allRooms = [...new Set([...sortedData, ...dummyRooms])].sort((a, b) =>
+          a.toLowerCase() > b.toLowerCase() ? 1 : -1
+        );
+        setRooms(allRooms);
       })
-      .catch((error) => console.error("Fetch error:", error));
+      .catch((error) => {
+        console.error("Fetch error:", error);
+        // If fetch fails, use dummy rooms
+        setRooms(dummyRooms.sort((a, b) => a.toLowerCase() > b.toLowerCase() ? 1 : -1));
+      });
   }, []);
 
   return (
     <div id="rooms-container">
-      {/* <div className="rooms-header">
-        <div className="rooms-title">
-          <WindowControls />
-        </div>
-      </div> */}
       <div className="rooms-body">
-        <ul className="rooms-list">
-        {rooms.map((room, index) => (
-          <li key={index} className="room-item">
-            <button
-              onClick={() => {
-                console.log("🚪 Navigating to chat room:", room);
-                navigate(`/${encodeURIComponent(room)}`);
-              }}
-            >
-              {room}
-            </button>
-          </li>
-        ))}
-      </ul>
+        <div className="welcome">
+          <p>Welcome to Small Talk!</p>
+          <p>Choose a room to start chatting with others.</p>
+          <p>Available rooms:</p>
+          <p>
+            Small Talk is a place to connect, share, and have fun conversations on any topic you like.<br />
+            Select a room from the list to join a discussion, or just browse to see what others are talking about.<br />
+            Don't see a topic you like? Feel free to suggest a new room to the community!
+          </p>
+        </div>
+        <div className="rooms-scroll-container">
+          <ul className="rooms-list">
+          {rooms.map((room, index) => (
+            <li key={index} className="room-item">
+              <Link to={`/${encodeURIComponent(room)}`}>
+                {room}
+              </Link>
+            </li>
+          ))}
+          </ul>
+        </div>
       </div>
     </div>
   );
