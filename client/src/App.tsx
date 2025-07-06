@@ -30,7 +30,6 @@ const App = () => {
     navigate("/");
   };
 
-  // Sync tab state with route (for room URLs)
   useEffect(() => {
     if (location.pathname === "/" || location.pathname === "/") {
       setTab("Chat");
@@ -61,18 +60,20 @@ const App = () => {
           left="50%"
           username={username}
           onSignOut={handleSignOut}
-          tabs={["Chat", "Appearance", "Settings"]}
+          tabs={["File", "Chat", "Appearance", "Settings"]}
           activeTab={tab}
           onTabClick={(selected) => {
             setTab(selected);
-
-            // Optional: Reset routing for tabs that are not Chat
             if (selected !== "Chat") {
               navigate("/");
             }
           }}
         >
-          {/* Tab-driven conditional content */}
+          {tab === "File" && (
+            <div style={{ padding: "1rem" }}>
+              <h2>File</h2>
+            </div>
+          )}
           {tab === "Chat" && (
             <Routes>
               <Route path="/" element={<Rooms username={username} />} />
@@ -82,19 +83,12 @@ const App = () => {
           {tab === "Settings" && (
             <div style={{ padding: "1rem" }}>
               <h2>Settings</h2>
-              <p>Coming soon...</p>
             </div>
           )}
           {tab === "Appearance" && (
             <div style={{ padding: "1rem" }}>
               <h2>Appearance</h2>
-              <p>Change themes and styles</p>
-            </div>
-          )}
-          {tab === "_General" && (
-            <div style={{ padding: "1rem" }}>
-              <h2>Welcome</h2>
-              <p>This is a general info panel.</p>
+  
             </div>
           )}
         </Window>

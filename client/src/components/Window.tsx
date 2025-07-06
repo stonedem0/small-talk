@@ -97,7 +97,6 @@ const Window = ({
                 <button onClick={onSignOut}>Sign out</button>
               </div>
             </div>
-            {/* <div className="window-menu"></div> */}
           </div>
         )}
         {children}
