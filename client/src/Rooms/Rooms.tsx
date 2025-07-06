@@ -1,15 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import "./Rooms.css";
 import { API_URL } from "../config";
-import WindowControls from "../components/WindowControls";
-interface RoomsProps {
-  username: string;
-}
 
-const Rooms: React.FC<RoomsProps> = () => {
+const Rooms = () => {
   const [rooms, setRooms] = useState<string[]>([]);
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetch(`${API_URL}/rooms`)
@@ -25,23 +20,18 @@ const Rooms: React.FC<RoomsProps> = () => {
 
   return (
     <div id="rooms-container">
-      {/* <div className="rooms-header">
-        <div className="rooms-title">
-          <WindowControls />
-        </div>
-      </div> */}
       <div className="rooms-body">
+        <div className="welcome">
+          <p>Welcome to Small Talk!</p>
+          <p>Choose a room to start chatting with others.</p>
+          <p>Available rooms:</p>
+        </div>
         <ul className="rooms-list">
         {rooms.map((room, index) => (
           <li key={index} className="room-item">
-            <button
-              onClick={() => {
-                console.log("🚪 Navigating to chat room:", room);
-                navigate(`/${encodeURIComponent(room)}`);
-              }}
-            >
+            <Link to={`/${encodeURIComponent(room)}`}>
               {room}
-            </button>
+            </Link>
           </li>
         ))}
       </ul>
