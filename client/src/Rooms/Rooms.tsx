@@ -23,6 +23,11 @@ const Rooms = () => {
       "science",
       "politics",
       "humor",
+      "news",
+      "art",
+      "science",
+      "politics",
+      "humor",
       "news"
     ];
 
@@ -32,7 +37,7 @@ const Rooms = () => {
         const sortedData = data.sort((a: string, b: string) =>
           a.toLowerCase() > b.toLowerCase() ? 1 : -1
         );
-        // Combine server rooms with dummy rooms, removing duplicates
+
         const allRooms = [...new Set([...sortedData, ...dummyRooms])].sort((a, b) =>
           a.toLowerCase() > b.toLowerCase() ? 1 : -1
         );

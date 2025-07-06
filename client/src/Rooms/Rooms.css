@@ -37,9 +37,9 @@
 }
 
 .rooms-scroll-container {
-  flex: 1 1 0;
-  overflow-y: auto;
   min-height: 0;
+  max-height: 250px;
+    overflow: scroll;
 }
 
 .rooms-list {
@@ -56,13 +56,16 @@
 .room-item a {
   display: block;
   font-family: inherit;
-  color: #0066cc;
   text-decoration: none;
-  /* padding: 4px 0; */
   transition: color 0.2s;
+  color: var(--deep-purple);
 }
 
 .room-item a:hover {
-  color: #003366;
+  color: var(--deep-purple);
   text-decoration: underline;
+}
+
+.room-item a:visited {
+  color: var(--deep-purple);
 }
