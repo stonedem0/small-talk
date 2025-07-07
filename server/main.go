@@ -73,10 +73,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		ws.Close()
 		delete(clients[room], ws)
 		clientsLock.Unlock()
-		log.Printf("Test log")
-		log.Println(userAdded)
-		log.Println(username)
-
 		if userAdded && username != "" {
 			onlineUsersLock.Lock()
 			if onlineUsers[room] != nil {

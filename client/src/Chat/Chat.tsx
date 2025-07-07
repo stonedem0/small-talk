@@ -9,8 +9,10 @@ interface ChatProps {
 }
 
 interface Message {
+  type: string;
   username: string;
   message: string;
+  timestamp: string;
 }
 
 const Chat = ({ username }: ChatProps) => {
@@ -57,7 +59,7 @@ const Chat = ({ username }: ChatProps) => {
         if (!response.ok) throw new Error("Failed to fetch history");
         const data: Message[] = await response.json();
         setMessages(data.reverse());
-     
+  
         ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}`);
         ws.current.onopen = () => {
           console.log("WebSocket connected");
@@ -75,6 +77,12 @@ const Chat = ({ username }: ChatProps) => {
 
         ws.current.onmessage = (event) => {
           const newMessage: Message = JSON.parse(event.data);
+          // TODO: probably need to handle this better:
+          // if (newMessage.type == "system") {
+          //   console.log("New message: ")
+          //   console.log(newMessage)
+          //   return;
+          // }
           setMessages((prev) => [...prev, newMessage]);
         };
 
@@ -86,7 +94,6 @@ const Chat = ({ username }: ChatProps) => {
     setupChat();
     return () => {
       if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-        console.log("Closing WebSocket")
         ws.current.close();
       } else {
         ws.current?.close();
@@ -135,6 +142,7 @@ const Chat = ({ username }: ChatProps) => {
             <MessageSkeleton />
           ) : (
             messages.map((msg, index) => {
+              // console.log(msg)
               let timeStr = '';
               if ((msg as any).timestamp) {
                 try {
