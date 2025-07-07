@@ -34,8 +34,6 @@ type Message struct {
 	Room     string `json:"room"`
 	Username string `json:"username"`
 	Message  string `json:"message"`
-	Colour   string `json:"colour"`
-	Style    string `json:"style"`
 	Type     string `json:"type,omitempty"`
 }
 
@@ -88,8 +86,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 					Room:     room,
 					Username: username,
 					Message:  "left the room",
-					Colour:   "",
-					Style:    "system",
+					Type:     "system",
 				}
 				msgBytes, _ := json.Marshal(leaveMsg)
 				RDB.Publish(ctx, "room:"+room, string(msgBytes))
@@ -130,8 +127,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				Room:     room,
 				Username: username,
 				Message:  "joined the room",
-				Colour:   "",
-				Style:    "system",
 				Type:     "system",
 			}
 			msgBytes, _ := json.Marshal(joinMsg)
