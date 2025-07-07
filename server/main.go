@@ -27,6 +27,9 @@ var (
 	port          = "8080"
 )
 
+var onlineUsers = make(map[string]map[string]bool) // room -> username -> online
+var onlineUsersLock = sync.Mutex{}
+
 type Message struct {
 	Room     string `json:"room"`
 	Username string `json:"username"`
@@ -61,11 +64,28 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	clients[room][ws] = &sync.Mutex{}
 	clientsLock.Unlock()
 
+	var username string
+	userAdded := false
+
 	defer func() {
 		clientsLock.Lock()
 		ws.Close()
 		delete(clients[room], ws)
 		clientsLock.Unlock()
+		// Remove user from onlineUsers map if added
+		log.Printf("Test log")
+		log.Println(userAdded)
+		log.Println(username)
+
+		if userAdded && username != "" {
+			onlineUsersLock.Lock()
+			if onlineUsers[room] != nil {
+				delete(onlineUsers[room], username)
+				log.Printf("[Room %s] User '%s' REMOVED from onlineUsers", room, username)
+				log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
+			}
+			onlineUsersLock.Unlock()
+		}
 		log.Printf("Client disconnected from room: %s", room)
 	}()
 
@@ -85,7 +105,19 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error reading JSON or client disconnected: %v", err)
 			break
 		}
-
+		// On first message, record username as online
+		if !userAdded && msg.Username != "" {
+			username = msg.Username
+			onlineUsersLock.Lock()
+			if onlineUsers[room] == nil {
+				onlineUsers[room] = make(map[string]bool)
+			}
+			onlineUsers[room][username] = true
+			log.Printf("[Room %s] User '%s' ADDED to onlineUsers", room, username)
+			log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
+			onlineUsersLock.Unlock()
+			userAdded = true
+		}
 		msg.Room = room // Ensure message is tagged with room
 		msgBytes, _ := json.Marshal(msg)
 		RDB.Publish(ctx, "room:"+room, string(msgBytes)) // Only publish, don't broadcast locally
@@ -134,4 +166,12 @@ func main() {
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+func getOnlineUsernames(room string) []string {
+	users := []string{}
+	for u := range onlineUsers[room] {
+		users = append(users, u)
+	}
+	return users
 }
