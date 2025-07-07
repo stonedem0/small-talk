@@ -5,31 +5,32 @@ import { API_URL } from "../config";
 
 const Rooms = () => {
   const [rooms, setRooms] = useState<string[]>([]);
+  const [userCounts, setUserCounts] = useState<{ [room: string]: number }>({});
 
   useEffect(() => {
     // Add dummy rooms for testing
-    const dummyRooms = [
-      "general",
-      "random",
-      "tech",
-      "music",
-      "movies",
-      "books",
-      "sports",
-      "gaming",
-      "food",
-      "travel",
-      "art",
-      "science",
-      "politics",
-      "humor",
-      "news",
-      "art",
-      "science",
-      "politics",
-      "humor",
-      "news"
-    ];
+    // const dummyRooms = [
+      // "general",
+      // "random",
+      // "tech",
+      // "music",
+      // "movies",
+      // "books",
+      // "sports",
+      // "gaming",
+      // "food",
+      // "travel",
+      // "art",
+      // "science",
+      // "politics",
+      // "humor",
+      // "news",
+      // "art",
+      // "science",
+      // "politics",
+      // "humor",
+      // "news"
+    // ];
 
     fetch(`${API_URL}/rooms`)
       .then((response) => response.json())
@@ -38,15 +39,23 @@ const Rooms = () => {
           a.toLowerCase() > b.toLowerCase() ? 1 : -1
         );
 
-        const allRooms = [...new Set([...sortedData, ...dummyRooms])].sort((a, b) =>
+        const allRooms = [...new Set([...sortedData].sort((a, b) =>
           a.toLowerCase() > b.toLowerCase() ? 1 : -1
-        );
+        ))];
         setRooms(allRooms);
       })
       .catch((error) => {
         console.error("Fetch error:", error);
         // If fetch fails, use dummy rooms
-        setRooms(dummyRooms.sort((a, b) => a.toLowerCase() > b.toLowerCase() ? 1 : -1));
+        // setRooms(dummyRooms.sort((a, b) => a.toLowerCase() > b.toLowerCase() ? 1 : -1));
+      });
+
+    // Fetch online user counts
+    fetch(`${API_URL}/online-users`)
+      .then((response) => response.json())
+      .then((data) => setUserCounts(data))
+      .catch((error) => {
+        console.error("User count fetch error:", error);
       });
   }, []);
 
@@ -68,7 +77,7 @@ const Rooms = () => {
           {rooms.map((room, index) => (
             <li key={index} className="room-item">
               <Link to={`/${encodeURIComponent(room)}`}>
-                {room}
+                {room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
               </Link>
             </li>
           ))}

@@ -172,6 +172,7 @@ func main() {
 	http.HandleFunc("/history", getChatHistoryHandler)
 	http.HandleFunc("/rooms", getRoomsHandler)
 	http.HandleFunc("/subscribe", subscribeToRoomHandler)
+	http.HandleFunc("/online-users", getOnlineUsersHandler)
 	log.Println("Server started on port", port)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {
