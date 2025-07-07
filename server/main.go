@@ -36,6 +36,7 @@ type Message struct {
 	Message  string `json:"message"`
 	Colour   string `json:"colour"`
 	Style    string `json:"style"`
+	Type     string `json:"type,omitempty"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -83,6 +84,16 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				delete(onlineUsers[room], username)
 				log.Printf("[Room %s] User '%s' REMOVED from onlineUsers", room, username)
 				log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
+				// Broadcast leave message
+				leaveMsg := Message{
+					Room:     room,
+					Username: username,
+					Message:  "left the room",
+					Colour:   "",
+					Style:    "system",
+				}
+				msgBytes, _ := json.Marshal(leaveMsg)
+				RDB.Publish(ctx, "room:"+room, string(msgBytes))
 			}
 			onlineUsersLock.Unlock()
 		}
@@ -105,8 +116,8 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error reading JSON or client disconnected: %v", err)
 			break
 		}
-		// On first message, record username as online
-		if !userAdded && msg.Username != "" {
+		// On first message, record username as online ONLY if it's a join message
+		if !userAdded && msg.Type == "join" && msg.Username != "" {
 			username = msg.Username
 			onlineUsersLock.Lock()
 			if onlineUsers[room] == nil {
