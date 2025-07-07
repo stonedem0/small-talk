@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -31,10 +32,11 @@ var onlineUsers = make(map[string]map[string]bool) // room -> username -> online
 var onlineUsersLock = sync.Mutex{}
 
 type Message struct {
-	Room     string `json:"room"`
-	Username string `json:"username"`
-	Message  string `json:"message"`
-	Type     string `json:"type,omitempty"`
+	Room      string `json:"room"`
+	Username  string `json:"username"`
+	Message   string `json:"message"`
+	Type      string `json:"type,omitempty"`
+	Timestamp string `json:"timestamp"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -83,10 +85,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
 				// Broadcast leave message
 				leaveMsg := Message{
-					Room:     room,
-					Username: username,
-					Message:  "left the room",
-					Type:     "system",
+					Room:      room,
+					Username:  username,
+					Message:   "left the room",
+					Type:      "system",
+					Timestamp: time.Now().UTC().Format(time.RFC3339),
 				}
 				msgBytes, _ := json.Marshal(leaveMsg)
 				RDB.Publish(ctx, "room:"+room, string(msgBytes))
@@ -124,10 +127,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
 			// Broadcast join message
 			joinMsg := Message{
-				Room:     room,
-				Username: username,
-				Message:  "joined the room",
-				Type:     "system",
+				Room:      room,
+				Username:  username,
+				Message:   "joined the room",
+				Type:      "system",
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
 			}
 			msgBytes, _ := json.Marshal(joinMsg)
 			RDB.Publish(ctx, "room:"+room, string(msgBytes))
@@ -135,6 +139,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			userAdded = true
 		}
 		msg.Room = room // Ensure message is tagged with room
+		msg.Timestamp = time.Now().UTC().Format(time.RFC3339)
 		msgBytes, _ := json.Marshal(msg)
 		RDB.Publish(ctx, "room:"+room, string(msgBytes)) // Only publish, don't broadcast locally
 	}

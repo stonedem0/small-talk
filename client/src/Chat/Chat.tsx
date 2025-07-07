@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { API_URL, WS_URL } from "../config";
+import { format } from 'date-fns';
 
 interface ChatProps {
   username: string;
@@ -133,12 +134,28 @@ const Chat = ({ username }: ChatProps) => {
           {isLoadingMessages ? (
             <MessageSkeleton />
           ) : (
-            messages.map((msg, index) => (
-              // console.log(msg),
-              <p key={index}>
-                <strong>{msg.username}:</strong> {msg.message}
-              </p>
-            ))
+            messages.map((msg, index) => {
+              let timeStr = '';
+              if ((msg as any).timestamp) {
+                try {
+                  timeStr = format(new Date((msg as any).timestamp), 'HH:mm:ss');
+                } catch {}
+              }
+              if ((msg as any).type === "system") {
+                return (
+                  <p key={index} style={{ color: "#888", fontStyle: "italic" }}>
+                    {timeStr && <span>[{timeStr}] </span>}
+                    {msg.username} {msg.message}
+                  </p>
+                );
+              }
+              return (
+                <p key={index}>
+                  {timeStr && <span>[{timeStr}] </span>}
+                  <strong>{msg.username}:</strong> {msg.message}
+                </p>
+              );
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
