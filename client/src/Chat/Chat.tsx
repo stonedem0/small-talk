@@ -63,6 +63,14 @@ const Chat = ({ username }: ChatProps) => {
           console.log("WebSocket connected");
           setIsConnected(true);
           setIsLoadingMessages(false);
+          ws.current?.send(
+            JSON.stringify({
+              type: "join",
+              room: roomName,
+              username: username,
+              message: "joined the room"
+            })
+          );
         };
 
         ws.current.onmessage = (event) => {
@@ -75,11 +83,21 @@ const Chat = ({ username }: ChatProps) => {
         console.error("Failed to set up chat:", error);
       }
     };
-
     setupChat();
-
     return () => {
-      ws.current?.close();
+      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        ws.current.send(
+          JSON.stringify({
+            type: "leave",
+            room: roomName,
+            username: username,
+            message: "left the room"
+          })
+        );
+        setTimeout(() => ws.current?.close(), 100);
+      } else {
+        ws.current?.close();
+      }
     };
   }, [isValidRoom, roomName]);
 
