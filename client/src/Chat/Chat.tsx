@@ -56,13 +56,12 @@ const Chat = ({ username }: ChatProps) => {
         if (!response.ok) throw new Error("Failed to fetch history");
         const data: Message[] = await response.json();
         setMessages(data.reverse());
-
         ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}`);
-
         ws.current.onopen = () => {
           console.log("WebSocket connected");
           setIsConnected(true);
           setIsLoadingMessages(false);
+          console.log("Test log" + roomName + " " + username)
           ws.current?.send(
             JSON.stringify({
               type: "join",

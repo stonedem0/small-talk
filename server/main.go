@@ -73,7 +73,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		ws.Close()
 		delete(clients[room], ws)
 		clientsLock.Unlock()
-		// Remove user from onlineUsers map if added
 		log.Printf("Test log")
 		log.Println(userAdded)
 		log.Println(username)
@@ -126,6 +125,17 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			onlineUsers[room][username] = true
 			log.Printf("[Room %s] User '%s' ADDED to onlineUsers", room, username)
 			log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
+			// Broadcast join message
+			joinMsg := Message{
+				Room:     room,
+				Username: username,
+				Message:  "joined the room",
+				Colour:   "",
+				Style:    "system",
+				Type:     "system",
+			}
+			msgBytes, _ := json.Marshal(joinMsg)
+			RDB.Publish(ctx, "room:"+room, string(msgBytes))
 			onlineUsersLock.Unlock()
 			userAdded = true
 		}
