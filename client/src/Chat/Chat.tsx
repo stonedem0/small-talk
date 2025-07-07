@@ -56,12 +56,12 @@ const Chat = ({ username }: ChatProps) => {
         if (!response.ok) throw new Error("Failed to fetch history");
         const data: Message[] = await response.json();
         setMessages(data.reverse());
+     
         ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}`);
         ws.current.onopen = () => {
           console.log("WebSocket connected");
           setIsConnected(true);
           setIsLoadingMessages(false);
-          console.log("Test log" + roomName + " " + username)
           ws.current?.send(
             JSON.stringify({
               type: "join",
@@ -85,15 +85,8 @@ const Chat = ({ username }: ChatProps) => {
     setupChat();
     return () => {
       if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-        ws.current.send(
-          JSON.stringify({
-            type: "leave",
-            room: roomName,
-            username: username,
-            message: "left the room"
-          })
-        );
-        setTimeout(() => ws.current?.close(), 100);
+        console.log("Closing WebSocket")
+        ws.current.close();
       } else {
         ws.current?.close();
       }
@@ -141,6 +134,7 @@ const Chat = ({ username }: ChatProps) => {
             <MessageSkeleton />
           ) : (
             messages.map((msg, index) => (
+              // console.log(msg),
               <p key={index}>
                 <strong>{msg.username}:</strong> {msg.message}
               </p>
