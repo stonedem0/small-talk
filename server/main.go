@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -27,12 +28,15 @@ var (
 	port          = "8080"
 )
 
+var onlineUsers = make(map[string]map[string]bool) // room -> username -> online
+var onlineUsersLock = sync.Mutex{}
+
 type Message struct {
-	Room     string `json:"room"`
-	Username string `json:"username"`
-	Message  string `json:"message"`
-	Colour   string `json:"colour"`
-	Style    string `json:"style"`
+	Room      string `json:"room"`
+	Username  string `json:"username"`
+	Message   string `json:"message"`
+	Type      string `json:"type,omitempty"`
+	Timestamp string `json:"timestamp"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -61,11 +65,33 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	clients[room][ws] = &sync.Mutex{}
 	clientsLock.Unlock()
 
+	var username string
+	userAdded := false
+
 	defer func() {
 		clientsLock.Lock()
 		ws.Close()
 		delete(clients[room], ws)
 		clientsLock.Unlock()
+		if userAdded && username != "" {
+			onlineUsersLock.Lock()
+			if onlineUsers[room] != nil {
+				delete(onlineUsers[room], username)
+				log.Printf("[Room %s] User '%s' REMOVED from onlineUsers", room, username)
+				log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
+				// Broadcast leave message
+				leaveMsg := Message{
+					Room:      room,
+					Username:  username,
+					Message:   "left the room",
+					Type:      "system",
+					Timestamp: time.Now().UTC().Format(time.RFC3339),
+				}
+				msgBytes, _ := json.Marshal(leaveMsg)
+				RDB.Publish(ctx, "room:"+room, string(msgBytes))
+			}
+			onlineUsersLock.Unlock()
+		}
 		log.Printf("Client disconnected from room: %s", room)
 	}()
 
@@ -85,8 +111,31 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error reading JSON or client disconnected: %v", err)
 			break
 		}
-
+		// On first message, record username as online ONLY if it's a join message
+		if !userAdded && msg.Type == "join" && msg.Username != "" {
+			username = msg.Username
+			onlineUsersLock.Lock()
+			if onlineUsers[room] == nil {
+				onlineUsers[room] = make(map[string]bool)
+			}
+			onlineUsers[room][username] = true
+			log.Printf("[Room %s] User '%s' ADDED to onlineUsers", room, username)
+			log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
+			// Broadcast join message
+			joinMsg := Message{
+				Room:      room,
+				Username:  username,
+				Message:   "joined the room",
+				Type:      "system",
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
+			}
+			msgBytes, _ := json.Marshal(joinMsg)
+			RDB.Publish(ctx, "room:"+room, string(msgBytes))
+			onlineUsersLock.Unlock()
+			userAdded = true
+		}
 		msg.Room = room // Ensure message is tagged with room
+		msg.Timestamp = time.Now().UTC().Format(time.RFC3339)
 		msgBytes, _ := json.Marshal(msg)
 		RDB.Publish(ctx, "room:"+room, string(msgBytes)) // Only publish, don't broadcast locally
 	}
@@ -129,9 +178,18 @@ func main() {
 	http.HandleFunc("/history", getChatHistoryHandler)
 	http.HandleFunc("/rooms", getRoomsHandler)
 	http.HandleFunc("/subscribe", subscribeToRoomHandler)
+	http.HandleFunc("/online-users", getOnlineUsersHandler)
 	log.Println("Server started on port", port)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+func getOnlineUsernames(room string) []string {
+	users := []string{}
+	for u := range onlineUsers[room] {
+		users = append(users, u)
+	}
+	return users
 }

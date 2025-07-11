@@ -2,14 +2,17 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { API_URL, WS_URL } from "../config";
+import { format } from 'date-fns';
 
 interface ChatProps {
   username: string;
 }
 
 interface Message {
+  type: string;
   username: string;
   message: string;
+  timestamp: string;
 }
 
 const Chat = ({ username }: ChatProps) => {
@@ -56,17 +59,30 @@ const Chat = ({ username }: ChatProps) => {
         if (!response.ok) throw new Error("Failed to fetch history");
         const data: Message[] = await response.json();
         setMessages(data.reverse());
-
+  
         ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}`);
-
         ws.current.onopen = () => {
           console.log("WebSocket connected");
           setIsConnected(true);
           setIsLoadingMessages(false);
+          ws.current?.send(
+            JSON.stringify({
+              type: "join",
+              room: roomName,
+              username: username,
+              message: "joined the room"
+            })
+          );
         };
 
         ws.current.onmessage = (event) => {
           const newMessage: Message = JSON.parse(event.data);
+          // TODO: probably need to handle this better:
+          // if (newMessage.type == "system") {
+          //   console.log("New message: ")
+          //   console.log(newMessage)
+          //   return;
+          // }
           setMessages((prev) => [...prev, newMessage]);
         };
 
@@ -75,11 +91,13 @@ const Chat = ({ username }: ChatProps) => {
         console.error("Failed to set up chat:", error);
       }
     };
-
     setupChat();
-
     return () => {
-      ws.current?.close();
+      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        ws.current.close();
+      } else {
+        ws.current?.close();
+      }
     };
   }, [isValidRoom, roomName]);
 
@@ -123,11 +141,29 @@ const Chat = ({ username }: ChatProps) => {
           {isLoadingMessages ? (
             <MessageSkeleton />
           ) : (
-            messages.map((msg, index) => (
-              <p key={index}>
-                <strong>{msg.username}:</strong> {msg.message}
-              </p>
-            ))
+            messages.map((msg, index) => {
+              // console.log(msg)
+              let timeStr = '';
+              if ((msg as any).timestamp) {
+                try {
+                  timeStr = format(new Date((msg as any).timestamp), 'HH:mm:ss');
+                } catch {}
+              }
+              if ((msg as any).type === "system") {
+                return (
+                  <p key={index} style={{ color: "#888", fontStyle: "italic" }}>
+                    {timeStr && <span>[{timeStr}] </span>}
+                    {msg.username} {msg.message}
+                  </p>
+                );
+              }
+              return (
+                <p key={index}>
+                  {timeStr && <span>[{timeStr}] </span>}
+                  <strong>{msg.username}:</strong> {msg.message}
+                </p>
+              );
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
