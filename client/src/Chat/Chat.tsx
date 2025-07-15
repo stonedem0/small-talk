@@ -25,6 +25,7 @@ const Chat = ({ username }: ChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [isConnected, setIsConnected] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   const ws = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -102,6 +103,25 @@ const Chat = ({ username }: ChatProps) => {
   }, [isValidRoom, roomName]);
 
   useEffect(() => {
+    if (!isValidRoom) return;
+
+    let interval: number;
+    const fetchOnlineUsers = async () => {
+      try {
+        const response = await fetch(`${API_URL}/room-usernames`);
+        if (!response.ok) throw new Error("Failed to fetch online users");
+        const data: Record<string, string[]> = await response.json();
+        setOnlineUsers(data[roomName!] || []);
+      } catch (error) {
+        console.error("Failed to fetch online users:", error);
+      }
+    };
+    fetchOnlineUsers();
+    interval = window.setInterval(fetchOnlineUsers, 1000); // refresh every 1s
+    return () => clearInterval(interval);
+  }, [isValidRoom, roomName]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -136,49 +156,58 @@ const Chat = ({ username }: ChatProps) => {
 
   return (
     <div id="chat-container">
-      <div className="chat-room">
-        <div id="messages">
-          {isLoadingMessages ? (
-            <MessageSkeleton />
-          ) : (
-            messages.map((msg, index) => {
-              // console.log(msg)
-              let timeStr = '';
-              if ((msg as any).timestamp) {
-                try {
-                  timeStr = format(new Date((msg as any).timestamp), 'HH:mm:ss');
-                } catch {}
-              }
-              if ((msg as any).type === "system") {
+      <div className="chat-room" style={{ display: "flex", flexDirection: "row" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <div id="messages">
+            {isLoadingMessages ? (
+              <MessageSkeleton />
+            ) : (
+              messages.map((msg, index) => {
+                let timeStr = '';
+                if ((msg as any).timestamp) {
+                  try {
+                    timeStr = format(new Date((msg as any).timestamp), 'HH:mm:ss');
+                  } catch {}
+                }
+                if ((msg as any).type === "system") {
+                  return (
+                    <p key={index} style={{ color: "#888", fontStyle: "italic" }}>
+                      {timeStr && <span>[{timeStr}] </span>}
+                      {msg.username} {msg.message}
+                    </p>
+                  );
+                }
                 return (
-                  <p key={index} style={{ color: "#888", fontStyle: "italic" }}>
+                  <p key={index}>
                     {timeStr && <span>[{timeStr}] </span>}
-                    {msg.username} {msg.message}
+                    <strong>{msg.username}:</strong> {msg.message}
                   </p>
                 );
-              }
-              return (
-                <p key={index}>
-                  {timeStr && <span>[{timeStr}] </span>}
-                  <strong>{msg.username}:</strong> {msg.message}
-                </p>
-              );
-            })
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+              })
+            )}
+            <div ref={messagesEndRef} />
+          </div>
 
-        <div id="message-controls">
-          <form onSubmit={sendMessage} id="submit">
-            <input
-              placeholder="message"
-              type="text"
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <input type="submit" value="send" id="send-message" />
-          </form>
+          <div id="message-controls">
+            <form onSubmit={sendMessage} id="submit">
+              <input
+                placeholder="message"
+                type="text"
+                id="message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+              <input type="submit" value="send" id="send-message" />
+            </form>
+          </div>
+        </div>
+        <div className="online-users-sidebar">
+          <h4>Online</h4>
+            <ul>
+              {onlineUsers.map((user) => (
+                <li key={user}>{user}</li>
+              ))}
+            </ul>
         </div>
       </div>
     </div>
