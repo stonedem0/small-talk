@@ -243,6 +243,23 @@
   background: white;
 }
 
+.online-users-sidebar h4 {
+  margin-top: 0;
+  margin-bottom: 5px;
+  color: var(--deep-purple);
+  font-weight: bold;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.online-users-sidebar ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: palevioletred;
+}
+
+
 @keyframes pulse {
   0% {
     background-position: -200% 0;

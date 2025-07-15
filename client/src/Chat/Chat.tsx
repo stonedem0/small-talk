@@ -202,10 +202,10 @@ const Chat = ({ username }: ChatProps) => {
           </div>
         </div>
         <div className="online-users-sidebar">
-          <h4 style={{ marginTop: 0 }}>Online</h4>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          <h4>Online</h4>
+            <ul>
               {onlineUsers.map((user) => (
-                <li key={user} style={{ padding: '4px 0' }}>{user}</li>
+                <li key={user}>{user}</li>
               ))}
             </ul>
         </div>
