@@ -111,17 +111,13 @@ const Chat = ({ username }: ChatProps) => {
         const response = await fetch(`${API_URL}/room-usernames`);
         if (!response.ok) throw new Error("Failed to fetch online users");
         const data: Record<string, string[]> = await response.json();
-        console.log("roomName:")
-        console.log(roomName)
-        console.log("data:")
-        console.log(data)
         setOnlineUsers(data[roomName!] || []);
       } catch (error) {
         console.error("Failed to fetch online users:", error);
       }
     };
     fetchOnlineUsers();
-    interval = window.setInterval(fetchOnlineUsers, 2000); // refresh every 4s
+    interval = window.setInterval(fetchOnlineUsers, 1000); // refresh every 1s
     return () => clearInterval(interval);
   }, [isValidRoom, roomName]);
 
@@ -159,63 +155,60 @@ const Chat = ({ username }: ChatProps) => {
   );
 
   return (
-    <div id="chat-container" style={{ display: "flex" }}>
-      <div className="chat-room" style={{ flex: 1 }}>
-        <div id="messages">
-          {isLoadingMessages ? (
-            <MessageSkeleton />
-          ) : (
-            messages.map((msg, index) => {
-              // console.log(msg)
-              let timeStr = '';
-              if ((msg as any).timestamp) {
-                try {
-                  timeStr = format(new Date((msg as any).timestamp), 'HH:mm:ss');
-                } catch {}
-              }
-              if ((msg as any).type === "system") {
+    <div id="chat-container">
+      <div className="chat-room" style={{ display: "flex", flexDirection: "row" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <div id="messages">
+            {isLoadingMessages ? (
+              <MessageSkeleton />
+            ) : (
+              messages.map((msg, index) => {
+                let timeStr = '';
+                if ((msg as any).timestamp) {
+                  try {
+                    timeStr = format(new Date((msg as any).timestamp), 'HH:mm:ss');
+                  } catch {}
+                }
+                if ((msg as any).type === "system") {
+                  return (
+                    <p key={index} style={{ color: "#888", fontStyle: "italic" }}>
+                      {timeStr && <span>[{timeStr}] </span>}
+                      {msg.username} {msg.message}
+                    </p>
+                  );
+                }
                 return (
-                  <p key={index} style={{ color: "#888", fontStyle: "italic" }}>
+                  <p key={index}>
                     {timeStr && <span>[{timeStr}] </span>}
-                    {msg.username} {msg.message}
+                    <strong>{msg.username}:</strong> {msg.message}
                   </p>
                 );
-              }
-              return (
-                <p key={index}>
-                  {timeStr && <span>[{timeStr}] </span>}
-                  <strong>{msg.username}:</strong> {msg.message}
-                </p>
-              );
-            })
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+              })
+            )}
+            <div ref={messagesEndRef} />
+          </div>
 
-        <div id="message-controls">
-          <form onSubmit={sendMessage} id="submit">
-            <input
-              placeholder="message"
-              type="text"
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <input type="submit" value="send" id="send-message" />
-          </form>
+          <div id="message-controls">
+            <form onSubmit={sendMessage} id="submit">
+              <input
+                placeholder="message"
+                type="text"
+                id="message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+              <input type="submit" value="send" id="send-message" />
+            </form>
+          </div>
         </div>
-      </div>
-      <div className="online-users-sidebar" style={{ width: 200, borderLeft: "1px solid #eee", padding: 16, background: "#fafbfc" }}>
-        <h4 style={{ marginTop: 0 }}>Online Users</h4>
-        {onlineUsers.length === 0 ? (
-          <div style={{ color: '#aaa', fontStyle: 'italic' }}>No users online</div>
-        ) : (
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {onlineUsers.map((user) => (
-              <li key={user} style={{ padding: '4px 0' }}>{user}</li>
-            ))}
-          </ul>
-        )}
+        <div className="online-users-sidebar">
+          <h4 style={{ marginTop: 0 }}>Online</h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              {onlineUsers.map((user) => (
+                <li key={user} style={{ padding: '4px 0' }}>{user}</li>
+              ))}
+            </ul>
+        </div>
       </div>
     </div>
   );
