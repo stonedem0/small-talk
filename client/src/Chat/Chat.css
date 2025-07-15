@@ -171,10 +171,12 @@
 }
 
 #messages {
-  margin: 0px 5px 5px 5px;
+  margin: 0px 0px 0px 5px;
   background-color: white;
   padding: 10px;
   max-height: 330px;
+  border: 1px solid gray;
+  border-top: none;
   /* min-height: 430px; */
   overflow-y: auto;
 }
@@ -187,8 +189,8 @@
 #message-controls {
   display: flex;
   flex-direction: column;
-  margin: 0px 5px 5px 5px;
-  /* border-top: 5px solid var(--deep-purple); */
+  margin: 0px 0px 5px 5px;
+  border-right: 1px solid gray;
   background-color: white;
   padding: 10px;
 }
@@ -238,7 +240,7 @@
   margin-bottom: 5px;
   padding-top: 5px;
   padding-left: 5px;
-  background: #fafbfc;
+  background: white;
 }
 
 @keyframes pulse {
