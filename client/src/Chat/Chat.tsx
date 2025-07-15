@@ -25,6 +25,7 @@ const Chat = ({ username }: ChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [isConnected, setIsConnected] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   const ws = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -102,6 +103,29 @@ const Chat = ({ username }: ChatProps) => {
   }, [isValidRoom, roomName]);
 
   useEffect(() => {
+    if (!isValidRoom) return;
+
+    let interval: number;
+    const fetchOnlineUsers = async () => {
+      try {
+        const response = await fetch(`${API_URL}/room-usernames`);
+        if (!response.ok) throw new Error("Failed to fetch online users");
+        const data: Record<string, string[]> = await response.json();
+        console.log("roomName:")
+        console.log(roomName)
+        console.log("data:")
+        console.log(data)
+        setOnlineUsers(data[roomName!] || []);
+      } catch (error) {
+        console.error("Failed to fetch online users:", error);
+      }
+    };
+    fetchOnlineUsers();
+    interval = window.setInterval(fetchOnlineUsers, 2000); // refresh every 4s
+    return () => clearInterval(interval);
+  }, [isValidRoom, roomName]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -135,8 +159,8 @@ const Chat = ({ username }: ChatProps) => {
   );
 
   return (
-    <div id="chat-container">
-      <div className="chat-room">
+    <div id="chat-container" style={{ display: "flex" }}>
+      <div className="chat-room" style={{ flex: 1 }}>
         <div id="messages">
           {isLoadingMessages ? (
             <MessageSkeleton />
@@ -180,6 +204,18 @@ const Chat = ({ username }: ChatProps) => {
             <input type="submit" value="send" id="send-message" />
           </form>
         </div>
+      </div>
+      <div className="online-users-sidebar" style={{ width: 200, borderLeft: "1px solid #eee", padding: 16, background: "#fafbfc" }}>
+        <h4 style={{ marginTop: 0 }}>Online Users</h4>
+        {onlineUsers.length === 0 ? (
+          <div style={{ color: '#aaa', fontStyle: 'italic' }}>No users online</div>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {onlineUsers.map((user) => (
+              <li key={user} style={{ padding: '4px 0' }}>{user}</li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

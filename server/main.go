@@ -179,6 +179,7 @@ func main() {
 	http.HandleFunc("/rooms", getRoomsHandler)
 	http.HandleFunc("/subscribe", subscribeToRoomHandler)
 	http.HandleFunc("/online-users", getOnlineUsersHandler)
+	http.HandleFunc("/room-usernames", getRoomUsernamesHandler)
 	log.Println("Server started on port", port)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {
