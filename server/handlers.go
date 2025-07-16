@@ -272,8 +272,3 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Login successful"))
 }
-
-// http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-// 	log.Printf("UNMATCHED: %s %s", r.Method, r.URL.Path)
-// 	http.NotFound(w, r)
-// })
