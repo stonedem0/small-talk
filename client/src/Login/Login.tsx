@@ -28,13 +28,20 @@ const Popup = ({ setUsername }: PopupProps) => {
     });
 
     const data = await response.json();
+    const token = data.token;
+    if (!token) {
+      setError("No token received from server");
+      return;
+    }
+
+    localStorage.setItem("username", username.trim());
     if (data.error) {
       setError(data.error);
-    } else {
-      localStorage.setItem("username", username.trim());
-      setUsername(username.trim()); // call parent setter only
-      navigate("/home");
-    }
+    } 
+    localStorage.setItem("token", token);
+    setUsername(username.trim());
+    navigate("/home");
+  
   };
 
   const register = async () => {

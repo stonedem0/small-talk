@@ -9,7 +9,11 @@ const Rooms = () => {
 
   useEffect(() => {
 
-    fetch(`${API_URL}/rooms`)
+    fetch(`${API_URL}/rooms`, {
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      }
+    })
       .then((response) => response.json())
       .then((data) => {
         const sortedData = data.sort((a: string, b: string) =>

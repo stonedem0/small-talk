@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -31,6 +33,27 @@ func NewHandler(rdb *redis.Client, jwtSecret []byte) *Handler {
 	}
 }
 
+func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Always return early for preflight
+		if r.Method == "OPTIONS" {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		username, err := h.VerifyToken(r)
+		if err != nil {
+			http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "username", username)
+		next(w, r.WithContext(ctx))
+	}
+}
 func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
@@ -297,5 +320,54 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("LoginHandler: Login successful for user", username)
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Login successful"})
+	claims := jwt.MapClaims{
+		"username": username,
+		"exp":      jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := token.SignedString(h.JWTSecret)
+	if err != nil {
+		log.Println("LoginHandler: Failed to sign token")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to generate token"})
+		return
+	}
+
+	log.Println("LoginHandler: Login successful for user", username)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Login successful",
+		"token":   signedToken,
+	})
+
+}
+
+func (h *Handler) VerifyToken(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		return "", fmt.Errorf("missing or invalid Authorization header")
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return h.JWTSecret, nil
+	})
+
+	if err != nil || !token.Valid {
+		return "", fmt.Errorf("invalid token: %w", err)
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", fmt.Errorf("invalid token claims")
+	}
+
+	username, ok := claims["username"].(string)
+	if !ok {
+		return "", fmt.Errorf("username missing from token")
+	}
+
+	return username, nil
 }
