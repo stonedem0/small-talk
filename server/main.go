@@ -6,16 +6,26 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/joho/godotenv"
 )
 
+var jwtSecret []byte
+
 func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+
 	clients["backrooms"] = make(map[*websocket.Conn]*sync.Mutex)
 	clients["political"] = make(map[*websocket.Conn]*sync.Mutex)
 	clients["overwatch is dead"] = make(map[*websocket.Conn]*sync.Mutex)
+
 }
 
 var ctx = context.Background()
