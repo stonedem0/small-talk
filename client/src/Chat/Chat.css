@@ -156,7 +156,7 @@
   outline: none;
 }
 
-#leave-room {
+/* #leave-room {
   background-image: url("../assets/leave.png");
   background-size: 22px;
   background-repeat: no-repeat;
@@ -168,7 +168,7 @@
   background-size: 22px;
   background-repeat: no-repeat;
   background-position: center;
-}
+} */
 
 #messages {
   margin: 0px 0px 0px 5px;
