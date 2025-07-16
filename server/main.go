@@ -180,6 +180,10 @@ func main() {
 	http.HandleFunc("/subscribe", SubscribeToRoomHandler)
 	http.HandleFunc("/online-users", GetOnlineUsersHandler)
 	http.HandleFunc("/room-usernames", GetRoomUsernamesHandler)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("UNMATCHED: %s %s", r.Method, r.URL.Path)
+		http.NotFound(w, r)
+	})
 	log.Println("Server started on port", port)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {

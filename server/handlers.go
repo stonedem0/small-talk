@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/go-redis/redis"
 )
 
 type Credentials struct {
@@ -104,6 +104,7 @@ func GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GetOnlineUsersHandler: %s %s", r.Method, r.URL.Path)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -205,9 +206,11 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("LoginHandler called!")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -215,42 +218,65 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != "POST" {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		log.Println("LoginHandler: Invalid request method")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request method"})
 		return
 	}
 
 	var creds Credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		log.Println("LoginHandler: Invalid request body")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
-	spew.Dump(creds)
 	username := creds.Username
 	password := creds.Password
 
 	if username == "" || password == "" {
-		http.Error(w, "Username and password are required", http.StatusBadRequest)
+		log.Println("LoginHandler: Username and password are required")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Username and password are required"})
 		return
 	}
 
 	user, err := RDB.HGet(ctx, "users", username).Result()
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		if err == redis.Nil {
+			log.Println("LoginHandler: User not found (redis.Nil)")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": "User not found"})
+		} else {
+			log.Println("LoginHandler: Internal server error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		}
 		return
 	}
 
 	var userData Credentials
 	if err := json.Unmarshal([]byte(user), &userData); err != nil {
-		http.Error(w, "Invalid user data", http.StatusInternalServerError)
+		log.Println("LoginHandler: Invalid user data")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid user data"})
 		return
 	}
 
 	if userData.Password != password {
-		http.Error(w, "Invalid password", http.StatusUnauthorized)
+		log.Println("LoginHandler: Invalid password")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid password"})
 		return
 	}
 
+	log.Println("LoginHandler: Login successful for user", username)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Login successful"))
 }
+
+// http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+// 	log.Printf("UNMATCHED: %s %s", r.Method, r.URL.Path)
+// 	http.NotFound(w, r)
+// })
