@@ -6,16 +6,26 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/joho/godotenv"
 )
 
+var jwtSecret []byte
+
 func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+
 	clients["backrooms"] = make(map[*websocket.Conn]*sync.Mutex)
 	clients["political"] = make(map[*websocket.Conn]*sync.Mutex)
 	clients["overwatch is dead"] = make(map[*websocket.Conn]*sync.Mutex)
+
 }
 
 var ctx = context.Background()
@@ -77,8 +87,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			onlineUsersLock.Lock()
 			if onlineUsers[room] != nil {
 				delete(onlineUsers[room], username)
-				log.Printf("[Room %s] User '%s' REMOVED from onlineUsers", room, username)
-				log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
 				// Broadcast leave message
 				leaveMsg := Message{
 					Room:      room,
@@ -173,13 +181,20 @@ func subscribeToRoom(room string) {
 func main() {
 	flag.Parse()
 	InitRedis()
+	handler := NewHandler(RDB, jwtSecret)
 	p := ":" + port
 	http.HandleFunc("/ws", handleConnections)
-	http.HandleFunc("/history", getChatHistoryHandler)
-	http.HandleFunc("/rooms", getRoomsHandler)
-	http.HandleFunc("/subscribe", subscribeToRoomHandler)
-	http.HandleFunc("/online-users", getOnlineUsersHandler)
-	http.HandleFunc("/room-usernames", getRoomUsernamesHandler)
+	http.HandleFunc("/login", handler.LoginHandler)
+	http.HandleFunc("/register", handler.RegisterHandler)
+	http.HandleFunc("/history", handler.WithAuth(handler.GetChatHistoryHandler))
+	http.HandleFunc("/rooms", handler.WithAuth(handler.GetRoomsHandler))
+	http.HandleFunc("/subscribe", handler.WithAuth(handler.SubscribeToRoomHandler))
+	http.HandleFunc("/online-users", handler.WithAuth(handler.GetOnlineUsersHandler))
+	http.HandleFunc("/room-usernames", handler.GetRoomUsernamesHandler)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("UNMATCHED: %s %s", r.Method, r.URL.Path)
+		http.NotFound(w, r)
+	})
 	log.Println("Server started on port", port)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {

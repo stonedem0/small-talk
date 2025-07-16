@@ -33,7 +33,11 @@ const Chat = ({ username }: ChatProps) => {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await fetch(`${API_URL}/rooms`);
+        const response = await fetch(`${API_URL}/rooms`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          }
+        });
         if (!response.ok) throw new Error("Failed to fetch rooms");
         const data: string[] = await response.json();
         setValidRooms(data);
@@ -56,7 +60,11 @@ const Chat = ({ username }: ChatProps) => {
 
     const setupChat = async () => {
       try {
-        const response = await fetch(`${API_URL}/history?room=${roomName}`);
+        const response = await fetch(`${API_URL}/history?room=${roomName}`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          }
+        });
         if (!response.ok) throw new Error("Failed to fetch history");
         const data: Message[] = await response.json();
         setMessages(data.reverse());

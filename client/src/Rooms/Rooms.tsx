@@ -6,33 +6,19 @@ import { API_URL } from "../config";
 const Rooms = () => {
   const [rooms, setRooms] = useState<string[]>([]);
   const [userCounts, setUserCounts] = useState<{ [room: string]: number }>({});
-
+  // const navigate = useNavigate();
   useEffect(() => {
-    // Add dummy rooms for testing
-    // const dummyRooms = [
-      // "general",
-      // "random",
-      // "tech",
-      // "music",
-      // "movies",
-      // "books",
-      // "sports",
-      // "gaming",
-      // "food",
-      // "travel",
-      // "art",
-      // "science",
-      // "politics",
-      // "humor",
-      // "news",
-      // "art",
-      // "science",
-      // "politics",
-      // "humor",
-      // "news"
-    // ];
-
-    fetch(`${API_URL}/rooms`)
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.log("No token found");
+      // navigate("/login");
+      return;
+    }
+    fetch(`${API_URL}/rooms`, {
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      }
+    })
       .then((response) => response.json())
       .then((data) => {
         const sortedData = data.sort((a: string, b: string) =>
@@ -51,7 +37,11 @@ const Rooms = () => {
       });
 
     // Fetch online user counts
-    fetch(`${API_URL}/online-users`)
+    fetch(`${API_URL}/online-users`, {
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      }
+    })
       .then((response) => response.json())
       .then((data) => setUserCounts(data))
       .catch((error) => {

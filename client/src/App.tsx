@@ -19,10 +19,6 @@ const App = () => {
     }
   }, []);
 
-  const handleSetUsername = (name: string) => {
-    localStorage.setItem("username", name);
-    setUsername(name);
-  };
 
   const handleSignOut = () => {
     localStorage.removeItem("username");
@@ -48,7 +44,7 @@ const App = () => {
           username={username}
           onSignOut={handleSignOut}
         >
-          <Popup setUsername={handleSetUsername} />
+          <Popup setUsername={setUsername} />
         </Window>
       )}
 
@@ -76,8 +72,9 @@ const App = () => {
           )}
           {tab === "Chat" && (
             <Routes>
-              <Route path="/" element={<Rooms username={username} />} />
-              <Route path="/:roomName" element={<Chat username={username} />} />
+              <Route path="/" element={<Rooms />} />
+              <Route path="/home" element={<Rooms />} />
+              <Route path=":roomName" element={<Chat username={username} />} />
             </Routes>
           )}
           {tab === "Settings" && (
