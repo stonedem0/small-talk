@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Credentials struct {
@@ -173,6 +175,11 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	username := creds.Username
 	password := creds.Password
 
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 	if username == "" || password == "" {
 		http.Error(w, "Username and password are required", http.StatusBadRequest)
 		return
@@ -188,7 +195,9 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userJSON, err := json.Marshal(creds)
+	user := map[string]string{"username": username, "password": string(hash)}
+	userJSON, err := json.Marshal(user)
+
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -231,17 +240,17 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
+
 	username := creds.Username
 	password := creds.Password
 
 	if username == "" || password == "" {
-		log.Println("LoginHandler: Username and password are required")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Username and password are required"})
 		return
 	}
 
-	user, err := RDB.HGet(ctx, "users", username).Result()
+	userJSON, err := RDB.HGet(ctx, "users", username).Result()
 	if err != nil {
 		if strings.Contains(err.Error(), "redis: nil") {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -253,22 +262,23 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var userData Credentials
-	if err := json.Unmarshal([]byte(user), &userData); err != nil {
-		log.Println("LoginHandler: Invalid user data")
+	var storedUser Credentials
+	if err := json.Unmarshal([]byte(userJSON), &storedUser); err != nil {
+		log.Println("LoginHandler: Invalid user data in Redis")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid user data"})
 		return
 	}
 
-	if userData.Password != password {
+	err = bcrypt.CompareHashAndPassword([]byte(storedUser.Password), []byte(password))
+	if err != nil {
 		log.Println("LoginHandler: Invalid password")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid password"})
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
 	log.Println("LoginHandler: Login successful for user", username)
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Login successful"})
 }
