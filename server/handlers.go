@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func getRoomsHandler(w http.ResponseWriter, r *http.Request) {
+func GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -27,7 +27,7 @@ func getRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rooms)
 }
 
-func subscribeToRoomHandler(w http.ResponseWriter, r *http.Request) {
+func SubscribeToRoomHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -59,7 +59,7 @@ func subscribeToRoomHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Subscribed successfully"))
 }
-func getChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
+func GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -96,7 +96,7 @@ func getChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(history)
 }
 
-func getOnlineUsersHandler(w http.ResponseWriter, r *http.Request) {
+func GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -117,7 +117,7 @@ func getOnlineUsersHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(userCounts)
 }
 
-func getRoomUsernamesHandler(w http.ResponseWriter, r *http.Request) {
+func GetRoomUsernamesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")

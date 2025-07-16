@@ -77,8 +77,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			onlineUsersLock.Lock()
 			if onlineUsers[room] != nil {
 				delete(onlineUsers[room], username)
-				log.Printf("[Room %s] User '%s' REMOVED from onlineUsers", room, username)
-				log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
 				// Broadcast leave message
 				leaveMsg := Message{
 					Room:      room,
@@ -175,11 +173,11 @@ func main() {
 	InitRedis()
 	p := ":" + port
 	http.HandleFunc("/ws", handleConnections)
-	http.HandleFunc("/history", getChatHistoryHandler)
-	http.HandleFunc("/rooms", getRoomsHandler)
-	http.HandleFunc("/subscribe", subscribeToRoomHandler)
-	http.HandleFunc("/online-users", getOnlineUsersHandler)
-	http.HandleFunc("/room-usernames", getRoomUsernamesHandler)
+	http.HandleFunc("/history", GetChatHistoryHandler)
+	http.HandleFunc("/rooms", GetRoomsHandler)
+	http.HandleFunc("/subscribe", SubscribeToRoomHandler)
+	http.HandleFunc("/online-users", GetOnlineUsersHandler)
+	http.HandleFunc("/room-usernames", GetRoomUsernamesHandler)
 	log.Println("Server started on port", port)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {
