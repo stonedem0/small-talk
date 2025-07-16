@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"github.com/go-redis/redis"
+	"strings"
 )
 
 type Credentials struct {
@@ -244,12 +243,10 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := RDB.HGet(ctx, "users", username).Result()
 	if err != nil {
-		if err == redis.Nil {
-			log.Println("LoginHandler: User not found (redis.Nil)")
+		if strings.Contains(err.Error(), "redis: nil") {
 			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(map[string]string{"error": "User not found"})
 		} else {
-			log.Println("LoginHandler: Internal server error", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
 		}
