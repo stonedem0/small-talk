@@ -8,29 +8,6 @@ const Rooms = () => {
   const [userCounts, setUserCounts] = useState<{ [room: string]: number }>({});
 
   useEffect(() => {
-    // Add dummy rooms for testing
-    // const dummyRooms = [
-      // "general",
-      // "random",
-      // "tech",
-      // "music",
-      // "movies",
-      // "books",
-      // "sports",
-      // "gaming",
-      // "food",
-      // "travel",
-      // "art",
-      // "science",
-      // "politics",
-      // "humor",
-      // "news",
-      // "art",
-      // "science",
-      // "politics",
-      // "humor",
-      // "news"
-    // ];
 
     fetch(`${API_URL}/rooms`)
       .then((response) => response.json())

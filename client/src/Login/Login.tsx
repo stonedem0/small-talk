@@ -5,9 +5,12 @@ import logo from "../assets/fella.png";
 import { API_URL } from "../config";
 import { useNavigate } from "react-router-dom";
 
+interface PopupProps {
+  setUsername: (name: string) => void;
+}
 
-const Popup = () => {
-  const [username, setUsername] = useState<string>("");
+const Popup = ({ setUsername }: PopupProps) => {
+  const [username, setUsernameLocal] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [showRegister, setShowRegister] = useState(false);
@@ -29,7 +32,7 @@ const Popup = () => {
       setError(data.error);
     } else {
       localStorage.setItem("username", username.trim());
-      setUsername(username.trim());
+      setUsername(username.trim()); // call parent setter only
       navigate("/home");
     }
   };
@@ -76,7 +79,7 @@ const Popup = () => {
               type="text"
               className="form-input"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => setUsernameLocal(e.target.value)}
             />
             <label htmlFor="password-input" className="form-label">
               Password:
