@@ -3,6 +3,7 @@ import "./Login.css";
 import PrimaryButton from "../components/PrimaryButton";
 import logo from "../assets/fella.png"; 
 import { API_URL } from "../config";
+import { useNavigate } from "react-router-dom";
 
 
 const Popup = () => {
@@ -11,8 +12,9 @@ const Popup = () => {
   const [error, setError] = useState<string>("");
   const [showRegister, setShowRegister] = useState(false);
   const [registerSuccess, setRegisterSuccess] = useState(false);
+  const navigate = useNavigate();
 
-  const signIn = async () => {
+  const login = async () => {
     setError("");
     const response = await fetch(`${API_URL}/login`, {
       method: "POST",
@@ -28,6 +30,7 @@ const Popup = () => {
     } else {
       localStorage.setItem("username", username.trim());
       setUsername(username.trim());
+      navigate("/home");
     }
   };
 
@@ -98,7 +101,7 @@ const Popup = () => {
             </>
           ) : (
             <>
-              <PrimaryButton onClick={signIn}>Log In</PrimaryButton>
+              <PrimaryButton onClick={login}>Log In</PrimaryButton>
               <div style={{ marginTop: 8 }}>
                 <span className="toggle-link" style={{ color: '#3366cc', cursor: 'pointer', textDecoration: 'underline', background: 'none', border: 'none', padding: 0 }} onClick={() => { setShowRegister(true); setError(""); setRegisterSuccess(false); }}>
                   Don't have an account? Register
