@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 type Credentials struct {
@@ -223,6 +225,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+	spew.Dump(creds)
 	username := creds.Username
 	password := creds.Password
 
