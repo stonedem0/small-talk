@@ -35,7 +35,7 @@ func NewHandler(rdb *redis.Client, jwtSecret []byte) *Handler {
 
 func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Always return early for preflight
+		// Handle preflight
 		if r.Method == "OPTIONS" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -54,6 +54,7 @@ func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r.WithContext(ctx))
 	}
 }
+
 func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
