@@ -9,9 +9,11 @@ const Popup = () => {
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [showRegister, setShowRegister] = useState(false);
+  const [registerSuccess, setRegisterSuccess] = useState(false);
 
   const signIn = async () => {
-    console.log(username, password);
+    setError("");
     const response = await fetch(`${API_URL}/login`, {
       method: "POST",
       headers: {
@@ -27,9 +29,33 @@ const Popup = () => {
       localStorage.setItem("username", username.trim());
       setUsername(username.trim());
     }
-
   };
 
+  const register = async () => {
+    setError("");
+    setRegisterSuccess(false);
+    const response = await fetch(`${API_URL}/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    });
+    const text = await response.text();
+    try {
+      const data = JSON.parse(text);
+      if (data.error) {
+        setError(data.error);
+        return;
+      }
+    } catch {}
+    if (response.ok) {
+      setRegisterSuccess(true);
+      setError("");
+    } else {
+      setError(text);
+    }
+  };
 
   return (
     <div id="login-overlay">
@@ -54,19 +80,34 @@ const Popup = () => {
             </label>
             <input
               id="password-input"
-              type="password" 
+              type="password"
               className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <PrimaryButton onClick={signIn}>Log In</PrimaryButton>
+          {showRegister ? (
+            <>
+              <PrimaryButton onClick={register}>Register</PrimaryButton>
+              {registerSuccess && <p className="success-message">Registration successful! You can now log in.</p>}
+              <div style={{ marginTop: 8 }}>
+                <span className="toggle-link" style={{ color: '#3366cc', cursor: 'pointer', textDecoration: 'underline', background: 'none', border: 'none', padding: 0 }} onClick={() => { setShowRegister(false); setError(""); setRegisterSuccess(false); }}>
+                  Back to Login
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <PrimaryButton onClick={signIn}>Log In</PrimaryButton>
+              <div style={{ marginTop: 8 }}>
+                <span className="toggle-link" style={{ color: '#3366cc', cursor: 'pointer', textDecoration: 'underline', background: 'none', border: 'none', padding: 0 }} onClick={() => { setShowRegister(true); setError(""); setRegisterSuccess(false); }}>
+                  Don't have an account? Register
+                </span>
+              </div>
+            </>
+          )}
           {error && <p className="error-message">{error}</p>}
-          <div className="register-link">
-          <a href="/register">Don't have an account? Register</a>
         </div>
-        </div>
-   
       </div>
     </div>
   );

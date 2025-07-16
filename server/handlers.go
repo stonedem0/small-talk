@@ -268,7 +268,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("LoginHandler: Login successful for user", username)
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Login successful"))
+	log.Println("LoginHandler: Login successful for user", username)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Login successful"})
 }
