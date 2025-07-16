@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
 
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -14,7 +17,21 @@ type Credentials struct {
 	Password string `json:"password"`
 }
 
-func GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
+type Handler struct {
+	RDB       *redis.Client
+	JWTSecret []byte
+	Ctx       context.Context
+}
+
+func NewHandler(rdb *redis.Client, jwtSecret []byte) *Handler {
+	return &Handler{
+		RDB:       rdb,
+		JWTSecret: jwtSecret,
+		Ctx:       context.Background(),
+	}
+}
+
+func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -35,7 +52,7 @@ func GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(rooms)
 }
 
-func SubscribeToRoomHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SubscribeToRoomHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -67,7 +84,7 @@ func SubscribeToRoomHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Subscribed successfully"))
 }
-func GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -104,8 +121,7 @@ func GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(history)
 }
 
-func GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("GetOnlineUsersHandler: %s %s", r.Method, r.URL.Path)
+func (h *Handler) GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -126,7 +142,7 @@ func GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(userCounts)
 }
 
-func GetRoomUsernamesHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetRoomUsernamesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -151,7 +167,7 @@ func GetRoomUsernamesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(roomUsernames)
 }
 
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -176,6 +192,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	password := creds.Password
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	fmt.Println("hash: ", string(hash))
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -213,7 +230,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("User registered successfully"))
 }
 
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("LoginHandler called!")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")

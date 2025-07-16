@@ -181,15 +181,16 @@ func subscribeToRoom(room string) {
 func main() {
 	flag.Parse()
 	InitRedis()
+	handler := NewHandler(RDB, jwtSecret)
 	p := ":" + port
 	http.HandleFunc("/ws", handleConnections)
-	http.HandleFunc("/login", LoginHandler)
-	http.HandleFunc("/register", RegisterHandler)
-	http.HandleFunc("/history", GetChatHistoryHandler)
-	http.HandleFunc("/rooms", GetRoomsHandler)
-	http.HandleFunc("/subscribe", SubscribeToRoomHandler)
-	http.HandleFunc("/online-users", GetOnlineUsersHandler)
-	http.HandleFunc("/room-usernames", GetRoomUsernamesHandler)
+	http.HandleFunc("/login", handler.LoginHandler)
+	http.HandleFunc("/register", handler.RegisterHandler)
+	http.HandleFunc("/history", handler.GetChatHistoryHandler)
+	http.HandleFunc("/rooms", handler.GetRoomsHandler)
+	http.HandleFunc("/subscribe", handler.SubscribeToRoomHandler)
+	http.HandleFunc("/online-users", handler.GetOnlineUsersHandler)
+	http.HandleFunc("/room-usernames", handler.GetRoomUsernamesHandler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("UNMATCHED: %s %s", r.Method, r.URL.Path)
 		http.NotFound(w, r)
