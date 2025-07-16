@@ -92,7 +92,10 @@
   justify-content: center;
 }
 
-
+.error-message {
+  color: red;
+  font-size: 12px;;
+}
 .register-link {
   margin-top: 10px;
   font-size: 12px;

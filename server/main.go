@@ -173,7 +173,7 @@ func main() {
 	InitRedis()
 	p := ":" + port
 	http.HandleFunc("/ws", handleConnections)
-	http.HandleFunc("/login", LoginHandler)
+	http.HandleFunc("/login", LoginHa	ndler)
 	http.HandleFunc("/register", RegisterHandler)
 	http.HandleFunc("/history", GetChatHistoryHandler)
 	http.HandleFunc("/rooms", GetRoomsHandler)

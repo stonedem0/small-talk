@@ -8,6 +8,7 @@ import { API_URL } from "../config";
 const Popup = () => {
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
   const signIn = async () => {
     console.log(username, password);
@@ -18,15 +19,15 @@ const Popup = () => {
       },
       body: JSON.stringify({ username, password }),
     });
-    // console.log(response);
+
     const data = await response.json();
-    console.log(data);
-    // if (username.trim()) {
-    //   localStorage.setItem("username", username.trim());
-    //   setUsername(username.trim());
-    // } else {
-    //   alert("Please enter a valid username.");
-    // }
+    if (data.error) {
+      setError(data.error);
+    } else {
+      localStorage.setItem("username", username.trim());
+      setUsername(username.trim());
+    }
+
   };
 
 
@@ -60,6 +61,7 @@ const Popup = () => {
             />
           </div>
           <PrimaryButton onClick={signIn}>Log In</PrimaryButton>
+          {error && <p className="error-message">{error}</p>}
           <div className="register-link">
           <a href="/register">Don't have an account? Register</a>
         </div>
