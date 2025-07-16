@@ -1,35 +1,34 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import "./Login.css";
 import PrimaryButton from "../components/PrimaryButton";
 import logo from "../assets/fella.png"; 
+import { API_URL } from "../config";
 
-interface PopupProps {
-  setUsername: (username: string) => void;
-}
 
-const Popup: React.FC<PopupProps> = ({ setUsername }) => {
-  const [input, setInput] = useState<string>("");
+const Popup = () => {
+  const [username, setUsername] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
 
-  const signIn = () => {
-    if (input.trim()) {
-      localStorage.setItem("username", input.trim());
-      setUsername(input.trim());
-    } else {
-      alert("Please enter a valid username.");
-    }
+  const signIn = async () => {
+    console.log(username, password);
+    const response = await fetch(`${API_URL}/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    });
+    // console.log(response);
+    const data = await response.json();
+    console.log(data);
+    // if (username.trim()) {
+    //   localStorage.setItem("username", username.trim());
+    //   setUsername(username.trim());
+    // } else {
+    //   alert("Please enter a valid username.");
+    // }
   };
 
-  const handleMinimize = () => {
-    console.log("Minimize clicked");
-  };
-
-  const handleFullscreen = () => {
-    console.log("Fullscreen clicked");
-  };
-
-  const handleClose = () => {
-    console.log("Close clicked");
-  };
 
   return (
     <div id="login-overlay">
@@ -46,12 +45,26 @@ const Popup: React.FC<PopupProps> = ({ setUsername }) => {
               id="username-input"
               type="text"
               className="form-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <label htmlFor="password-input" className="form-label">
+              Password:
+            </label>
+            <input
+              id="password-input"
+              type="password" 
+              className="form-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           <PrimaryButton onClick={signIn}>Log In</PrimaryButton>
+          <div className="register-link">
+          <a href="/register">Don't have an account? Register</a>
         </div>
+        </div>
+   
       </div>
     </div>
   );
