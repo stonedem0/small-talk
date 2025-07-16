@@ -70,7 +70,7 @@ const App = () => {
               <h2>File</h2>
             </div>
           )}
-          {tab === "  Chat" && (
+          {tab === "Chat" && (
             <Routes>
               <Route path="/" element={<Rooms />} />
               <Route path="/home" element={<Rooms />} />
