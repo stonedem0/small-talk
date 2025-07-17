@@ -32,8 +32,6 @@ const Rooms = () => {
       })
       .catch((error) => {
         console.error("Fetch error:", error);
-        // If fetch fails, use dummy rooms
-        // setRooms(dummyRooms.sort((a, b) => a.toLowerCase() > b.toLowerCase() ? 1 : -1));
       });
 
     // Fetch online user counts
@@ -72,6 +70,25 @@ const Rooms = () => {
             </li>
           ))}
           </ul>
+          <button onClick={async () => {
+            const roomName = prompt("Enter room name:");
+            if (!roomName) {
+              return;
+            }
+            const response = await fetch(`${API_URL}/create-room`, {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+              },
+              body: JSON.stringify({ room: roomName })
+            });
+            if (!response.ok) {
+              alert(await response.text());
+              return;
+            }
+            alert("Room created successfully");
+            window.location.reload();
+          }}>Create Room</button>
         </div>
       </div>
     </div>
