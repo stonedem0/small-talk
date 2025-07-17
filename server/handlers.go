@@ -7,9 +7,11 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -67,12 +69,19 @@ func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientsLock.Lock()
-	rooms := make([]string, 0, len(clients))
-	for room := range clients {
-		rooms = append(rooms, room)
+	// Get rooms from Redis
+	rooms, err := h.RDB.SMembers(h.Ctx, "rooms").Result()
+	if err != nil {
+		log.Printf("Error fetching rooms from Redis: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
 	}
-	clientsLock.Unlock()
+
+	// If no rooms in Redis, return empty array
+	if len(rooms) == 0 {
+		rooms = []string{}
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(rooms)
@@ -246,7 +255,6 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != "POST" {
-		log.Println("LoginHandler: Invalid request method")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request method"})
 		return
@@ -255,7 +263,6 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
-		log.Println("LoginHandler: Invalid request body")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
@@ -284,7 +291,6 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	var storedUser Credentials
 	if err := json.Unmarshal([]byte(userJSON), &storedUser); err != nil {
-		log.Println("LoginHandler: Invalid user data in Redis")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid user data"})
 		return
@@ -292,13 +298,10 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = bcrypt.CompareHashAndPassword([]byte(storedUser.Password), []byte(password))
 	if err != nil {
-		log.Println("LoginHandler: Invalid password")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid password"})
 		return
 	}
-
-	log.Println("LoginHandler: Login successful for user", username)
 	w.WriteHeader(http.StatusOK)
 	claims := jwt.MapClaims{
 		"username": username,
@@ -314,13 +317,71 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("LoginHandler: Login successful for user", username)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Login successful",
 		"token":   signedToken,
 	})
 
+}
+
+func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request method"})
+		return
+	}
+
+	var req struct {
+		Room string `json:"room"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+		return
+	}
+	room := strings.TrimSpace(req.Room)
+	if room == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Room name is required"})
+		return
+	}
+
+	exists, err := h.RDB.SIsMember(h.Ctx, "rooms", room).Result()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
+	}
+	if exists {
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Room already exists"})
+		return
+	}
+
+	err = h.RDB.SAdd(h.Ctx, "rooms", room).Err()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to save room"})
+		return
+	}
+
+	clientsLock.Lock()
+	clients[room] = make(map[*websocket.Conn]*sync.Mutex)
+	clientsLock.Unlock()
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Room created successfully", "room": room})
 }
 
 func (h *Handler) VerifyToken(r *http.Request) (string, error) {

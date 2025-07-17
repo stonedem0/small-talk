@@ -22,10 +22,10 @@ func init() {
 	}
 	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
+	// Initialize default rooms in memory
 	clients["backrooms"] = make(map[*websocket.Conn]*sync.Mutex)
 	clients["political"] = make(map[*websocket.Conn]*sync.Mutex)
 	clients["overwatch is dead"] = make(map[*websocket.Conn]*sync.Mutex)
-
 }
 
 var ctx = context.Background()
@@ -62,6 +62,12 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		http.Error(w, "Username parameter is required", http.StatusBadRequest)
+		return
+	}
+
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("WS error: %v", err)
@@ -75,8 +81,37 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	clients[room][ws] = &sync.Mutex{}
 	clientsLock.Unlock()
 
-	var username string
 	userAdded := false
+
+	// Add user to online users immediately upon connection
+	onlineUsersLock.Lock()
+	if onlineUsers[room] == nil {
+		onlineUsers[room] = make(map[string]bool)
+	}
+	onlineUsers[room][username] = true
+	userAdded = true
+	onlineUsersLock.Unlock()
+
+	// Broadcast join message with a small delay to ensure client is ready
+	go func() {
+		time.Sleep(100 * time.Millisecond) // Small delay to ensure client is ready
+		joinMsg := Message{
+			Room:      room,
+			Username:  username,
+			Message:   "joined the room",
+			Type:      "system",
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+		}
+		msgBytes, _ := json.Marshal(joinMsg)
+
+		// Save join message to Redis chat history
+		RDB.LPush(ctx, "chat_history:"+room, msgBytes)
+		RDB.LTrim(ctx, "chat_history:"+room, 0, 99) // Keep last 100 messages
+
+		// Broadcast to all clients
+		RDB.Publish(ctx, "room:"+room, string(msgBytes))
+		log.Printf("[Room %s] Sent join message for user '%s'", room, username)
+	}()
 
 	defer func() {
 		clientsLock.Lock()
@@ -119,33 +154,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error reading JSON or client disconnected: %v", err)
 			break
 		}
-		// On first message, record username as online ONLY if it's a join message
-		if !userAdded && msg.Type == "join" && msg.Username != "" {
-			username = msg.Username
-			onlineUsersLock.Lock()
-			if onlineUsers[room] == nil {
-				onlineUsers[room] = make(map[string]bool)
-			}
-			onlineUsers[room][username] = true
-			log.Printf("[Room %s] User '%s' ADDED to onlineUsers", room, username)
-			log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
-			// Broadcast join message
-			joinMsg := Message{
-				Room:      room,
-				Username:  username,
-				Message:   "joined the room",
-				Type:      "system",
-				Timestamp: time.Now().UTC().Format(time.RFC3339),
-			}
-			msgBytes, _ := json.Marshal(joinMsg)
-			RDB.Publish(ctx, "room:"+room, string(msgBytes))
-			onlineUsersLock.Unlock()
-			userAdded = true
-		}
-		msg.Room = room // Ensure message is tagged with room
+
+		msg.Room = room
 		msg.Timestamp = time.Now().UTC().Format(time.RFC3339)
 		msgBytes, _ := json.Marshal(msg)
-		RDB.Publish(ctx, "room:"+room, string(msgBytes)) // Only publish, don't broadcast locally
+		RDB.Publish(ctx, "room:"+room, string(msgBytes))
 	}
 }
 
@@ -181,6 +194,12 @@ func subscribeToRoom(room string) {
 func main() {
 	flag.Parse()
 	InitRedis()
+
+	defaultRooms := []string{"backrooms", "political", "overwatch is dead"}
+	for _, room := range defaultRooms {
+		RDB.SAdd(ctx, "rooms", room)
+	}
+
 	handler := NewHandler(RDB, jwtSecret)
 	p := ":" + port
 	http.HandleFunc("/ws", handleConnections)
@@ -191,6 +210,7 @@ func main() {
 	http.HandleFunc("/subscribe", WithCORS(handler.WithAuth(handler.SubscribeToRoomHandler)))
 	http.HandleFunc("/online-users", WithCORS(handler.WithAuth(handler.GetOnlineUsersHandler)))
 	http.HandleFunc("/room-usernames", WithCORS(handler.GetRoomUsernamesHandler))
+	http.HandleFunc("/create-room", WithCORS(handler.WithAuth(handler.CreateRoomHandler)))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("UNMATCHED: %s %s", r.Method, r.URL.Path)
 		http.NotFound(w, r)
@@ -200,12 +220,4 @@ func main() {
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
-}
-
-func getOnlineUsernames(room string) []string {
-	users := []string{}
-	for u := range onlineUsers[room] {
-		users = append(users, u)
-	}
-	return users
 }
