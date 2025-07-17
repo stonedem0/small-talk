@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import WindowControls from "./WindowControls";
 import "./Window.css";
 
@@ -32,6 +33,8 @@ const Window = ({
   onTabClick,
 }: WindowProps) => {
   const navigate = useNavigate();
+  const [showUsernameForm, setShowUsernameForm] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
 
   const handleClose = () => {
     if (onClose) {
@@ -39,6 +42,19 @@ const Window = ({
     } else {
       navigate("/"); // ✅ fallback navigation
     }
+  };
+
+  const handleUsernameChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newUsername.trim()) {
+      localStorage.setItem("username", newUsername.trim());
+      window.location.reload();
+    }
+  };
+
+  const handleCancelUsernameChange = () => {
+    setShowUsernameForm(false);
+    setNewUsername("");
   };
 
   return (
@@ -82,13 +98,7 @@ const Window = ({
                 id="change-username"
                 className="menu-button"
                 title="Change username"
-                onClick={() => {
-                  const newUsername = prompt("Enter your new username:");
-                  if (newUsername) {
-                    localStorage.setItem("username", newUsername);
-                    window.location.reload();
-                  }
-                }}
+                onClick={() => setShowUsernameForm(true)}
               ></button>
               <div className="sign-out">
                 <span className="username">
@@ -99,6 +109,32 @@ const Window = ({
             </div>
           </div>
         )}
+        
+        {showUsernameForm && (
+          <div className="username-form-overlay">
+            <div className="username-form">
+              <h3>Change Username</h3>
+              <form onSubmit={handleUsernameChange}>
+                <input
+                  type="text"
+                  placeholder="Enter new username"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  autoFocus
+                />
+                <div className="form-buttons">
+                  <button type="submit" disabled={!newUsername.trim()}>
+                    Change
+                  </button>
+                  <button type="button" onClick={handleCancelUsernameChange}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        
         {children}
       </div>
     </div>

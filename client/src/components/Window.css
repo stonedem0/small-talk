@@ -63,9 +63,9 @@
   background-size: 22px;
   background-repeat: no-repeat;
   background-position: center;
-}
+} 
 
-#change-username {
+ #change-username {
   background-image: url("../assets/edit.png");
   background-size: 22px;
   background-repeat: no-repeat;
@@ -126,5 +126,85 @@
 
 .tab.active {
   font-weight: bold;
-  /* text-decoration: underline; */
+}
+
+.username-form-overlay {
+  position: fixed;
+  height: 500px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.username-form {
+  background-color: white;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.username-form h3 {
+  margin: 0 0 16px 0;
+  color: var(--deep-purple);
+  font-size: 18px;
+  text-align: center;
+}
+
+.username-form input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #ddd;
+  font-size: 14px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.username-form input:focus {
+  outline: none;
+  border-color: var(--deep-purple);
+}
+
+.form-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.form-buttons button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.form-buttons button[type="submit"] {
+  background-color: var(--deep-purple);
+  color: white;
+}
+
+.form-buttons button[type="submit"]:hover:not(:disabled) {
+  background-color: #4a4a8a;
+}
+
+.form-buttons button[type="submit"]:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.form-buttons button[type="button"] {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.form-buttons button[type="button"]:hover {
+  background-color: #e0e0e0;
 }
