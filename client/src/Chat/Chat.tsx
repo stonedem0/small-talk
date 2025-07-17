@@ -72,31 +72,21 @@ const Chat = ({ username }: ChatProps) => {
         } else {
           setMessages([]);
         }
-        ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}`);
+        ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}&username=${encodeURIComponent(username)}`);
         ws.current.onopen = () => {
           console.log("WebSocket connected");
           setIsConnected(true);
           setIsLoadingMessages(false);
-          // ws.current?.send(
-            // JSON.stringify({
-            //   type: "join",
-            //   room: roomName,
-            //   username: username,
-            //   message: "joined the room"
-            // })
-          // );
         };
 
         ws.current.onmessage = (event) => {
           const newMessage: Message = JSON.parse(event.data);
-          console.log("newMessage");
-          console.log(newMessage);
-          // TODO: probably need to handle this better:
-          // if (newMessage.type == "system") {
-          //   console.log("New message: ")
-          //   console.log(newMessage)
-          //   return;
-          // }
+          console.log("Received WebSocket message:", newMessage);
+          
+          if (newMessage.type === "system") {
+            console.log("System message received:", newMessage);
+          }
+          
           setMessages((prev) => [...prev, newMessage]);
         };
 
@@ -113,7 +103,7 @@ const Chat = ({ username }: ChatProps) => {
         ws.current?.close();
       }
     };
-  }, [isValidRoom, roomName]);
+  }, [isValidRoom, roomName, username]);
 
   useEffect(() => {
     if (!isValidRoom) return;

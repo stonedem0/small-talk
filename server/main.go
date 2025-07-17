@@ -62,6 +62,12 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		http.Error(w, "Username parameter is required", http.StatusBadRequest)
+		return
+	}
+
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("WS error: %v", err)
@@ -75,8 +81,30 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	clients[room][ws] = &sync.Mutex{}
 	clientsLock.Unlock()
 
-	var username string
 	userAdded := false
+
+	// Add user to online users immediately upon connection
+	onlineUsersLock.Lock()
+	if onlineUsers[room] == nil {
+		onlineUsers[room] = make(map[string]bool)
+	}
+	onlineUsers[room][username] = true
+	userAdded = true
+	onlineUsersLock.Unlock()
+
+	go func() {
+		time.Sleep(100 * time.Millisecond) // Small delay to ensure client is ready
+		joinMsg := Message{
+			Room:      room,
+			Username:  username,
+			Message:   "joined the room",
+			Type:      "system",
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+		}
+		msgBytes, _ := json.Marshal(joinMsg)
+		RDB.Publish(ctx, "room:"+room, string(msgBytes))
+		log.Printf("[Room %s] Sent join message for user '%s'", room, username)
+	}()
 
 	defer func() {
 		clientsLock.Lock()
@@ -119,33 +147,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error reading JSON or client disconnected: %v", err)
 			break
 		}
-		// On first message, record username as online ONLY if it's a join message
-		if !userAdded && msg.Type == "join" && msg.Username != "" {
-			username = msg.Username
-			onlineUsersLock.Lock()
-			if onlineUsers[room] == nil {
-				onlineUsers[room] = make(map[string]bool)
-			}
-			onlineUsers[room][username] = true
-			log.Printf("[Room %s] User '%s' ADDED to onlineUsers", room, username)
-			log.Printf("[Room %s] Online users: %v", room, getOnlineUsernames(room))
-			// Broadcast join message
-			joinMsg := Message{
-				Room:      room,
-				Username:  username,
-				Message:   "joined the room",
-				Type:      "system",
-				Timestamp: time.Now().UTC().Format(time.RFC3339),
-			}
-			msgBytes, _ := json.Marshal(joinMsg)
-			RDB.Publish(ctx, "room:"+room, string(msgBytes))
-			onlineUsersLock.Unlock()
-			userAdded = true
-		}
-		msg.Room = room // Ensure message is tagged with room
+
+		msg.Room = room
 		msg.Timestamp = time.Now().UTC().Format(time.RFC3339)
 		msgBytes, _ := json.Marshal(msg)
-		RDB.Publish(ctx, "room:"+room, string(msgBytes)) // Only publish, don't broadcast locally
+		RDB.Publish(ctx, "room:"+room, string(msgBytes))
 	}
 }
 
