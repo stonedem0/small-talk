@@ -22,10 +22,10 @@ func init() {
 	}
 	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
+	// Initialize default rooms in memory
 	clients["backrooms"] = make(map[*websocket.Conn]*sync.Mutex)
 	clients["political"] = make(map[*websocket.Conn]*sync.Mutex)
 	clients["overwatch is dead"] = make(map[*websocket.Conn]*sync.Mutex)
-
 }
 
 var ctx = context.Background()
@@ -194,6 +194,13 @@ func subscribeToRoom(room string) {
 func main() {
 	flag.Parse()
 	InitRedis()
+
+	// Initialize default rooms in Redis
+	defaultRooms := []string{"backrooms", "political", "overwatch is dead"}
+	for _, room := range defaultRooms {
+		RDB.SAdd(ctx, "rooms", room)
+	}
+
 	handler := NewHandler(RDB, jwtSecret)
 	p := ":" + port
 	http.HandleFunc("/ws", handleConnections)

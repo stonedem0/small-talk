@@ -67,12 +67,19 @@ func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientsLock.Lock()
-	rooms := make([]string, 0, len(clients))
-	for room := range clients {
-		rooms = append(rooms, room)
+	// Get rooms from Redis
+	rooms, err := h.RDB.SMembers(h.Ctx, "rooms").Result()
+	if err != nil {
+		log.Printf("Error fetching rooms from Redis: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
 	}
-	clientsLock.Unlock()
+
+	// If no rooms in Redis, return empty array
+	if len(rooms) == 0 {
+		rooms = []string{}
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(rooms)
@@ -370,14 +377,28 @@ func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientsLock.Lock()
-	defer clientsLock.Unlock()
-	if _, exists := clients[room]; exists {
+	exists, err := h.RDB.SIsMember(h.Ctx, "rooms", room).Result()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
+	}
+	if exists {
 		w.WriteHeader(http.StatusConflict)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Room already exists"})
 		return
 	}
+
+	err = h.RDB.SAdd(h.Ctx, "rooms", room).Err()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to save room"})
+		return
+	}
+
+	clientsLock.Lock()
 	clients[room] = make(map[*websocket.Conn]*sync.Mutex)
+	clientsLock.Unlock()
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Room created successfully", "room": room})
