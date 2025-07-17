@@ -92,6 +92,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	userAdded = true
 	onlineUsersLock.Unlock()
 
+	// Broadcast join message with a small delay to ensure client is ready
 	go func() {
 		time.Sleep(100 * time.Millisecond) // Small delay to ensure client is ready
 		joinMsg := Message{
@@ -102,6 +103,12 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 		}
 		msgBytes, _ := json.Marshal(joinMsg)
+
+		// Save join message to Redis chat history
+		RDB.LPush(ctx, "chat_history:"+room, msgBytes)
+		RDB.LTrim(ctx, "chat_history:"+room, 0, 99) // Keep last 100 messages
+
+		// Broadcast to all clients
 		RDB.Publish(ctx, "room:"+room, string(msgBytes))
 		log.Printf("[Room %s] Sent join message for user '%s'", room, username)
 	}()
@@ -209,10 +216,10 @@ func main() {
 	}
 }
 
-func getOnlineUsernames(room string) []string {
-	users := []string{}
-	for u := range onlineUsers[room] {
-		users = append(users, u)
-	}
-	return users
-}
+// func getOnlineUsernames(room string) []string {
+// 	users := []string{}
+// 	for u := range onlineUsers[room] {
+// 		users = append(users, u)
+// 	}
+// 	return users
+// }
