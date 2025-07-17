@@ -189,6 +189,7 @@ func main() {
 	http.HandleFunc("/history", handler.WithAuth(handler.GetChatHistoryHandler))
 	http.HandleFunc("/rooms", handler.WithAuth(handler.GetRoomsHandler))
 	http.HandleFunc("/subscribe", handler.WithAuth(handler.SubscribeToRoomHandler))
+	http.HandleFunc("/create-room", handler.WithAuth(handler.CreateRoomHandler))
 	http.HandleFunc("/online-users", handler.WithAuth(handler.GetOnlineUsersHandler))
 	http.HandleFunc("/room-usernames", handler.GetRoomUsernamesHandler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
