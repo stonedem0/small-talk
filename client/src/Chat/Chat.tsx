@@ -81,12 +81,7 @@ const Chat = ({ username }: ChatProps) => {
 
         ws.current.onmessage = (event) => {
           const newMessage: Message = JSON.parse(event.data);
-          console.log("Received WebSocket message:", newMessage);
-          
-          if (newMessage.type === "system") {
-            console.log("System message received:", newMessage);
-          }
-          
+        
           setMessages((prev) => [...prev, newMessage]);
         };
 
