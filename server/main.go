@@ -195,7 +195,6 @@ func main() {
 	flag.Parse()
 	InitRedis()
 
-	// Initialize default rooms in Redis
 	defaultRooms := []string{"backrooms", "political", "overwatch is dead"}
 	for _, room := range defaultRooms {
 		RDB.SAdd(ctx, "rooms", room)
@@ -222,11 +221,3 @@ func main() {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
-
-// func getOnlineUsernames(room string) []string {
-// 	users := []string{}
-// 	for u := range onlineUsers[room] {
-// 		users = append(users, u)
-// 	}
-// 	return users
-// }
