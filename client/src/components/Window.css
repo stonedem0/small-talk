@@ -126,10 +126,8 @@
 
 .tab.active {
   font-weight: bold;
-  /* text-decoration: underline; */
 }
 
-/* Username Form Styles */
 .username-form-overlay {
   position: fixed;
   height: 500px;
@@ -147,7 +145,6 @@
 .username-form {
   background-color: white;
   padding: 20px;
-  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   min-width: 300px;
   max-width: 400px;
@@ -164,7 +161,6 @@
   width: 100%;
   padding: 10px;
   border: 2px solid #ddd;
-  border-radius: 4px;
   font-size: 14px;
   margin-bottom: 16px;
   box-sizing: border-box;
