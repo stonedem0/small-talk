@@ -70,7 +70,7 @@ const Rooms = () => {
             </li>
           ))}
           </ul>
-          <button onClick={async () => {
+          <button  className="create-room-button" onClick={async () => {
             const roomName = prompt("Enter room name:");
             if (!roomName) {
               return;

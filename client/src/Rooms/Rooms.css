@@ -72,3 +72,7 @@
 .room-item a:visited {
   color: var(--deep-purple);
 }
+
+.create-room-button {
+ margin: 7px;
+}

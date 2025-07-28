@@ -19,7 +19,6 @@ const Popup = ({ setUsername }: PopupProps) => {
 
   const login = async () => {
     setError("");
-    console.log('🔧 Login attempt for username:', username);
     
     const response = await fetch(`${API_URL}/login`, {
       method: "POST",
@@ -29,25 +28,19 @@ const Popup = ({ setUsername }: PopupProps) => {
       body: JSON.stringify({ username, password }),
     });
 
-    console.log('🔧 Login response status:', response.status);
-    
     const data = await response.json();
-    console.log('🔧 Login response data:', { ...data, token: data.token ? '***' : 'missing' });
     
     if (data.error) {
-      console.log('🔧 Login error:', data.error);
       setError(data.error);
       return;
     }
     
     const token = data.token;
     if (!token) {
-      console.log('🔧 No token in response');
       setError("Invalid username or password");
       return;
     }
 
-    console.log('🔧 Login successful, setting localStorage');
     localStorage.setItem("username", username.trim());
     localStorage.setItem("token", token);
     setUsername(username.trim());
