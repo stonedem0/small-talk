@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -56,23 +57,30 @@ var upgrader = websocket.Upgrader{
 }
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
+	log.Printf("🔧 New WebSocket connection request")
 	room := r.URL.Query().Get("room")
 	if room == "" {
+		log.Printf("🔧 Missing room parameter")
 		http.Error(w, "Room parameter is required", http.StatusBadRequest)
 		return
 	}
 
 	username := r.URL.Query().Get("username")
 	if username == "" {
+		log.Printf("🔧 Missing username parameter")
 		http.Error(w, "Username parameter is required", http.StatusBadRequest)
 		return
 	}
 
+	log.Printf("🔧 WebSocket connection request for room: %s, username: %s", room, username)
+
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("WS error: %v", err)
+		log.Printf("🔧 WS upgrade error: %v", err)
 		return
 	}
+
+	log.Printf("🔧 WebSocket upgraded successfully for %s in room %s", username, room)
 
 	clientsLock.Lock()
 	if clients[room] == nil {
@@ -87,9 +95,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	onlineUsersLock.Lock()
 	if onlineUsers[room] == nil {
 		onlineUsers[room] = make(map[string]bool)
+		log.Printf("🔧 Created new online users map for room %s", room)
 	}
 	onlineUsers[room][username] = true
 	userAdded = true
+	log.Printf("🔧 Added user %s to online users for room %s. Current online users: %v", username, room, onlineUsers[room])
 	onlineUsersLock.Unlock()
 
 	// Broadcast join message with a small delay to ensure client is ready
@@ -114,6 +124,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	defer func() {
+		log.Printf("🔧 WebSocket connection closing for %s in room %s", username, room)
 		clientsLock.Lock()
 		ws.Close()
 		delete(clients[room], ws)
@@ -121,7 +132,9 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		if userAdded && username != "" {
 			onlineUsersLock.Lock()
 			if onlineUsers[room] != nil {
+				log.Printf("🔧 Removing user %s from online users in room %s", username, room)
 				delete(onlineUsers[room], username)
+				log.Printf("🔧 Remaining online users in room %s: %v", room, onlineUsers[room])
 				// Broadcast leave message
 				leaveMsg := Message{
 					Room:      room,
@@ -132,10 +145,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				}
 				msgBytes, _ := json.Marshal(leaveMsg)
 				RDB.Publish(ctx, "room:"+room, string(msgBytes))
+				log.Printf("🔧 Published leave message: %s", string(msgBytes))
 			}
 			onlineUsersLock.Unlock()
 		}
-		log.Printf("Client disconnected from room: %s", room)
+		log.Printf("🔧 Client %s disconnected from room: %s", username, room)
 	}()
 
 	// Ensure only one subscription per room
@@ -153,6 +167,41 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		if err := ws.ReadJSON(&msg); err != nil {
 			log.Printf("Error reading JSON or client disconnected: %v", err)
 			break
+		}
+
+		log.Printf("[Room %s] Received message from %s: type=%s, message=%s", room, username, msg.Type, msg.Message)
+
+		// Handle username update messages
+		if msg.Type == "username_update" {
+			oldUsername := msg.Username
+			newUsername := msg.Message // Using message field to store new username
+
+			log.Printf("[Room %s] Received username update: %s -> %s", room, oldUsername, newUsername)
+
+			// Update online users tracking
+			onlineUsersLock.Lock()
+			if onlineUsers[room] != nil {
+				log.Printf("[Room %s] Before update - Online users: %v", room, onlineUsers[room])
+				delete(onlineUsers[room], oldUsername)
+				onlineUsers[room][newUsername] = true
+				log.Printf("[Room %s] After update - Online users: %v", room, onlineUsers[room])
+			} else {
+				log.Printf("[Room %s] No online users map found for room", room)
+			}
+			onlineUsersLock.Unlock()
+
+			// Broadcast username change message
+			changeMsg := Message{
+				Room:      room,
+				Username:  oldUsername,
+				Message:   fmt.Sprintf("changed username to %s", newUsername),
+				Type:      "system",
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
+			}
+			msgBytes, _ := json.Marshal(changeMsg)
+			RDB.Publish(ctx, "room:"+room, string(msgBytes))
+			log.Printf("[Room %s] Broadcasted username change message: %s", room, string(msgBytes))
+			continue
 		}
 
 		msg.Room = room
@@ -211,6 +260,8 @@ func main() {
 	http.HandleFunc("/online-users", WithCORS(handler.WithAuth(handler.GetOnlineUsersHandler)))
 	http.HandleFunc("/room-usernames", WithCORS(handler.GetRoomUsernamesHandler))
 	http.HandleFunc("/create-room", WithCORS(handler.WithAuth(handler.CreateRoomHandler)))
+	http.HandleFunc("/update-username", WithCORS(handler.UpdateUsernameHandler))
+	http.HandleFunc("/update-password", WithCORS(handler.UpdatePasswordHandler))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("UNMATCHED: %s %s", r.Method, r.URL.Path)
 		http.NotFound(w, r)
