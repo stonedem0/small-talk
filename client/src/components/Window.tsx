@@ -53,11 +53,16 @@ const Window = ({
   const handleUsernameChange = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('🔧 handleUsernameChange called');
+    console.log('🔧 Form submitted with newUsername:', newUsername);
+    alert('Username change function called!');
     
     if (!newUsername.trim()) {
       console.log('🔧 Username is empty');
+      alert('Username cannot be empty!');
       return;
     }
+    
+    console.log('🔧 Starting username change process...');
     
     setIsUpdating(true);
     const oldUsername = username;
@@ -65,25 +70,30 @@ const Window = ({
     
     console.log('🔧 Username change request:', { oldUsername, newUsername: newUsernameValue });
     
-    try {
-      // Get current room from URL if we're in a chat room
-      const pathParts = window.location.pathname.split('/');
-      const currentRoom = pathParts[pathParts.length - 1];
-      
-      console.log('🔧 Current room from URL:', currentRoom);
-      console.log('🔧 Full pathname:', window.location.pathname);
-      console.log('🔧 Path parts:', pathParts);
-      
-      if (currentRoom && currentRoom !== 'home' && currentRoom !== '') {
-        console.log('🔧 Room is valid, attempting username update');
+          try {
+        console.log('🔧 Entering try block...');
         
-        // Make HTTP request to update username in database
+        // Get current room from URL if we're in a chat room
+        const pathParts = window.location.pathname.split('/');
+        const currentRoom = pathParts[pathParts.length - 1];
+        
+        console.log('🔧 Current room from URL:', currentRoom);
+        console.log('🔧 Full pathname:', window.location.pathname);
+        console.log('🔧 Path parts:', pathParts);
+      
+                      // Always make HTTP request to update username in database, regardless of room
+        console.log('🔧 Making username update request to server');
+        
         const requestBody = {
           oldUsername: oldUsername,
           newUsername: newUsernameValue,
-          room: currentRoom
+          room: currentRoom || 'home' // Use current room or 'home' as fallback
         };
-        console.log('🔧 Making HTTP request to update username:', requestBody);
+        console.log('🔧 About to make HTTP request to update username:', requestBody);
+        console.log('🔧 API_URL:', API_URL);
+        console.log('🔧 Full URL will be:', `${API_URL}/update-username`);
+        
+        alert('About to make HTTP request to server...');
         
         const response = await fetch(`${API_URL}/update-username`, {
           method: 'POST',
@@ -115,33 +125,29 @@ const Window = ({
             token: responseData.token ? '***' : 'missing'
           });
           
-          // Try to send WebSocket message to update chat display
-          const ws = (window as any).currentWebSocket;
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            console.log('🔧 Sending WebSocket username update message');
-            const updateMessage = {
-              type: "username_update",
-              username: oldUsername,
-              message: newUsernameValue
-            };
-            ws.send(JSON.stringify(updateMessage));
+          // Try to send WebSocket message to update chat display (only if in a room)
+          if (currentRoom && currentRoom !== 'home' && currentRoom !== '') {
+            const ws = (window as any).currentWebSocket;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              console.log('🔧 Sending WebSocket username update message');
+              const updateMessage = {
+                type: "username_update",
+                username: oldUsername,
+                message: newUsernameValue
+              };
+              ws.send(JSON.stringify(updateMessage));
+            }
           }
           
-          // Close the form and reload
+          // Close the form and show success
           setShowUsernameForm(false);
           setNewUsername("");
           
-          console.log('🔧 About to reload page with new username:', responseData.newUsername);
-          alert('Username updated successfully! You will be redirected.');
-          window.location.reload();
+          console.log('🔧 Username update successful:', responseData);
+          alert(`Username updated successfully!\nNew username: ${responseData.newUsername}\nPlease refresh the page manually.`);
+          
+          // Don't auto-reload, let user do it manually
         }
-      } else {
-        console.log('🔧 No valid room found, updating only local storage');
-        localStorage.setItem("username", newUsernameValue);
-        setShowUsernameForm(false);
-        setNewUsername("");
-        window.location.reload();
-      }
     } catch (error) {
       console.error('🔧 Error updating username:', error);
       alert('Error updating username: ' + error);

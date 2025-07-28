@@ -262,6 +262,7 @@ func main() {
 	http.HandleFunc("/create-room", WithCORS(handler.WithAuth(handler.CreateRoomHandler)))
 	http.HandleFunc("/update-username", WithCORS(handler.UpdateUsernameHandler))
 	http.HandleFunc("/update-password", WithCORS(handler.UpdatePasswordHandler))
+	http.HandleFunc("/debug-users", WithCORS(handler.DebugUsersHandler))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("UNMATCHED: %s %s", r.Method, r.URL.Path)
 		http.NotFound(w, r)

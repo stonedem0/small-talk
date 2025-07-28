@@ -80,6 +80,30 @@ const App = () => {
           {tab === "Settings" && (
             <div style={{ padding: "1rem" }}>
               <h2>Settings</h2>
+              <button 
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`${import.meta.env.VITE_API_HOST || 'http://localhost:8080'}/debug-users`);
+                    const data = await response.json();
+                    console.log('🔧 Database users:', data);
+                    alert(`Users in database: ${data.usernames?.join(', ') || 'None'}\nTotal: ${data.userCount || 0}`);
+                  } catch (error) {
+                    console.error('Error fetching users:', error);
+                    alert('Error fetching users: ' + error);
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#4a4a8a',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  marginTop: '10px'
+                }}
+              >
+                Check Database Users
+              </button>
             </div>
           )}
           {tab === "Appearance" && (

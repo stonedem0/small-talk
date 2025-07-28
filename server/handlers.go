@@ -492,16 +492,29 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Use Redis transaction to ensure atomicity
+	log.Printf("UpdateUsernameHandler: Starting Redis transaction")
 	pipe := RDB.Pipeline()
 	pipe.HDel(ctx, "users", req.OldUsername)
 	pipe.HSet(ctx, "users", req.NewUsername, newUserJSON)
-	_, err = pipe.Exec(ctx)
+
+	log.Printf("UpdateUsernameHandler: Executing Redis pipeline")
+	cmds, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("UpdateUsernameHandler: Error updating user in database: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to update user"})
 		return
 	}
+
+	log.Printf("UpdateUsernameHandler: Redis pipeline executed successfully, %d commands", len(cmds))
+	for i, cmd := range cmds {
+		log.Printf("UpdateUsernameHandler: Command %d result: %v", i, cmd)
+	}
+
+	// Verify the update worked
+	oldUserExists, _ := RDB.HExists(ctx, "users", req.OldUsername).Result()
+	newUserExists, _ := RDB.HExists(ctx, "users", req.NewUsername).Result()
+	log.Printf("UpdateUsernameHandler: After update - Old user exists: %v, New user exists: %v", oldUserExists, newUserExists)
 
 	// Generate new JWT token with new username
 	claims := jwt.MapClaims{
@@ -653,6 +666,46 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
 	log.Printf("UpdatePasswordHandler: Successfully updated password for user %s", req.Username)
+}
+
+func (h *Handler) DebugUsersHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("DebugUsersHandler called")
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Get all users from Redis
+	users, err := RDB.HGetAll(ctx, "users").Result()
+	if err != nil {
+		log.Printf("DebugUsersHandler: Error getting users: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to get users"})
+		return
+	}
+
+	log.Printf("DebugUsersHandler: Found %d users in database", len(users))
+	for username := range users {
+		log.Printf("DebugUsersHandler: User: %s", username)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"userCount": len(users),
+		"usernames": func() []string {
+			names := make([]string, 0, len(users))
+			for username := range users {
+				names = append(names, username)
+			}
+			return names
+		}(),
+	})
 }
 
 func (h *Handler) VerifyToken(r *http.Request) (string, error) {
