@@ -72,31 +72,48 @@ const Chat = ({ username }: ChatProps) => {
         } else {
           setMessages([]);
         }
+        console.log('🔧 Creating WebSocket connection for room:', roomName, 'username:', username);
         ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}&username=${encodeURIComponent(username)}`);
+        
         ws.current.onopen = () => {
-          console.log("WebSocket connected");
+          console.log("🔧 WebSocket connected successfully");
           setIsConnected(true);
           setIsLoadingMessages(false);
         };
+        
+        // Make WebSocket accessible globally for username updates
+        (window as any).currentWebSocket = ws.current;
+        console.log('🔧 WebSocket made globally accessible:', ws.current);
 
         ws.current.onmessage = (event) => {
+          console.log('🔧 Received WebSocket message:', event.data);
           const newMessage: Message = JSON.parse(event.data);
+          console.log('🔧 Parsed message:', newMessage);
         
           setMessages((prev) => [...prev, newMessage]);
         };
 
-        ws.current.onclose = () => setIsConnected(false);
+        ws.current.onclose = () => {
+          console.log('🔧 WebSocket connection closed');
+          setIsConnected(false);
+        };
       } catch (error) {
         console.error("Failed to set up chat:", error);
       }
     };
     setupChat();
     return () => {
+      console.log('🔧 Cleaning up WebSocket connection');
       if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        console.log('🔧 Closing open WebSocket connection');
         ws.current.close();
       } else {
+        console.log('🔧 WebSocket was not open, closing anyway');
         ws.current?.close();
       }
+      // Clean up global WebSocket reference
+      console.log('🔧 Removing global WebSocket reference');
+      delete (window as any).currentWebSocket;
     };
   }, [isValidRoom, roomName, username]);
 

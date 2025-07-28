@@ -19,6 +19,7 @@ const Popup = ({ setUsername }: PopupProps) => {
 
   const login = async () => {
     setError("");
+    
     const response = await fetch(`${API_URL}/login`, {
       method: "POST",
       headers: {
@@ -28,20 +29,22 @@ const Popup = ({ setUsername }: PopupProps) => {
     });
 
     const data = await response.json();
+    
+    if (data.error) {
+      setError(data.error);
+      return;
+    }
+    
     const token = data.token;
     if (!token) {
-      setError("No token received from server");
+      setError("Invalid username or password");
       return;
     }
 
     localStorage.setItem("username", username.trim());
-    if (data.error) {
-      setError(data.error);
-    } 
     localStorage.setItem("token", token);
     setUsername(username.trim());
     navigate("/home");
-  
   };
 
   const register = async () => {
