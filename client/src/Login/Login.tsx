@@ -76,6 +76,9 @@ const Popup = ({ setUsername }: PopupProps) => {
   return (
     <div id="login-overlay">
       <div id="login-container">
+        <div className="login-header">
+          <div className="login-title">Login</div>
+        </div>
         <div className="login-body">
           <div className="icon">
             <img src={logo} alt="logo" />

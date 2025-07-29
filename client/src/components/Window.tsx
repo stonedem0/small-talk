@@ -184,31 +184,31 @@ const Window = ({
   return (
     <div className="window" style={{ width, height, top, left }}>
       <div className="window-header">
-        <span>{title}</span>
-        <WindowControls />
-      </div>
-
-      {tabs && tabs.length > 0 && (
-        <div className="window-tabs-container">
-          <div className="window-tabs">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                className={`tab ${
-                  tab === activeTab || (!activeTab && tab === tabs[0])
-                    ? "active"
-                    : ""
-                }`}
-                onClick={() => onTabClick?.(tab)}
-              >
-                {tab.startsWith("_") ? tab : <u>{tab}</u>}
-              </button>
-            ))}
-          </div>
+        <div className="window-header-top">
+          <span>{title}</span>
+          <WindowControls />
         </div>
-      )}
 
-      <div className="window-content">
+        {tabs && tabs.length > 0 && (
+          <div className="window-tabs-container">
+            <div className="window-tabs">
+              {tabs.map((tab) => (
+                <button
+                  key={tab}
+                  className={`tab ${
+                    tab === activeTab || (!activeTab && tab === tabs[0])
+                      ? "active"
+                      : ""
+                  }`}
+                  onClick={() => onTabClick?.(tab)}
+                >
+                  {tab.startsWith("_") ? tab : <u>{tab}</u>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {username && onSignOut && (
           <div className="window-menu-container">
             <div className="window-menu">
@@ -239,7 +239,9 @@ const Window = ({
             </div>
           </div>
         )}
-        
+      </div>
+
+      <div className="window-content">
         {showUsernameForm && (
           <div className="username-form-overlay">
             <div className="username-form">

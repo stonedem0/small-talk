@@ -10,10 +10,9 @@
 }
 
 #login-container {
-  background-color: var(--deep-purple);
+  background: var(--purple-gradient);
   border-radius: 5px;
-  box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--window-shadow);
   width: 350px;
 }
 
@@ -22,12 +21,11 @@
   justify-content: space-between;
   align-items: center;
   height: 26px;
-  background-color: var(--deep-purple);
+  background: var(--purple-gradient);
   color: white;
   padding: 5px 0px;
   font-weight: bold;
-  box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--header-shadow);
   border-radius: 5px 5px 0 0;
 }
 
