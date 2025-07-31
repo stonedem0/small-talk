@@ -11,22 +11,61 @@
   border-radius: 6px;
   color: black;
   border-radius: 5px 5px 5px 5px;
-  box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--window-shadow);
 }
 
 .window-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 26px;
+  flex-direction: column;
   background-color: var(--deep-purple);
   color: white;
+  border-radius: 5px 5px 0 0;
+  box-shadow: none;
+  position: relative;
+  /* background: linear-gradient(180deg,rgba(104, 96, 247, 0.9) 0%, rgba(67, 57, 255, 0.9) 35%, rgba(131, 122, 255, 0.9) 100%); */
+}
+
+.window-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+    
+  );
+  border-radius: 5px 5px 0 0;
+  pointer-events: none;
+}
+
+.window-header::after { 
+  content: "";
+  position: absolute;
+  top: 33px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    to bottom,
+    rgba(41, 2, 2, 0.25) 0%,
+    rgba(0, 0, 0, 0.03) 100%
+  );
+  
+  pointer-events: none;
+}
+
+
+.window-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 20px;
   padding: 8px;
   font-weight: bold;
-  box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.2);
-  border-radius: 5px 5px 0 0;
 }
 
 .window-menu-container {
@@ -35,11 +74,8 @@
   padding: 5px;
   justify-content: flex-end;
   align-items: center;
-  background-color: var(--deep-purple);
   color: white;
   padding: 0px 0px;
-  box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .window-menu {
@@ -97,9 +133,7 @@
 }
 
 .window-tabs-container {
-  background-color: var(--deep-purple);
-  /* box-shadow: inset 1px 4px 8px rgba(255, 255, 255, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.2); */
+  /* Removed purple background - now part of unified header */
 }
 
 .window-tabs {
@@ -110,7 +144,6 @@
   background-color: white;
   margin-left: 5px;
   margin-right: 5px;
-
 }
 .tab {
   background: none;
@@ -216,3 +249,13 @@
 .form-buttons button[type="button"]:hover {
   background-color: #e0e0e0;
 }
+
+.window-content {
+  background: #ffffff;
+  box-shadow: none;
+  border: none;
+  border-top: none;
+  border-left: none;
+  border-radius: 0 0 5px 5px;
+  background-clip: border-box;
+  }
