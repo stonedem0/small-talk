@@ -22,6 +22,7 @@
   border-radius: 5px 5px 0 0;
   box-shadow: none;
   position: relative;
+  /* background: linear-gradient(180deg,rgba(104, 96, 247, 0.9) 0%, rgba(67, 57, 255, 0.9) 35%, rgba(131, 122, 255, 0.9) 100%); */
 }
 
 .window-header::before {
@@ -41,6 +42,21 @@
   pointer-events: none;
 }
 
+.window-header::after { 
+  content: "";
+  position: absolute;
+  top: 33px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    to bottom,
+    rgba(41, 2, 2, 0.25) 0%,
+    rgba(0, 0, 0, 0.03) 100%
+  );
+  
+  pointer-events: none;
+}
 
 
 .window-header-top {
