@@ -257,7 +257,7 @@ func main() {
 	http.HandleFunc("/login", WithCORS(handler.LoginHandler))
 	http.HandleFunc("/register", WithCORS(handler.RegisterHandler))
 	http.HandleFunc("/history", WithCORS(handler.WithAuth(handler.GetChatHistoryHandler)))
-	http.HandleFunc("/rooms", (handler.WithAuth(handler.GetRoomsHandler)))
+	http.HandleFunc("/rooms", WithCORS(handler.WithAuth(handler.GetRoomsHandler)))
 	http.HandleFunc("/subscribe", WithCORS(handler.WithAuth(handler.SubscribeToRoomHandler)))
 	http.HandleFunc("/online-users", WithCORS(handler.WithAuth(handler.GetOnlineUsersHandler)))
 	http.HandleFunc("/room-usernames", WithCORS(handler.GetRoomUsernamesHandler))

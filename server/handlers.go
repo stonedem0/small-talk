@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
@@ -57,8 +58,14 @@ func WithCORS(next http.HandlerFunc) http.HandlerFunc {
 
 func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 		username, err := h.VerifyToken(r)
 		if err != nil {
+			// log.Printf("🔧 WithAuth: %v", err)
+			// spew.Dump(r)
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: " + err.Error()})
 			return
@@ -75,6 +82,7 @@ func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	spew.Dump(r)
 	rooms, err := h.RDB.SMembers(h.Ctx, "rooms").Result()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
