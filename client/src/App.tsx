@@ -79,7 +79,7 @@ const App = () => {
       <div id="main-container">
         {!token && (
         <Window
-          title="Fella connect"
+          title="Login"
           width={300}
           height={200}
           username={username}
