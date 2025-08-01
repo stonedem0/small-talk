@@ -8,21 +8,28 @@ import "./App.css";
 
 const App = () => {
   const [username, setUsername] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [tab, setTab] = useState("Chat");
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     const storedUsername = localStorage.getItem("username");
-    if (storedUsername) {
-      setUsername(storedUsername);
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
+      if (storedUsername) {
+        setUsername(storedUsername);
+      }
     }
   }, []);
 
 
   const handleSignOut = () => {
     localStorage.removeItem("username");
+    localStorage.removeItem("token");
     setUsername(null);
+    setToken(null);
     navigate("/");
   };
 
@@ -34,9 +41,12 @@ const App = () => {
     }
   }, [location.pathname]);
 
+
+  console.log(username, token);
+
   return (
-    <div id="main-container">
-      {!username && (
+      <div id="main-container">
+        {!token && (
         <Window
           title="Fella connect"
           width={300}
@@ -44,11 +54,11 @@ const App = () => {
           username={username}
           onSignOut={handleSignOut}
         >
-          <Popup setUsername={setUsername} />
+          <Popup setUsername={setUsername} setToken={setToken} />
         </Window>
       )}
 
-      {username && (
+      {token && (
         <Window
           title="Fella connect"
           width={600}
@@ -74,7 +84,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Rooms />} />
               <Route path="/home" element={<Rooms />} />
-              <Route path=":roomName" element={<Chat username={username} />} />
+              <Route path=":roomName" element={<Chat username={username || ""} />} />
             </Routes>
           )}
           {tab === "Settings" && (
