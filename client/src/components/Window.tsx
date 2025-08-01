@@ -3,6 +3,7 @@ import { useState } from "react";
 import WindowControls from "./WindowControls";
 import "./Window.css";
 import { API_URL } from "../config";
+import PrimaryButton from "./PrimaryButton";
 
 type WindowProps = {
   title: string;
@@ -154,9 +155,6 @@ const Window = ({
         setIsUpdating(false);
         return;
       } else {
-        const responseData = await response.json();
-        
-        // Close the form
         setShowPasswordForm(false);
         setCurrentPassword("");
         setNewPassword("");
@@ -181,6 +179,25 @@ const Window = ({
     setNewUsername("");
   };
 
+  const onCreateRoom = async () => {
+    const roomName = prompt("Enter room name:");
+    if (!roomName) {
+      return;
+    }
+    const response = await fetch(`${API_URL}/create-room`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      },
+      body: JSON.stringify({ room: roomName })
+    });
+    if (!response.ok) {
+      console.error("Failed to create room");
+      return;
+    }
+    alert("Room created successfully");
+    window.location.reload();
+  };
   return (
     <div className="window" style={{ width, height, top, left }}>
       <div className="window-header">
@@ -234,7 +251,8 @@ const Window = ({
                 <span className="username">
                   oh hai, <strong>{username || "User"}</strong>!
                 </span>
-                <button onClick={onSignOut}>Sign out</button>
+              <PrimaryButton onClick={onSignOut}>Sign out</PrimaryButton>
+              <PrimaryButton onClick={onCreateRoom}>Create room</PrimaryButton>
               </div>
             </div>
           </div>

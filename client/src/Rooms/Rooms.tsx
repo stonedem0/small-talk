@@ -70,7 +70,7 @@ const Rooms = () => {
             </li>
           ))}
           </ul>
-          <button  className="create-room-button" onClick={async () => {
+          {/* <button  className="create-room-button" onClick={async () => {
             const roomName = prompt("Enter room name:");
             if (!roomName) {
               return;
@@ -88,7 +88,7 @@ const Rooms = () => {
             }
             alert("Room created successfully");
             window.location.reload();
-          }}>Create Room</button>
+          }}>Create Room</button> */}
         </div>
       </div>
     </div>
