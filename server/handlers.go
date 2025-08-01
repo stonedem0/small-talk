@@ -640,6 +640,18 @@ func (h *Handler) DebugUsersHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) UserInfoHandler(w http.ResponseWriter, r *http.Request) {
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"username": username})
+}
+
 func (h *Handler) VerifyToken(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {

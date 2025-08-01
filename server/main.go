@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 )
@@ -59,7 +58,6 @@ var upgrader = websocket.Upgrader{
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
 	log.Printf("🔧 New WebSocket connection request")
-	spew.Dump(r)
 	room := r.URL.Query().Get("room")
 	if room == "" {
 		log.Printf("🔧 Missing room parameter")
@@ -256,6 +254,7 @@ func main() {
 	http.HandleFunc("/ws", handleConnections)
 	http.HandleFunc("/login", WithCORS(handler.LoginHandler))
 	http.HandleFunc("/register", WithCORS(handler.RegisterHandler))
+	http.HandleFunc("/user-info", WithCORS(handler.WithAuth(handler.UserInfoHandler)))
 	http.HandleFunc("/history", WithCORS(handler.WithAuth(handler.GetChatHistoryHandler)))
 	http.HandleFunc("/rooms", WithCORS(handler.WithAuth(handler.GetRoomsHandler)))
 	http.HandleFunc("/subscribe", WithCORS(handler.WithAuth(handler.SubscribeToRoomHandler)))
