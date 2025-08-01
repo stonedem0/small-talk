@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
@@ -47,26 +46,22 @@ func WithCORS(next http.HandlerFunc) http.HandlerFunc {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Content-Type", "application/json")
+
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
+
+		w.Header().Set("Content-Type", "application/json")
 		next(w, r)
 	}
 }
 
 func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
 		username, err := h.VerifyToken(r)
 		if err != nil {
-			// log.Printf("🔧 WithAuth: %v", err)
-			// spew.Dump(r)
-			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: " + err.Error()})
 			return
 		}
@@ -77,12 +72,6 @@ func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	spew.Dump(r)
 	rooms, err := h.RDB.SMembers(h.Ctx, "rooms").Result()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -93,7 +82,6 @@ func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 		rooms = []string{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(rooms)
 }
 
