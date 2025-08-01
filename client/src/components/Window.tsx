@@ -253,9 +253,6 @@ const Window = ({
                 title="Sign out"
                 onClick={onSignOut}
               ></button>
-                <span className="username">
-                  oh hai, <strong>{username || "User"}</strong>!
-                </span>
             </div>
           </div>
         )}
