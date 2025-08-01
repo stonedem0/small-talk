@@ -209,7 +209,7 @@ const Window = ({
           </div>
         )}
 
-        {username && onSignOut && (
+        {onSignOut && (
           <div className="window-menu-container">
             <div className="window-menu">
               <button
@@ -232,7 +232,7 @@ const Window = ({
               ></button>
               <div className="sign-out">
                 <span className="username">
-                  oh hai, <strong>{username}</strong>!
+                  oh hai, <strong>{username || "User"}</strong>!
                 </span>
                 <button onClick={onSignOut}>Sign out</button>
               </div>

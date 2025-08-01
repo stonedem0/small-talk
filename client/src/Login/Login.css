@@ -11,7 +11,6 @@
 
 #login-container {
   background: var(--purple-gradient);
-  border-radius: 5px;
   box-shadow: var(--window-shadow);
   width: 350px;
 }

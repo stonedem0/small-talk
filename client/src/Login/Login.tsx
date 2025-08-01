@@ -7,9 +7,10 @@ import { useNavigate } from "react-router-dom";
 
 interface PopupProps {
   setUsername: (name: string) => void;
+  setToken: (token: string) => void;
 }
 
-const Popup = ({ setUsername }: PopupProps) => {
+const Popup = ({ setUsername, setToken }: PopupProps) => {
   const [username, setUsernameLocal] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -44,6 +45,7 @@ const Popup = ({ setUsername }: PopupProps) => {
     localStorage.setItem("username", username.trim());
     localStorage.setItem("token", token);
     setUsername(username.trim());
+    setToken(token);
     navigate("/home");
   };
 
@@ -76,9 +78,6 @@ const Popup = ({ setUsername }: PopupProps) => {
   return (
     <div id="login-overlay">
       <div id="login-container">
-        <div className="login-header">
-          <div className="login-title">Login</div>
-        </div>
         <div className="login-body">
           <div className="icon">
             <img src={logo} alt="logo" />

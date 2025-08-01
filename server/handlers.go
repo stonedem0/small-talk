@@ -16,6 +16,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type contextKey string
+
+const (
+	usernameKey contextKey = "username"
+)
+
 type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -40,11 +46,13 @@ func WithCORS(next http.HandlerFunc) http.HandlerFunc {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Content-Type", "application/json")
+
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
+
+		w.Header().Set("Content-Type", "application/json")
 		next(w, r)
 	}
 }
@@ -53,37 +61,27 @@ func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username, err := h.VerifyToken(r)
 		if err != nil {
-			http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: " + err.Error()})
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "username", username)
+		ctx := context.WithValue(r.Context(), usernameKey, username)
 		next(w, r.WithContext(ctx))
 	}
 }
 
 func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	// Get rooms from Redis
 	rooms, err := h.RDB.SMembers(h.Ctx, "rooms").Result()
 	if err != nil {
-		log.Printf("Error fetching rooms from Redis: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
 		return
 	}
-
-	// If no rooms in Redis, return empty array
 	if len(rooms) == 0 {
 		rooms = []string{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(rooms)
 }
 
@@ -173,9 +171,7 @@ func (h *Handler) GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) GetRoomUsernamesHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("🔧 GetRoomUsernamesHandler called")
-
 	if r.Method == "OPTIONS" {
-		log.Printf("🔧 GetRoomUsernamesHandler: OPTIONS request")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -644,6 +640,18 @@ func (h *Handler) DebugUsersHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) UserInfoHandler(w http.ResponseWriter, r *http.Request) {
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"username": username})
+}
+
 func (h *Handler) VerifyToken(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
@@ -656,8 +664,15 @@ func (h *Handler) VerifyToken(r *http.Request) (string, error) {
 		return h.JWTSecret, nil
 	})
 
-	if err != nil || !token.Valid {
+	if err != nil {
+		if strings.Contains(err.Error(), "token is expired") {
+			return "", fmt.Errorf("token expired")
+		}
 		return "", fmt.Errorf("invalid token: %w", err)
+	}
+
+	if !token.Valid {
+		return "", fmt.Errorf("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
