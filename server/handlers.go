@@ -16,6 +16,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type contextKey string
+
+const (
+	usernameKey contextKey = "username"
+)
+
 type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -53,11 +59,12 @@ func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username, err := h.VerifyToken(r)
 		if err != nil {
-			http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: " + err.Error()})
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "username", username)
+		ctx := context.WithValue(r.Context(), usernameKey, username)
 		next(w, r.WithContext(ctx))
 	}
 }
@@ -68,17 +75,12 @@ func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-
-	// Get rooms from Redis
 	rooms, err := h.RDB.SMembers(h.Ctx, "rooms").Result()
 	if err != nil {
-		log.Printf("Error fetching rooms from Redis: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
 		return
 	}
-
-	// If no rooms in Redis, return empty array
 	if len(rooms) == 0 {
 		rooms = []string{}
 	}
@@ -173,7 +175,6 @@ func (h *Handler) GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) GetRoomUsernamesHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("🔧 GetRoomUsernamesHandler called")
-
 	if r.Method == "OPTIONS" {
 		log.Printf("🔧 GetRoomUsernamesHandler: OPTIONS request")
 		w.WriteHeader(http.StatusOK)
@@ -656,8 +657,15 @@ func (h *Handler) VerifyToken(r *http.Request) (string, error) {
 		return h.JWTSecret, nil
 	})
 
-	if err != nil || !token.Valid {
+	if err != nil {
+		if strings.Contains(err.Error(), "token is expired") {
+			return "", fmt.Errorf("token expired")
+		}
 		return "", fmt.Errorf("invalid token: %w", err)
+	}
+
+	if !token.Valid {
+		return "", fmt.Errorf("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)

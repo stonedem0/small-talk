@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 )
@@ -58,6 +59,7 @@ var upgrader = websocket.Upgrader{
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
 	log.Printf("🔧 New WebSocket connection request")
+	spew.Dump(r)
 	room := r.URL.Query().Get("room")
 	if room == "" {
 		log.Printf("🔧 Missing room parameter")
@@ -255,7 +257,7 @@ func main() {
 	http.HandleFunc("/login", WithCORS(handler.LoginHandler))
 	http.HandleFunc("/register", WithCORS(handler.RegisterHandler))
 	http.HandleFunc("/history", WithCORS(handler.WithAuth(handler.GetChatHistoryHandler)))
-	http.HandleFunc("/rooms", WithCORS(handler.WithAuth(handler.GetRoomsHandler)))
+	http.HandleFunc("/rooms", (handler.WithAuth(handler.GetRoomsHandler)))
 	http.HandleFunc("/subscribe", WithCORS(handler.WithAuth(handler.SubscribeToRoomHandler)))
 	http.HandleFunc("/online-users", WithCORS(handler.WithAuth(handler.GetOnlineUsersHandler)))
 	http.HandleFunc("/room-usernames", WithCORS(handler.GetRoomUsernamesHandler))
@@ -263,10 +265,6 @@ func main() {
 	http.HandleFunc("/update-username", WithCORS(handler.UpdateUsernameHandler))
 	http.HandleFunc("/update-password", WithCORS(handler.UpdatePasswordHandler))
 	http.HandleFunc("/debug-users", WithCORS(handler.DebugUsersHandler))
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("UNMATCHED: %s %s", r.Method, r.URL.Path)
-		http.NotFound(w, r)
-	})
 	log.Println("Server started on port", port)
 	err := http.ListenAndServe(p, nil)
 	if err != nil {
