@@ -170,7 +170,6 @@ func (h *Handler) GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) GetRoomUsernamesHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("🔧 GetRoomUsernamesHandler called")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -184,11 +183,8 @@ func (h *Handler) GetRoomUsernamesHandler(w http.ResponseWriter, r *http.Request
 			usernames = append(usernames, username)
 		}
 		roomUsernames[room] = usernames
-		log.Printf("🔧 GetRoomUsernamesHandler: Room %s has users: %v", room, usernames)
 	}
 	onlineUsersLock.Unlock()
-
-	log.Printf("🔧 GetRoomUsernamesHandler: Returning all room usernames: %v", roomUsernames)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(roomUsernames)
 }
