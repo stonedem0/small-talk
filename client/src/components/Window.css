@@ -116,6 +116,24 @@
   filter: hue-rotate(180deg); /* Make it look different from username button */
 }
 
+#create-room {
+  background-image: url("../assets/create.png");
+  background-size: 22px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+#sign-out {
+  background-image: url("../assets/signout.png");
+  background-size: 22px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.username {
+align-self: center;
+}
+
 .sign-out {
   gap: 11px;
   display: flex;
