@@ -176,7 +176,6 @@ func (h *Handler) GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) GetRoomUsernamesHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("🔧 GetRoomUsernamesHandler called")
 	if r.Method == "OPTIONS" {
-		log.Printf("🔧 GetRoomUsernamesHandler: OPTIONS request")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
