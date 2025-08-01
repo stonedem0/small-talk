@@ -1,17 +1,18 @@
 .primary-xp-btn {
-  background: linear-gradient(to bottom, #f6f6f6 0%, #d4d4d4 45%, #b0b0b0 100%);
-  border: 2px solid #888;
+  /* background: linear-gradient(to bottom, #f6f6f6 0%, #d4d4d4 45%, #b0b0b0 100%); */
+  background: linear-gradient(to bottom, #f6f6f6 0%, #f4f3f3 45%, #e3e3e3 100%);
+  border: 1px solid var(--deep-purple);
   border-radius: 5px;
   color: #222;
   font-size: 1rem;
   font-family: inherit;
   padding: 7px 32px 7px 32px;
-  box-shadow:
+  /* box-shadow:
     0 1px 0 #fff inset,
     0 2px 4px rgba(0,0,0,0.10),
     0 1.5px 0 #eaeaea,
     0 0 0 1.5px #e0e0e0 inset,
-    0 2px 8px #b0b0b0 inset;
+    0 2px 8px #b0b0b0 inset; */
   cursor: pointer;
   transition: background 0.2s, box-shadow 0.2s;
   outline: none;
@@ -30,12 +31,14 @@
   top: 2px;
   height: 40%;
   border-radius: 3px 3px 2px 2px;
-  background: linear-gradient(to bottom, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.15) 100%);
+  /* background: linear-gradient(to bottom, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.15) 100%);  */
+  background: linear-gradient(to bottom, rgba(255,255,255,0.7) 0%, rgba(220, 219, 219, 0.15) 100%); 
   pointer-events: none;
 }
 
 .primary-xp-btn:hover {
-  background: linear-gradient(to bottom, #fafafa 0%, #e0e0e0 45%, #bdbdbd 100%);
+  /* background: linear-gradient(to bottom, #fafafa 0%, #e0e0e0 45%, #bdbdbd 100%); */
+  background: linear-gradient(to bottom, #f6f6f6 0%, #f4f3f3 45%, #e3e3e3 100%);
   box-shadow:
     0 1px 0 #fff inset,
     0 4px 12px rgba(0,0,0,0.13),
@@ -49,7 +52,7 @@
   box-shadow:
     0 1px 0 #fff inset,
     0 1px 2px rgba(0,0,0,0.10),
-    0 1.5px 0 #eaeaea,
+    0 1.5px 0 #776f6f,
     0 0 0 1.5px #e0e0e0 inset,
     0 2px 8px #b0b0b0 inset;
 } 

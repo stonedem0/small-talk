@@ -6,7 +6,13 @@ import { API_URL } from "../config";
 const Rooms = () => {
   const [rooms, setRooms] = useState<string[]>([]);
   const [userCounts, setUserCounts] = useState<{ [room: string]: number }>({});
-  // const navigate = useNavigate();
+  const [username, setUsername] = useState<string | null>(null);
+  useEffect(() => {
+    const username = localStorage.getItem("username");
+    if (username) {
+      setUsername(username);
+    }
+  }, []);
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -51,6 +57,9 @@ const Rooms = () => {
     <div id="rooms-container">
       <div className="rooms-body">
         <div className="welcome">
+        <span className="username">
+                  oh hai, <strong>{username || "User"}</strong>!
+                </span>
           <p>Welcome to Small Talk!</p>
           <p>Choose a room to start chatting with others.</p>
           <p>Available rooms:</p>
@@ -70,7 +79,7 @@ const Rooms = () => {
             </li>
           ))}
           </ul>
-          <button  className="create-room-button" onClick={async () => {
+          {/* <button  className="create-room-button" onClick={async () => {
             const roomName = prompt("Enter room name:");
             if (!roomName) {
               return;
@@ -88,7 +97,7 @@ const Rooms = () => {
             }
             alert("Room created successfully");
             window.location.reload();
-          }}>Create Room</button>
+          }}>Create Room</button> */}
         </div>
       </div>
     </div>

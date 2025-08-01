@@ -3,6 +3,7 @@ import { useState } from "react";
 import WindowControls from "./WindowControls";
 import "./Window.css";
 import { API_URL } from "../config";
+import PrimaryButton from "./PrimaryButton";
 
 type WindowProps = {
   title: string;
@@ -13,7 +14,7 @@ type WindowProps = {
   left?: string;
   username?: string | null;
   onSignOut?: () => void;
-  onClose?: () => void; // ✅ NEW
+  onClose?: () => void; 
   tabs?: string[];
   activeTab?: string;
   onTabClick?: (tab: string) => void;
@@ -46,7 +47,7 @@ const Window = ({
     if (onClose) {
       onClose();
     } else {
-      navigate("/"); // ✅ fallback navigation
+      navigate("/"); 
     }
   };
 
@@ -62,15 +63,13 @@ const Window = ({
     const newUsernameValue = newUsername.trim();
     
     try {
-      // Get current room from URL if we're in a chat room
       const pathParts = window.location.pathname.split('/');
       const currentRoom = pathParts[pathParts.length - 1];
       
-      // Always make HTTP request to update username in database, regardless of room
       const requestBody = {
         oldUsername: oldUsername,
         newUsername: newUsernameValue,
-        room: currentRoom || 'home' // Use current room or 'home' as fallback
+        room: currentRoom || 'home' 
       };
         
         const response = await fetch(`${API_URL}/update-username`, {
@@ -81,7 +80,7 @@ const Window = ({
           body: JSON.stringify(requestBody),
         });
         
-                  if (!response.ok) {
+            if (!response.ok) {
             const errorText = await response.text();
             alert('Failed to update username: ' + errorText);
             setIsUpdating(false);
@@ -89,11 +88,9 @@ const Window = ({
           } else {
             const responseData = await response.json();
             
-            // Update localStorage with new username and token
             localStorage.setItem("username", responseData.newUsername);
             localStorage.setItem("token", responseData.token);
             
-            // Try to send WebSocket message to update chat display (only if in a room)
             if (currentRoom && currentRoom !== 'home' && currentRoom !== '') {
               const ws = (window as any).currentWebSocket;
               if (ws && ws.readyState === WebSocket.OPEN) {
@@ -106,7 +103,6 @@ const Window = ({
               }
             }
             
-            // Close the form and show success
             setShowUsernameForm(false);
             setNewUsername("");
             
@@ -133,7 +129,6 @@ const Window = ({
     setIsUpdating(true);
     
     try {
-      // Make HTTP request to update password
       const requestBody = {
         username: username,
         currentPassword: currentPassword.trim(),
@@ -154,9 +149,6 @@ const Window = ({
         setIsUpdating(false);
         return;
       } else {
-        const responseData = await response.json();
-        
-        // Close the form
         setShowPasswordForm(false);
         setCurrentPassword("");
         setNewPassword("");
@@ -181,6 +173,25 @@ const Window = ({
     setNewUsername("");
   };
 
+  const onCreateRoom = async () => {
+    const roomName = prompt("Enter room name:");
+    if (!roomName) {
+      return;
+    }
+    const response = await fetch(`${API_URL}/create-room`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      },
+      body: JSON.stringify({ room: roomName })
+    });
+    if (!response.ok) {
+      console.error("Failed to create room");
+      return;
+    }
+    alert("Room created successfully");
+    window.location.reload();
+  };
   return (
     <div className="window" style={{ width, height, top, left }}>
       <div className="window-header">
@@ -230,12 +241,18 @@ const Window = ({
                 title="Change password"
                 onClick={() => setShowPasswordForm(true)}
               ></button>
-              <div className="sign-out">
-                <span className="username">
-                  oh hai, <strong>{username || "User"}</strong>!
-                </span>
-                <button onClick={onSignOut}>Sign out</button>
-              </div>
+              <button
+                id="create-room"
+                className="menu-button"
+                title="Create room"
+                onClick={onCreateRoom}
+              ></button>
+              <button
+                id="sign-out"
+                className="menu-button"
+                title="Sign out"
+                onClick={onSignOut}
+              ></button>
             </div>
           </div>
         )}
