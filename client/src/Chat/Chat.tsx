@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { API_URL, WS_URL } from "../config";
 import { format } from 'date-fns';
+import PrimaryButton from "../components/PrimaryButton";
 
 interface ChatProps {
   username: string;
@@ -212,7 +213,7 @@ const Chat = ({ username }: ChatProps) => {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
-              <input type="submit" value="send" id="send-message" />
+              <PrimaryButton type="submit" id="send-message">send</PrimaryButton>
             </form>
           </div>
         </div>
