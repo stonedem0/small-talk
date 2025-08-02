@@ -83,10 +83,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--scroll-thumb-bg) !important;
+  background: #e6d9ff !important;
   border: 1px solid var(--scroll-thumb-bg) !important;
   height: 115px;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><rect fill="%23ffffff" opacity="0.3" x="2" y="4" width="12" height="1"/><rect fill="%23ffffff" opacity="0.3" x="2" y="7" width="12" height="1"/><rect fill="%23ffffff" opacity="0.3" x="2" y="10" width="12" height="1"/></svg>') !important;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><rect fill="%23784cff" opacity="0.6" x="2" y="4" width="12" height="1"/><rect fill="%23784cff" opacity="0.6" x="2" y="7" width="12" height="1"/><rect fill="%23784cff" opacity="0.6" x="2" y="10" width="12" height="1"/></svg>') !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
 }
