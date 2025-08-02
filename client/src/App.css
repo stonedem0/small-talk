@@ -79,7 +79,8 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--scroll-track-bg);
+  background: linear-gradient(to right, #fff9ff 0%, #f4effc 10%, #ebe0fd 100%);
+  
 }
 
 ::-webkit-scrollbar-thumb {
