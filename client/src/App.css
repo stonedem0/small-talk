@@ -75,7 +75,7 @@ body {
 
 /* Custom Scrollbar Styling */
 ::-webkit-scrollbar {
-  width: 17px;
+  width: 18px;
 }
 
 ::-webkit-scrollbar-track {
