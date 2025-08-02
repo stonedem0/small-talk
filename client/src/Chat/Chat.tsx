@@ -187,7 +187,7 @@ const Chat = ({ username }: ChatProps) => {
                 }
                 if ((msg as any).type === "system") {
                   return (
-                    <p key={index} style={{ color: "#888", fontStyle: "italic" }}>
+                    <p key={index} style={{ background: "linear-gradient(90deg, rgba(139, 92, 246, 0.4), rgba(236, 72, 153, 0.4))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", fontStyle: "italic", opacity: 0.7 }}>
                       {timeStr && <span>[{timeStr}] </span>}
                       {msg.username} {msg.message}
                     </p>
@@ -195,8 +195,9 @@ const Chat = ({ username }: ChatProps) => {
                 }
                 return (
                   <p key={index}>
-                    {timeStr && <span>[{timeStr}] </span>}
-                    <strong>{msg.username}:</strong> {msg.message}
+                    {timeStr && <span style={{ color: "#c084fc" }}>[{timeStr}] </span>}
+                    <strong style={{ color: "#ff69b4" }}>{msg.username}:</strong> 
+                    <span style={{ color: "#8b5cf6" }}> {msg.message}</span>
                   </p>
                 );
               })
