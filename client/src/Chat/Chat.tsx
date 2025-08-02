@@ -212,7 +212,7 @@ const Chat = ({ username }: ChatProps) => {
                 }
                 if ((msg as any).type === "system") {
                   return (
-                    <p key={index} style={{ background: "linear-gradient(90deg, rgba(139, 92, 246, 0.4), rgba(236, 72, 153, 0.4))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", fontStyle: "italic", opacity: 0.7 }}>
+                    <p key={index} style={{ background: "linear-gradient(90deg, rgba(139, 92, 246, 0.5), rgba(236, 72, 153, 0.5))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", fontStyle: "italic", opacity: 0.8 }}>
                       {timeStr && <span>[{timeStr}] </span>}
                       {msg.username} {msg.message}
                     </p>
