@@ -170,6 +170,31 @@ const Chat = ({ username }: ChatProps) => {
     </div>
   );
 
+  // Retro pixel art palette colors - pinks, greens, purples
+  const getUserColor = (username: string) => {
+    const colors = [
+      "#ff6ec7", // Bright pink
+      "#00ff7f", // Spring green
+      "#9d4edd", // Deep purple
+      "#ff1493", // Deep pink
+      "#39ff14", // Neon green
+      "#8a2be2", // Blue violet
+      "#ff69b4", // Hot pink
+      "#00fa9a", // Medium spring green
+      "#dda0dd", // Plum
+      "#ff91a4", // Light pink
+      "#32cd32", // Lime green
+      "#ba55d3", // Medium orchid
+    ];
+    
+    // Generate consistent color based on username
+    let hash = 0;
+    for (let i = 0; i < username.length; i++) {
+      hash = username.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
   return (
     <div id="chat-container">
       <div className="chat-room" style={{ display: "flex", flexDirection: "row" }}>
@@ -222,7 +247,16 @@ const Chat = ({ username }: ChatProps) => {
           <h4>Online</h4>
             <ul>
               {onlineUsers.map((user) => (
-                <li key={user}>{user}</li>
+                <li 
+                  key={user} 
+                  style={{ 
+                    color: getUserColor(user),
+                    fontWeight: "bold",
+                    marginBottom: "4px"
+                  }}
+                >
+                  ● {user}
+                </li>
               ))}
             </ul>
         </div>
