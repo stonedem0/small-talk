@@ -105,18 +105,36 @@ body {
 }
 
 ::-webkit-scrollbar-button:vertical:decrement {
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"><path fill="%231C1C1C" d="M12 8l6 6H6z"/></svg>') !important;
+  height: 16px;
+  background-color: #e6d7ff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M5 9 L8 6 L11 9 Z' fill='%235200ff'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 ::-webkit-scrollbar-button:vertical:increment {
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"><path fill="%231C1C1C" d="M12 16l-6-6h12z"/></svg>') !important;
+  height: 16px;
+  background-color: #e6d7ff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M5 7 L8 10 L11 7 Z' fill='%235200ff'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+
 }
+
+
 
 ::-webkit-scrollbar-button:vertical:increment:start,
 ::-webkit-scrollbar-button:vertical:decrement:end {
   display: none !important;
   border: none !important;
 }
+
+::-webkit-scrollbar-button:horizontal:increment:start,
+::-webkit-scrollbar-button:horizontal:decrement:end {
+  display: none !important;
+  border: none !important;
+}
+
 
 
 /* Firefox support */
