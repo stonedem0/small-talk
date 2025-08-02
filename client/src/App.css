@@ -78,6 +78,10 @@ body {
   width: 18px;
 }
 
+::-webkit-scrollbar:horizontal {
+  height: 18px;
+}
+
 ::-webkit-scrollbar-track {
   background: linear-gradient(to right, #fff9ff 0%, #f4effc 10%, #ebe0fd 100%);
   
@@ -114,6 +118,8 @@ body {
 }
 
 ::-webkit-scrollbar-button:vertical:decrement {
+  height: 18px;
+  width: 18px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='4,10 8,6 12,10' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), 
   linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
   background-repeat: no-repeat, no-repeat !important;
@@ -122,11 +128,28 @@ body {
 }
 
 ::-webkit-scrollbar-button:vertical:increment {
+  height: 18px;
+  width: 18px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='4,6 8,10 12,6' fill='none'  stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),   linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
   background-repeat: no-repeat;
   background-position: center;
-  
 
+}
+
+::-webkit-scrollbar-button:horizontal:decrement {
+  height: 18px;
+  width: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='10,4 6,8 10,12' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+::-webkit-scrollbar-button:horizontal:increment {
+  height: 18px;
+  width: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='6,4 10,8 6,12' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 ::-webkit-scrollbar-button:vertical:increment:start,
