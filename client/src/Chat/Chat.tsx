@@ -248,6 +248,10 @@ const Chat = ({ username }: ChatProps) => {
                   text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                   // Replace *italic* with <em>
                   text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                  // Replace _underline_ with <u>
+                  text = text.replace(/_(.*?)_/g, '<u>$1</u>');
+                  // Replace ~~strikethrough~~ with <del>
+                  text = text.replace(/~~(.*?)~~/g, '<del>$1</del>');
                   // Replace `code` with <code>
                   text = text.replace(/`(.*?)`/g, '<code style="background: rgba(139, 92, 246, 0.1); padding: 2px 4px; border-radius: 3px;">$1</code>');
                   return text;
@@ -269,54 +273,112 @@ const Chat = ({ username }: ChatProps) => {
           </div>
 
           <div id="message-controls">
-            <div style={{ display: "flex", gap: "4px", marginBottom: "8px", alignItems: "center" }}>
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center",
+              background: "linear-gradient(to bottom, #f0f0f0, #e0e0e0)",
+              border: "1px solid #8b5cf6",
+              borderRadius: "3px",
+              padding: "4px 6px",
+              marginBottom: "8px",
+              gap: "2px",
+              boxShadow: "inset 1px 1px 1px rgba(255,255,255,0.7), inset -1px -1px 1px rgba(0,0,0,0.1)"
+            }}>
               <button
                 type="button"
+                className="formatting-button"
+                data-tooltip="Bold (**text**)"
                 onClick={() => insertFormatting("**", "**")}
                 style={{
-                  padding: "4px 8px",
-                  border: "1px solid #8b5cf6",
-                  background: "white",
-                  color: "#8b5cf6",
-                  borderRadius: "3px",
+                  padding: "4px 7px",
+                  border: "1px solid #999",
+                  background: "linear-gradient(to bottom, #ffffff, #f0f0f0)",
+                  color: "#333",
+                  borderRadius: "2px",
                   cursor: "pointer",
                   fontSize: "12px",
-                  fontWeight: "bold"
+                  fontWeight: "bold",
+                  boxShadow: "1px 1px 1px rgba(0,0,0,0.2)"
                 }}
               >
                 B
               </button>
               <button
                 type="button"
+                className="formatting-button"
+                data-tooltip="Italic (*text*)"
                 onClick={() => insertFormatting("*", "*")}
                 style={{
-                  padding: "4px 8px",
-                  border: "1px solid #8b5cf6",
-                  background: "white",
-                  color: "#8b5cf6",
-                  borderRadius: "3px",
+                  padding: "4px 7px",
+                  border: "1px solid #999",
+                  background: "linear-gradient(to bottom, #ffffff, #f0f0f0)",
+                  color: "#333",
+                  borderRadius: "2px",
                   cursor: "pointer",
                   fontSize: "12px",
-                  fontStyle: "italic"
+                  fontStyle: "italic",
+                  boxShadow: "1px 1px 1px rgba(0,0,0,0.2)"
                 }}
               >
                 I
               </button>
               <button
                 type="button"
-                onClick={() => insertFormatting("`", "`")}
+                className="formatting-button"
+                data-tooltip="Underline (_text_)"
+                onClick={() => insertFormatting("_", "_")}
                 style={{
-                  padding: "4px 8px",
-                  border: "1px solid #8b5cf6",
-                  background: "white",
-                  color: "#8b5cf6",
-                  borderRadius: "3px",
+                  padding: "4px 7px",
+                  border: "1px solid #999",
+                  background: "linear-gradient(to bottom, #ffffff, #f0f0f0)",
+                  color: "#333",
+                  borderRadius: "2px",
                   cursor: "pointer",
                   fontSize: "12px",
-                  fontFamily: "monospace"
+                  textDecoration: "underline",
+                  boxShadow: "1px 1px 1px rgba(0,0,0,0.2)"
+                }}
+              >
+                U
+              </button>
+              <div style={{ width: "1px", height: "16px", background: "#999", margin: "0 4px" }} />
+              <button
+                type="button"
+                className="formatting-button"
+                data-tooltip="Code (`text`)"
+                onClick={() => insertFormatting("`", "`")}
+                style={{
+                  padding: "4px 7px",
+                  border: "1px solid #999",
+                  background: "linear-gradient(to bottom, #ffffff, #f0f0f0)",
+                  color: "#333",
+                  borderRadius: "2px",
+                  cursor: "pointer",
+                  fontSize: "10px",
+                  fontFamily: "monospace",
+                  boxShadow: "1px 1px 1px rgba(0,0,0,0.2)"
                 }}
               >
                 &lt;/&gt;
+              </button>
+              <button
+                type="button"
+                className="formatting-button"
+                data-tooltip="Strikethrough (~~text~~)"
+                onClick={() => insertFormatting("~~", "~~")}
+                style={{
+                  padding: "4px 7px",
+                  border: "1px solid #999",
+                  background: "linear-gradient(to bottom, #ffffff, #f0f0f0)",
+                  color: "#333",
+                  borderRadius: "2px",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  textDecoration: "line-through",
+                  boxShadow: "1px 1px 1px rgba(0,0,0,0.2)"
+                }}
+              >
+                S
               </button>
             </div>
             <form onSubmit={sendMessage} id="submit">
