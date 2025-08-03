@@ -318,14 +318,14 @@ const Chat = ({ username }: ChatProps) => {
                 onClick={() => insertFormatting("*", "*")}
                 style={{
                   padding: "4px 7px",
-                  border: "1px solid #999",
-                  background: "linear-gradient(to bottom, #ffffff, #f0f0f0)",
-                  color: "#333",
+                  border: "1px solid var(--scroll-thumb-bg)",
+                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
+                  color: "#4a00f7",
                   borderRadius: "2px",
                   cursor: "pointer",
                   fontSize: "12px",
                   fontStyle: "italic",
-                  boxShadow: "1px 1px 1px rgba(0,0,0,0.2)"
+                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
                 }}
               >
                 I
@@ -337,19 +337,19 @@ const Chat = ({ username }: ChatProps) => {
                 onClick={() => insertFormatting("_", "_")}
                 style={{
                   padding: "4px 7px",
-                  border: "1px solid #999",
-                  background: "linear-gradient(to bottom, #ffffff, #f0f0f0)",
-                  color: "#333",
+                  border: "1px solid var(--scroll-thumb-bg)",
+                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
+                  color: "#4a00f7",
                   borderRadius: "2px",
                   cursor: "pointer",
                   fontSize: "12px",
                   textDecoration: "underline",
-                  boxShadow: "1px 1px 1px rgba(0,0,0,0.2)"
+                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
                 }}
               >
                 U
               </button>
-              <div style={{ width: "1px", height: "16px", background: "#999", margin: "0 4px" }} />
+              <div style={{ width: "1px", height: "16px", background: "#8b5cf6", margin: "0 4px" }} />
               <button
                 type="button"
                 className="formatting-button"
@@ -357,14 +357,14 @@ const Chat = ({ username }: ChatProps) => {
                 onClick={() => insertFormatting("`", "`")}
                 style={{
                   padding: "4px 7px",
-                  border: "1px solid #999",
-                  background: "linear-gradient(to bottom, #ffffff, #f0f0f0)",
-                  color: "#333",
+                  border: "1px solid var(--scroll-thumb-bg)",
+                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
+                  color: "#4a00f7",
                   borderRadius: "2px",
                   cursor: "pointer",
                   fontSize: "10px",
                   fontFamily: "monospace",
-                  boxShadow: "1px 1px 1px rgba(0,0,0,0.2)"
+                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
                 }}
               >
                 &lt;/&gt;
@@ -376,14 +376,14 @@ const Chat = ({ username }: ChatProps) => {
                 onClick={() => insertFormatting("~~", "~~")}
                 style={{
                   padding: "4px 7px",
-                  border: "1px solid #999",
-                  background: "linear-gradient(to bottom, #ffffff, #f0f0f0)",
-                  color: "#333",
+                  border: "1px solid var(--scroll-thumb-bg)",
+                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
+                  color: "#4a00f7",
                   borderRadius: "2px",
                   cursor: "pointer",
                   fontSize: "12px",
                   textDecoration: "line-through",
-                  boxShadow: "1px 1px 1px rgba(0,0,0,0.2)"
+                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
                 }}
               >
                 S
