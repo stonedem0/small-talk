@@ -305,7 +305,6 @@ const Chat = ({ username }: ChatProps) => {
               >
                 U
               </button>
-              <div className="formatting-separator" />
               <button
                 type="button"
                 className="formatting-button code"
