@@ -280,17 +280,19 @@ const Chat = ({ username }: ChatProps) => {
             <div ref={messagesEndRef} />
           </div>
 
-          <div id="message-controls">
+          <div id="message-controls" style={{
+            border: "1px solid var(--scroll-thumb-bg)",
+            borderRadius: "3px",
+            overflow: "hidden",
+            boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12), 0 0 0 1px #caaaff"
+          }}>
             <div style={{ 
               display: "flex", 
               alignItems: "center",
               background: "linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
-              border: "1px solid var(--scroll-thumb-bg)",
-              borderRadius: "3px",
-              padding: "4px 6px",
-              marginBottom: "8px",
-              gap: "2px",
-              boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12), 0 0 0 1px #caaaff"
+              padding: "2px 4px",
+              gap: "1px",
+              borderBottom: "1px solid var(--scroll-thumb-bg)"
             }}>
               <button
                 type="button"
@@ -298,13 +300,13 @@ const Chat = ({ username }: ChatProps) => {
                 data-tooltip="Bold (**text**)"
                 onClick={() => insertFormatting("**", "**")}
                 style={{
-                  padding: "4px 7px",
+                  padding: "2px 5px",
                   border: "1px solid var(--scroll-thumb-bg)",
                   background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
                   color: "#4a00f7",
                   borderRadius: "2px",
                   cursor: "pointer",
-                  fontSize: "12px",
+                  fontSize: "10px",
                   fontWeight: "bold",
                   boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
                 }}
@@ -317,13 +319,13 @@ const Chat = ({ username }: ChatProps) => {
                 data-tooltip="Italic (*text*)"
                 onClick={() => insertFormatting("*", "*")}
                 style={{
-                  padding: "4px 7px",
+                  padding: "2px 5px",
                   border: "1px solid var(--scroll-thumb-bg)",
                   background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
                   color: "#4a00f7",
                   borderRadius: "2px",
                   cursor: "pointer",
-                  fontSize: "12px",
+                  fontSize: "10px",
                   fontStyle: "italic",
                   boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
                 }}
@@ -336,33 +338,33 @@ const Chat = ({ username }: ChatProps) => {
                 data-tooltip="Underline (_text_)"
                 onClick={() => insertFormatting("_", "_")}
                 style={{
-                  padding: "4px 7px",
-                  border: "1px solid var(--scroll-thumb-bg)",
-                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
-                  color: "#4a00f7",
-                  borderRadius: "2px",
-                  cursor: "pointer",
-                  fontSize: "12px",
-                  textDecoration: "underline",
-                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
-                }}
-              >
-                U
-              </button>
-              <div style={{ width: "1px", height: "16px", background: "#8b5cf6", margin: "0 4px" }} />
-              <button
-                type="button"
-                className="formatting-button"
-                data-tooltip="Code (`text`)"
-                onClick={() => insertFormatting("`", "`")}
-                style={{
-                  padding: "4px 7px",
+                  padding: "2px 5px",
                   border: "1px solid var(--scroll-thumb-bg)",
                   background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
                   color: "#4a00f7",
                   borderRadius: "2px",
                   cursor: "pointer",
                   fontSize: "10px",
+                  textDecoration: "underline",
+                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
+                }}
+              >
+                U
+              </button>
+              <div style={{ width: "1px", height: "12px", background: "#8b5cf6", margin: "0 2px" }} />
+              <button
+                type="button"
+                className="formatting-button"
+                data-tooltip="Code (`text`)"
+                onClick={() => insertFormatting("`", "`")}
+                style={{
+                  padding: "2px 5px",
+                  border: "1px solid var(--scroll-thumb-bg)",
+                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
+                  color: "#4a00f7",
+                  borderRadius: "2px",
+                  cursor: "pointer",
+                  fontSize: "9px",
                   fontFamily: "monospace",
                   boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
                 }}
@@ -375,13 +377,13 @@ const Chat = ({ username }: ChatProps) => {
                 data-tooltip="Strikethrough (~~text~~)"
                 onClick={() => insertFormatting("~~", "~~")}
                 style={{
-                  padding: "4px 7px",
+                  padding: "2px 5px",
                   border: "1px solid var(--scroll-thumb-bg)",
                   background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
                   color: "#4a00f7",
                   borderRadius: "2px",
                   cursor: "pointer",
-                  fontSize: "12px",
+                  fontSize: "10px",
                   textDecoration: "line-through",
                   boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
                 }}
@@ -389,7 +391,9 @@ const Chat = ({ username }: ChatProps) => {
                 S
               </button>
             </div>
-            <form onSubmit={sendMessage} id="submit">
+            <form onSubmit={sendMessage} id="submit" style={{ 
+              display: "flex"
+            }}>
               <input
                 ref={(input) => { inputRef.current = input; }}
                 placeholder="Type your message..."
@@ -397,8 +401,22 @@ const Chat = ({ username }: ChatProps) => {
                 id="message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
+                style={{
+                  flex: 1,
+                  border: "none",
+                  padding: "10px",
+                  backgroundColor: "white",
+                  outline: "none"
+                }}
               />
-              <PrimaryButton type="submit" id="send-message">send</PrimaryButton>
+              <div style={{ 
+                display: "flex", 
+                alignItems: "center",
+                padding: "4px",
+                borderLeft: "1px solid var(--scroll-thumb-bg)"
+              }}>
+                <PrimaryButton type="submit" id="send-message">send</PrimaryButton>
+              </div>
             </form>
           </div>
         </div>
