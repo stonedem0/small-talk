@@ -30,6 +30,7 @@ const Chat = ({ username }: ChatProps) => {
 
   const ws = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -162,6 +163,29 @@ const Chat = ({ username }: ChatProps) => {
 
   const handleMinimize = () => console.log("Minimize clicked");
 
+  const insertFormatting = (start: string, end: string) => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const startPos = input.selectionStart || 0;
+    const endPos = input.selectionEnd || 0;
+    const selectedText = message.substring(startPos, endPos);
+    
+    const newText = 
+      message.substring(0, startPos) + 
+      start + selectedText + end + 
+      message.substring(endPos);
+    
+    setMessage(newText);
+    
+    // Set cursor position after the formatting
+    setTimeout(() => {
+      input.focus();
+      const newCursorPos = startPos + start.length + selectedText.length + end.length;
+      input.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
   const MessageSkeleton = () => (
     <div className="message-skeleton-wrapper">
       {[...Array(8)].map((_, i) => (
@@ -245,9 +269,60 @@ const Chat = ({ username }: ChatProps) => {
           </div>
 
           <div id="message-controls">
+            <div style={{ display: "flex", gap: "4px", marginBottom: "8px", alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => insertFormatting("**", "**")}
+                style={{
+                  padding: "4px 8px",
+                  border: "1px solid #8b5cf6",
+                  background: "white",
+                  color: "#8b5cf6",
+                  borderRadius: "3px",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: "bold"
+                }}
+              >
+                B
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting("*", "*")}
+                style={{
+                  padding: "4px 8px",
+                  border: "1px solid #8b5cf6",
+                  background: "white",
+                  color: "#8b5cf6",
+                  borderRadius: "3px",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontStyle: "italic"
+                }}
+              >
+                I
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting("`", "`")}
+                style={{
+                  padding: "4px 8px",
+                  border: "1px solid #8b5cf6",
+                  background: "white",
+                  color: "#8b5cf6",
+                  borderRadius: "3px",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontFamily: "monospace"
+                }}
+              >
+                &lt;/&gt;
+              </button>
+            </div>
             <form onSubmit={sendMessage} id="submit">
               <input
-                placeholder="**bold** *italic* `code`"
+                ref={(input) => { inputRef.current = input; }}
+                placeholder="Type your message..."
                 type="text"
                 id="message"
                 value={message}
@@ -255,9 +330,6 @@ const Chat = ({ username }: ChatProps) => {
               />
               <PrimaryButton type="submit" id="send-message">send</PrimaryButton>
             </form>
-            <small style={{ color: "#8b5cf6", fontSize: "11px", marginTop: "4px" }}>
-              Format: **bold** *italic* `code`
-            </small>
           </div>
         </div>
         <div className="online-users-sidebar">
