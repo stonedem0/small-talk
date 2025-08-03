@@ -178,11 +178,19 @@ const Chat = ({ username }: ChatProps) => {
     
     setMessage(newText);
     
-    // Set cursor position after the formatting
+    // Set cursor position intelligently
     setTimeout(() => {
       input.focus();
-      const newCursorPos = startPos + start.length + selectedText.length + end.length;
-      input.setSelectionRange(newCursorPos, newCursorPos);
+      
+      if (selectedText.length > 0) {
+        // If text was selected, place cursor after the formatted text
+        const newCursorPos = startPos + start.length + selectedText.length + end.length;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+      } else {
+        // If no text was selected, place cursor between the formatting symbols
+        const cursorPos = startPos + start.length;
+        input.setSelectionRange(cursorPos, cursorPos);
+      }
     }, 0);
   };
 
@@ -276,13 +284,13 @@ const Chat = ({ username }: ChatProps) => {
             <div style={{ 
               display: "flex", 
               alignItems: "center",
-              background: "linear-gradient(to bottom, #f0f0f0, #e0e0e0)",
-              border: "1px solid #8b5cf6",
+              background: "linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
+              border: "1px solid var(--scroll-thumb-bg)",
               borderRadius: "3px",
               padding: "4px 6px",
               marginBottom: "8px",
               gap: "2px",
-              boxShadow: "inset 1px 1px 1px rgba(255,255,255,0.7), inset -1px -1px 1px rgba(0,0,0,0.1)"
+              boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12), 0 0 0 1px #caaaff"
             }}>
               <button
                 type="button"
@@ -291,14 +299,14 @@ const Chat = ({ username }: ChatProps) => {
                 onClick={() => insertFormatting("**", "**")}
                 style={{
                   padding: "4px 7px",
-                  border: "1px solid #999",
-                  background: "linear-gradient(to bottom, #ffffff, #f0f0f0)",
-                  color: "#333",
+                  border: "1px solid var(--scroll-thumb-bg)",
+                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
+                  color: "#4a00f7",
                   borderRadius: "2px",
                   cursor: "pointer",
                   fontSize: "12px",
                   fontWeight: "bold",
-                  boxShadow: "1px 1px 1px rgba(0,0,0,0.2)"
+                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
                 }}
               >
                 B
