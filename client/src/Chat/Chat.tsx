@@ -218,11 +218,25 @@ const Chat = ({ username }: ChatProps) => {
                     </p>
                   );
                 }
+                // Format message text with basic markdown
+                const formatMessage = (text: string) => {
+                  // Replace **bold** with <strong>
+                  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                  // Replace *italic* with <em>
+                  text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                  // Replace `code` with <code>
+                  text = text.replace(/`(.*?)`/g, '<code style="background: rgba(139, 92, 246, 0.1); padding: 2px 4px; border-radius: 3px;">$1</code>');
+                  return text;
+                };
+
                 return (
                   <p key={index}>
                     {timeStr && <span style={{ color: "#c084fc" }}>[{timeStr}] </span>}
                     <strong style={{ color: "#ff69b4" }}>{msg.username}:</strong> 
-                    <span style={{ color: "#8b5cf6" }}> {msg.message}</span>
+                    <span 
+                      style={{ color: "#8b5cf6" }}
+                      dangerouslySetInnerHTML={{ __html: " " + formatMessage(msg.message) }}
+                    />
                   </p>
                 );
               })
@@ -233,7 +247,7 @@ const Chat = ({ username }: ChatProps) => {
           <div id="message-controls">
             <form onSubmit={sendMessage} id="submit">
               <input
-                placeholder="message"
+                placeholder="**bold** *italic* `code`"
                 type="text"
                 id="message"
                 value={message}
@@ -241,6 +255,9 @@ const Chat = ({ username }: ChatProps) => {
               />
               <PrimaryButton type="submit" id="send-message">send</PrimaryButton>
             </form>
+            <small style={{ color: "#8b5cf6", fontSize: "11px", marginTop: "4px" }}>
+              Format: **bold** *italic* `code`
+            </small>
           </div>
         </div>
         <div className="online-users-sidebar">
