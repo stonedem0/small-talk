@@ -178,7 +178,6 @@ const Chat = ({ username }: ChatProps) => {
     
     setMessage(newText);
     
-    // Set cursor position intelligently
     setTimeout(() => {
       input.focus();
       

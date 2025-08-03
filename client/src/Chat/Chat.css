@@ -307,8 +307,10 @@
 
 /* Custom tooltip styles */
 .formatting-button {
+  height: 20px;
+  width: 21px;
   position: relative;
-  padding: 2px 5px;
+  padding: 2px 0;
   border: 1px solid var(--scroll-thumb-bg);
   background: linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
   color: #4a00f7;
