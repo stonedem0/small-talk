@@ -187,7 +187,7 @@
   margin: 0px 0px 5px 5px;
   border-right: 1px solid gray;
   background-color: white;
-  padding: 10px;
+  /* padding: 10px; */
 }
 
 #message-controls input[type="text"] {
@@ -220,7 +220,7 @@
 
 
 .online-users-sidebar {
-  width: 120px;
+  width: 116px;
   flex-shrink: 0;
   margin-right: 5px;
   margin-bottom: 5px;
@@ -260,19 +260,27 @@
   border-radius: 3px;
   overflow: hidden;
   box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12), 0 0 0 1px #caaaff;
+  padding: 0;
 }
 
 .formatting-toolbar {
   display: flex;
   align-items: center;
   background: linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
-  padding: 2px 4px;
+  padding: 4px;
   gap: 1px;
   border-bottom: 1px solid var(--scroll-thumb-bg);
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
 }
 
 .message-input-form {
   display: flex;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .message-input {
