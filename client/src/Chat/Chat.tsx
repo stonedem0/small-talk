@@ -280,120 +280,51 @@ const Chat = ({ username }: ChatProps) => {
             <div ref={messagesEndRef} />
           </div>
 
-          <div id="message-controls" style={{
-            border: "1px solid var(--scroll-thumb-bg)",
-            borderRadius: "3px",
-            overflow: "hidden",
-            boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12), 0 0 0 1px #caaaff"
-          }}>
-            <div style={{ 
-              display: "flex", 
-              alignItems: "center",
-              background: "linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
-              padding: "2px 4px",
-              gap: "1px",
-              borderBottom: "1px solid var(--scroll-thumb-bg)"
-            }}>
+          <div id="message-controls" className="message-controls-container">
+            <div className="formatting-toolbar">
               <button
                 type="button"
-                className="formatting-button"
+                className="formatting-button bold"
                 data-tooltip="Bold (**text**)"
                 onClick={() => insertFormatting("**", "**")}
-                style={{
-                  padding: "2px 5px",
-                  border: "1px solid var(--scroll-thumb-bg)",
-                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
-                  color: "#4a00f7",
-                  borderRadius: "2px",
-                  cursor: "pointer",
-                  fontSize: "10px",
-                  fontWeight: "bold",
-                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
-                }}
               >
                 B
               </button>
               <button
                 type="button"
-                className="formatting-button"
+                className="formatting-button italic"
                 data-tooltip="Italic (*text*)"
                 onClick={() => insertFormatting("*", "*")}
-                style={{
-                  padding: "2px 5px",
-                  border: "1px solid var(--scroll-thumb-bg)",
-                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
-                  color: "#4a00f7",
-                  borderRadius: "2px",
-                  cursor: "pointer",
-                  fontSize: "10px",
-                  fontStyle: "italic",
-                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
-                }}
               >
                 I
               </button>
               <button
                 type="button"
-                className="formatting-button"
+                className="formatting-button underline"
                 data-tooltip="Underline (_text_)"
                 onClick={() => insertFormatting("_", "_")}
-                style={{
-                  padding: "2px 5px",
-                  border: "1px solid var(--scroll-thumb-bg)",
-                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
-                  color: "#4a00f7",
-                  borderRadius: "2px",
-                  cursor: "pointer",
-                  fontSize: "10px",
-                  textDecoration: "underline",
-                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
-                }}
               >
                 U
               </button>
-              <div style={{ width: "1px", height: "12px", background: "#8b5cf6", margin: "0 2px" }} />
+              <div className="formatting-separator" />
               <button
                 type="button"
-                className="formatting-button"
+                className="formatting-button code"
                 data-tooltip="Code (`text`)"
                 onClick={() => insertFormatting("`", "`")}
-                style={{
-                  padding: "2px 5px",
-                  border: "1px solid var(--scroll-thumb-bg)",
-                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
-                  color: "#4a00f7",
-                  borderRadius: "2px",
-                  cursor: "pointer",
-                  fontSize: "9px",
-                  fontFamily: "monospace",
-                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
-                }}
               >
                 &lt;/&gt;
               </button>
               <button
                 type="button"
-                className="formatting-button"
+                className="formatting-button strikethrough"
                 data-tooltip="Strikethrough (~~text~~)"
                 onClick={() => insertFormatting("~~", "~~")}
-                style={{
-                  padding: "2px 5px",
-                  border: "1px solid var(--scroll-thumb-bg)",
-                  background: "linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%)",
-                  color: "#4a00f7",
-                  borderRadius: "2px",
-                  cursor: "pointer",
-                  fontSize: "10px",
-                  textDecoration: "line-through",
-                  boxShadow: "inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12)"
-                }}
               >
                 S
               </button>
             </div>
-            <form onSubmit={sendMessage} id="submit" style={{ 
-              display: "flex"
-            }}>
+            <form onSubmit={sendMessage} id="submit" className="message-input-form">
               <input
                 ref={(input) => { inputRef.current = input; }}
                 placeholder="Type your message..."
@@ -401,20 +332,9 @@ const Chat = ({ username }: ChatProps) => {
                 id="message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                style={{
-                  flex: 1,
-                  border: "none",
-                  padding: "10px",
-                  backgroundColor: "white",
-                  outline: "none"
-                }}
+                className="message-input"
               />
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center",
-                padding: "4px",
-                borderLeft: "1px solid var(--scroll-thumb-bg)"
-              }}>
+              <div className="send-button-container">
                 <PrimaryButton type="submit" id="send-message">send</PrimaryButton>
               </div>
             </form>

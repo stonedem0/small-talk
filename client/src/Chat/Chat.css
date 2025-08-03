@@ -254,9 +254,81 @@
   }
 }
 
+/* Message Controls Styles */
+.message-controls-container {
+  border: 1px solid var(--scroll-thumb-bg);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12), 0 0 0 1px #caaaff;
+}
+
+.formatting-toolbar {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  padding: 2px 4px;
+  gap: 1px;
+  border-bottom: 1px solid var(--scroll-thumb-bg);
+}
+
+.message-input-form {
+  display: flex;
+}
+
+.message-input {
+  flex: 1;
+  border: none;
+  padding: 10px;
+  background-color: white;
+  outline: none;
+}
+
+.send-button-container {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-left: 1px solid var(--scroll-thumb-bg);
+}
+
+.formatting-separator {
+  width: 1px;
+  height: 12px;
+  background: #8b5cf6;
+  margin: 0 2px;
+}
+
 /* Custom tooltip styles */
 .formatting-button {
   position: relative;
+  padding: 2px 5px;
+  border: 1px solid var(--scroll-thumb-bg);
+  background: linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  color: #4a00f7;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 10px;
+  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12);
+}
+
+.formatting-button.bold {
+  font-weight: bold;
+}
+
+.formatting-button.italic {
+  font-style: italic;
+}
+
+.formatting-button.underline {
+  text-decoration: underline;
+}
+
+.formatting-button.code {
+  font-size: 9px;
+  font-family: monospace;
+}
+
+.formatting-button.strikethrough {
+  text-decoration: line-through;
 }
 
 .formatting-button::after {
