@@ -171,10 +171,11 @@
 
 #messages {
   margin: 0px 0px 0px 5px;
-  background: linear-gradient(to bottom, 
+  /* background: linear-gradient(to bottom, 
     rgba(74, 0, 247, 0.09) 0%, 
     rgba(255, 105, 180, 0.09) 100%), 
-    white;
+    white; */
+  background: white;
   padding: 10px;
   max-height: 330px;
   border: 1px solid gray;

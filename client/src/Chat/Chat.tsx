@@ -246,7 +246,10 @@ const Chat = ({ username }: ChatProps) => {
         <div className="online-users-sidebar">
           <h4>Online</h4>
             <ul>
-              {onlineUsers.map((user) => (
+              {onlineUsers
+                .slice()
+                .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+                .map((user) => (
                 <li 
                   key={user} 
                   style={{ 
