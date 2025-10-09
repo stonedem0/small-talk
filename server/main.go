@@ -69,7 +69,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	// Verify JWT passed as query param and derive username from token
 	tokenStr := r.URL.Query().Get("token")
 	if tokenStr == "" {
-		log.Printf("WS auth: missing token for room %s", room)
 		http.Error(w, "Missing token", http.StatusUnauthorized)
 		return
 	}
@@ -78,19 +77,16 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		return jwtSecret, nil
 	})
 	if err != nil {
-		log.Printf("WS auth: token parse error for room %s: %v", room, err)
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return
 	}
 	if !token.Valid {
-		log.Printf("WS auth: token invalid for room %s", room)
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		log.Printf("WS auth: invalid claims for room %s", room)
 		http.Error(w, "Invalid token claims", http.StatusUnauthorized)
 		return
 	}
@@ -99,7 +95,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		switch exp := expRaw.(type) {
 		case float64:
 			if time.Now().After(time.Unix(int64(exp), 0)) {
-				log.Printf("WS auth: token expired for room %s", room)
 				http.Error(w, "Token expired", http.StatusUnauthorized)
 				return
 			}
@@ -108,12 +103,10 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 	username, ok := claims["username"].(string)
 	if !ok || username == "" {
-		log.Printf("WS auth: username missing in token for room %s", room)
 		http.Error(w, "Username missing in token", http.StatusUnauthorized)
 		return
 	}
 
-	log.Printf("WS auth: token validated for user %s in room %s", username, room)
 	log.Printf("🔧 WebSocket connection request for room: %s, username: %s", room, username)
 
 	ws, err := upgrader.Upgrade(w, r, nil)
