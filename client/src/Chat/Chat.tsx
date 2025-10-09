@@ -75,7 +75,8 @@ const Chat = ({ username }: ChatProps) => {
           setMessages([]);
         }
         console.log('🔧 Creating WebSocket connection for room:', roomName, 'username:', username);
-        ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}&username=${encodeURIComponent(username)}`);
+        const token = localStorage.getItem("token") || "";
+        ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`);
         
         ws.current.onopen = () => {
           console.log("🔧 WebSocket connected successfully");

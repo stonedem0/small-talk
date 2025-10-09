@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 )
@@ -65,10 +66,44 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username := r.URL.Query().Get("username")
-	if username == "" {
-		log.Printf("🔧 Missing username parameter")
-		http.Error(w, "Username parameter is required", http.StatusBadRequest)
+	// Verify JWT passed as query param and derive username from token
+	tokenStr := r.URL.Query().Get("token")
+	if tokenStr == "" {
+		http.Error(w, "Missing token", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	})
+	if err != nil {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+	if !token.Valid {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+		return
+	}
+
+	if expRaw, ok := claims["exp"]; ok {
+		switch exp := expRaw.(type) {
+		case float64:
+			if time.Now().After(time.Unix(int64(exp), 0)) {
+				http.Error(w, "Token expired", http.StatusUnauthorized)
+				return
+			}
+		}
+	}
+
+	username, ok := claims["username"].(string)
+	if !ok || username == "" {
+		http.Error(w, "Username missing in token", http.StatusUnauthorized)
 		return
 	}
 
