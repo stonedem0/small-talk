@@ -30,6 +30,7 @@ const Chat = ({ username }: ChatProps) => {
 
   const ws = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -162,6 +163,36 @@ const Chat = ({ username }: ChatProps) => {
 
   const handleMinimize = () => console.log("Minimize clicked");
 
+  const insertFormatting = (start: string, end: string) => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const startPos = input.selectionStart || 0;
+    const endPos = input.selectionEnd || 0;
+    const selectedText = message.substring(startPos, endPos);
+    
+    const newText = 
+      message.substring(0, startPos) + 
+      start + selectedText + end + 
+      message.substring(endPos);
+    
+    setMessage(newText);
+    
+    setTimeout(() => {
+      input.focus();
+      
+      if (selectedText.length > 0) {
+        // If text was selected, place cursor after the formatted text
+        const newCursorPos = startPos + start.length + selectedText.length + end.length;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+      } else {
+        // If no text was selected, place cursor between the formatting symbols
+        const cursorPos = startPos + start.length;
+        input.setSelectionRange(cursorPos, cursorPos);
+      }
+    }, 0);
+  };
+
   const MessageSkeleton = () => (
     <div className="message-skeleton-wrapper">
       {[...Array(8)].map((_, i) => (
@@ -169,6 +200,31 @@ const Chat = ({ username }: ChatProps) => {
       ))}
     </div>
   );
+
+  // Retro pixel art palette colors - pinks, greens, purples
+  const getUserColor = (username: string) => {
+    const colors = [
+      "#ff6ec7", // Bright pink
+      "#00ff7f", // Spring green
+      "#9d4edd", // Deep purple
+      "#ff1493", // Deep pink
+      "#39ff14", // Neon green
+      "#8a2be2", // Blue violet
+      "#ff69b4", // Hot pink
+      "#00fa9a", // Medium spring green
+      "#dda0dd", // Plum
+      "#ff91a4", // Light pink
+      "#32cd32", // Lime green
+      "#ba55d3", // Medium orchid
+    ];
+    
+    // Generate consistent color based on username
+    let hash = 0;
+    for (let i = 0; i < username.length; i++) {
+      hash = username.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   return (
     <div id="chat-container">
@@ -187,16 +243,35 @@ const Chat = ({ username }: ChatProps) => {
                 }
                 if ((msg as any).type === "system") {
                   return (
-                    <p key={index} style={{ color: "#888", fontStyle: "italic" }}>
+                    <p key={index} style={{ background: "linear-gradient(90deg, rgba(139, 92, 246, 0.5), rgba(236, 72, 153, 0.5))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", fontStyle: "italic", opacity: 0.8 }}>
                       {timeStr && <span>[{timeStr}] </span>}
                       {msg.username} {msg.message}
                     </p>
                   );
                 }
+                // Format message text with basic markdown
+                const formatMessage = (text: string) => {
+                  // Replace **bold** with <strong>
+                  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                  // Replace *italic* with <em>
+                  text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                  // Replace _underline_ with <u>
+                  text = text.replace(/_(.*?)_/g, '<u>$1</u>');
+                  // Replace ~~strikethrough~~ with <del>
+                  text = text.replace(/~~(.*?)~~/g, '<del>$1</del>');
+                  // Replace `code` with <code>
+                  text = text.replace(/`(.*?)`/g, '<code style="background: rgba(139, 92, 246, 0.1); padding: 2px 4px; border-radius: 3px;">$1</code>');
+                  return text;
+                };
+
                 return (
                   <p key={index}>
-                    {timeStr && <span>[{timeStr}] </span>}
-                    <strong>{msg.username}:</strong> {msg.message}
+                    {timeStr && <span style={{ color: "#c084fc" }}>[{timeStr}] </span>}
+                    <strong style={{ color: "#ff69b4" }}>{msg.username}:</strong> 
+                    <span 
+                      style={{ color: "#8b5cf6" }}
+                      dangerouslySetInnerHTML={{ __html: " " + formatMessage(msg.message) }}
+                    />
                   </p>
                 );
               })
@@ -204,24 +279,82 @@ const Chat = ({ username }: ChatProps) => {
             <div ref={messagesEndRef} />
           </div>
 
-          <div id="message-controls">
-            <form onSubmit={sendMessage} id="submit">
+          <div id="message-controls" className="message-controls-container">
+            <div className="formatting-toolbar">
+              <button
+                type="button"
+                className="formatting-button bold"
+                data-tooltip="Bold (**text**)"
+                onClick={() => insertFormatting("**", "**")}
+              >
+                B
+              </button>
+              <button
+                type="button"
+                className="formatting-button italic"
+                data-tooltip="Italic (*text*)"
+                onClick={() => insertFormatting("*", "*")}
+              >
+                I
+              </button>
+              <button
+                type="button"
+                className="formatting-button underline"
+                data-tooltip="Underline (_text_)"
+                onClick={() => insertFormatting("_", "_")}
+              >
+                U
+              </button>
+              <button
+                type="button"
+                className="formatting-button code"
+                data-tooltip="Code (`text`)"
+                onClick={() => insertFormatting("`", "`")}
+              >
+                &lt;/&gt;
+              </button>
+              <button
+                type="button"
+                className="formatting-button strikethrough"
+                data-tooltip="Strikethrough (~~text~~)"
+                onClick={() => insertFormatting("~~", "~~")}
+              >
+                S
+              </button>
+            </div>
+            <form onSubmit={sendMessage} id="submit" className="message-input-form">
               <input
-                placeholder="message"
+                ref={(input) => { inputRef.current = input; }}
+                placeholder="Type your message..."
                 type="text"
                 id="message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
+                className="message-input"
               />
-              <PrimaryButton type="submit" id="send-message">send</PrimaryButton>
+              <div className="send-button-container">
+                <PrimaryButton type="submit" id="send-message">send</PrimaryButton>
+              </div>
             </form>
           </div>
         </div>
         <div className="online-users-sidebar">
           <h4>Online</h4>
             <ul>
-              {onlineUsers.map((user) => (
-                <li key={user}>{user}</li>
+              {onlineUsers
+                .slice()
+                .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+                .map((user) => (
+                <li 
+                  key={user} 
+                  style={{ 
+                    color: getUserColor(user),
+                    fontWeight: "bold",
+                    marginBottom: "4px"
+                  }}
+                >
+                  ● {user}
+                </li>
               ))}
             </ul>
         </div>

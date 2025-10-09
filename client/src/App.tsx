@@ -91,7 +91,7 @@ const App = () => {
       {token && (
         <Window
           title="Fella connect"
-          width={600}
+          width={710}
           top="20%"
           left="50%"
           username={username}

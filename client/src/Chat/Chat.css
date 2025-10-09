@@ -1,15 +1,20 @@
 #chat-container {
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
   background-color: white;
   border-top: none;
   border-radius: 6px;
   color: black;
+  width: 100%;
+  max-width: 100%;
 }
 
 .chat-room {
   background: var(--purple-gradient);
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-width: 0;
 }
 
 .chat-header {
@@ -155,23 +160,14 @@
   outline: none;
 }
 
-/* #leave-room {
-  background-image: url("../assets/leave.png");
-  background-size: 22px;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-#change-username {
-  background-image: url("../assets/edit.png");
-  background-size: 22px;
-  background-repeat: no-repeat;
-  background-position: center;
-} */
 
 #messages {
   margin: 0px 0px 0px 5px;
-  background-color: white;
+  /* background: linear-gradient(to bottom, 
+    rgba(74, 0, 247, 0.09) 0%, 
+    rgba(255, 105, 180, 0.09) 100%), 
+    white; */
+  background: white;
   padding: 10px;
   max-height: 330px;
   border: 1px solid gray;
@@ -191,15 +187,20 @@
   margin: 0px 0px 5px 5px;
   border-right: 1px solid gray;
   background-color: white;
-  padding: 10px;
+  /* padding: 10px; */
 }
 
 #message-controls input[type="text"] {
   font-family: inherit;
   width: 420px;
   padding: 10px;
-  border: none;
-  border-radius: 5px;
+  border: 2px solid transparent;;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(90deg, #00bfff, #8a2be2) border-box;
+}
+
+#message-controls input[type="text"]:focus {
+  outline: none;
 }
 
 
@@ -211,7 +212,7 @@
   height: 14px;
   margin: 8px 0;
   width: 80%;
-  background: linear-gradient(90deg, #ccc, #eee, #ccc);
+  background: linear-gradient(90deg, #d8b4fe, #f0abfc, #d8b4fe);
   background-size: 200% 100%;
   animation: pulse 1.2s ease-in-out infinite;
   border-radius: 4px;
@@ -219,11 +220,11 @@
 
 
 .online-users-sidebar {
-  width: 120px;
+  width: 116px;
+  flex-shrink: 0;
   margin-right: 5px;
   margin-bottom: 5px;
-  padding-top: 5px;
-  padding-left: 5px;
+  padding: 5px;
   background: white;
 }
 
@@ -251,4 +252,114 @@
   100% {
     background-position: 200% 0;
   }
+}
+
+/* Message Controls Styles */
+.message-controls-container {
+  border: 1px solid var(--scroll-thumb-bg);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12), 0 0 0 1px #caaaff;
+  padding: 0;
+}
+
+.formatting-toolbar {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  padding: 4px;
+  gap: 1px;
+  border-bottom: 1px solid var(--scroll-thumb-bg);
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+}
+
+.message-input-form {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.message-input {
+  flex: 1;
+  border: none;
+  padding: 10px;
+  background-color: white;
+  outline: none;
+}
+
+.send-button-container {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-left: 1px solid var(--scroll-thumb-bg);
+}
+
+.formatting-separator {
+  width: 1px;
+  height: 12px;
+  background: #8b5cf6;
+  margin: 0 2px;
+}
+
+/* Custom tooltip styles */
+.formatting-button {
+  height: 20px;
+  width: 21px;
+  position: relative;
+  padding: 2px 0;
+  border: 1px solid var(--scroll-thumb-bg);
+  background: linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  color: #4a00f7;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 10px;
+  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12);
+}
+
+.formatting-button.bold {
+  font-weight: bold;
+}
+
+.formatting-button.italic {
+  font-style: italic;
+}
+
+.formatting-button.underline {
+  text-decoration: underline;
+}
+
+.formatting-button.code {
+  font-size: 9px;
+  font-family: monospace;
+}
+
+.formatting-button.strikethrough {
+  text-decoration: line-through;
+}
+
+.formatting-button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+  margin-bottom: 4px;
+}
+
+.formatting-button:hover::after {
+  opacity: 1;
 }
