@@ -20,12 +20,10 @@ const Chat = ({ username }: ChatProps) => {
   const { roomName } = useParams<{ roomName: string }>();
   const navigate = useNavigate();
 
-  const [validRooms, setValidRooms] = useState<string[]>([]);
   const [isValidRoom, setIsValidRoom] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   const ws = useRef<WebSocket | null>(null);
@@ -42,7 +40,6 @@ const Chat = ({ username }: ChatProps) => {
         });
         if (!response.ok) throw new Error("Failed to fetch rooms");
         const data: string[] = await response.json();
-        setValidRooms(data);
         if (data.includes(roomName || "")) {
           setIsValidRoom(true);
         } else {
@@ -80,7 +77,6 @@ const Chat = ({ username }: ChatProps) => {
         
         ws.current.onopen = () => {
           console.log("🔧 WebSocket connected successfully");
-          setIsConnected(true);
           setIsLoadingMessages(false);
         };
         
@@ -98,7 +94,6 @@ const Chat = ({ username }: ChatProps) => {
 
         ws.current.onclose = () => {
           console.log('🔧 WebSocket connection closed');
-          setIsConnected(false);
         };
       } catch (error) {
         console.error("Failed to set up chat:", error);
@@ -151,18 +146,7 @@ const Chat = ({ username }: ChatProps) => {
     }
   }
 
-  const handleFullscreen = () => {
-    const container = document.getElementById("chat-container");
-    if (container) {
-      if (!document.fullscreenElement) {
-        container.requestFullscreen().catch(console.error);
-      } else {
-        document.exitFullscreen();
-      }
-    }
-  };
-
-  const handleMinimize = () => console.log("Minimize clicked");
+  
 
   const insertFormatting = (start: string, end: string) => {
     const input = inputRef.current;

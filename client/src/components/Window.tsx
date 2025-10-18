@@ -3,7 +3,6 @@ import { useState } from "react";
 import WindowControls from "./WindowControls";
 import "./Window.css";
 import { API_URL } from "../config";
-import PrimaryButton from "./PrimaryButton";
 
 type WindowProps = {
   title: string;
