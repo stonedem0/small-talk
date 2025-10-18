@@ -16,32 +16,53 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var jwtSecret []byte
-
-func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
-	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
-
-	// Initialize default rooms in memory
-	clients["backrooms"] = make(map[*websocket.Conn]*sync.Mutex)
-	clients["political"] = make(map[*websocket.Conn]*sync.Mutex)
-	clients["overwatch is dead"] = make(map[*websocket.Conn]*sync.Mutex)
-}
-
-var ctx = context.Background()
-
 var (
-	clients       = make(map[string]map[*websocket.Conn]*sync.Mutex) // Map of rooms -> clients with mutex
-	clientsLock   = sync.Mutex{}                                     // Protects access to the clients map
-	subscriptions = make(map[string]bool)                            // Track active subscriptions per room
-	subLock       = sync.Mutex{}
-	port          = "8080"
+	ctx       = context.Background()
+	jwtSecret []byte
+	port      = getenv("PORT", "8080")
+
+	onlineUsers     = make(map[string]map[string]bool) // room -> username -> online
+	onlineUsersLock sync.Mutex
+
+	subscriptions = make(map[string]bool)
+	subLock       sync.Mutex
 )
 
-var onlineUsers = make(map[string]map[string]bool) // room -> username -> online
-var onlineUsersLock = sync.Mutex{}
+func init() {
+	_ = godotenv.Load()
+	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+}
+
+func getenv(k, def string) string {
+	if v := os.Getenv(k); v != "" {
+		return v
+	}
+	return def
+}
+
+// --- Pump-based WS architecture ---
+// Each client has a dedicated readPump (socket->app) and writePump (app->socket).
+// The server never does network I/O while holding global locks; it only enqueues
+// bytes into a per-client buffered channel. Slow clients are isolated.
+
+type client struct {
+	conn     *websocket.Conn
+	send     chan []byte
+	room     string
+	username string
+}
+
+var (
+	rooms     = make(map[string]map[*client]struct{})
+	roomsLock sync.RWMutex
+)
+
+// TODO: Lock this down later
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 type Message struct {
 	Room      string `json:"room"`
@@ -51,46 +72,139 @@ type Message struct {
 	Timestamp string `json:"timestamp"`
 }
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins (for dev mode)
-	},
+func enqueueToRoom(room string, payload []byte) {
+	roomsLock.RLock()
+	set := rooms[room]
+	for c := range set {
+		select {
+		case c.send <- payload:
+		default:
+			close(c.send)
+			delete(set, c)
+		}
+	}
+	roomsLock.RUnlock()
+}
+
+func writePump(c *client) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer func() {
+		ticker.Stop()
+		c.conn.Close()
+	}()
+
+	for {
+		select {
+		case msg, ok := <-c.send:
+			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if !ok {
+				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+				return
+			}
+		case <-ticker.C:
+			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		}
+	}
+}
+
+func readPump(c *client) {
+	defer func() {
+		roomsLock.Lock()
+		if set, ok := rooms[c.room]; ok {
+			delete(set, c)
+		}
+		roomsLock.Unlock()
+		close(c.send)
+		c.conn.Close()
+
+		onlineUsersLock.Lock()
+		if onlineUsers[c.room] != nil {
+			delete(onlineUsers[c.room], c.username)
+		}
+		onlineUsersLock.Unlock()
+
+		leave := Message{Room: c.room, Username: c.username, Message: "left the room", Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+		b, _ := json.Marshal(leave)
+		RDB.Publish(ctx, "room:"+c.room, string(b))
+		log.Printf("[Room %s] %s disconnected", c.room, c.username)
+	}()
+
+	c.conn.SetReadLimit(1 << 20)
+	c.conn.SetReadDeadline(time.Now().Add(70 * time.Second))
+	c.conn.SetPongHandler(func(string) error {
+		c.conn.SetReadDeadline(time.Now().Add(70 * time.Second))
+		return nil
+	})
+
+	for {
+		_, data, err := c.conn.ReadMessage()
+		if err != nil {
+			log.Printf("read error: %v", err)
+			return
+		}
+		var msg Message
+		if err := json.Unmarshal(data, &msg); err != nil {
+			log.Printf("json decode error: %v", err)
+			continue
+		}
+
+		if msg.Type == "username_update" {
+			oldU := msg.Username
+			newU := msg.Message
+			onlineUsersLock.Lock()
+			if onlineUsers[c.room] != nil {
+				delete(onlineUsers[c.room], oldU)
+				onlineUsers[c.room][newU] = true
+			}
+			onlineUsersLock.Unlock()
+			change := Message{Room: c.room, Username: oldU, Message: fmt.Sprintf("changed username to %s", newU), Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+			b, _ := json.Marshal(change)
+			RDB.Publish(ctx, "room:"+c.room, string(b))
+			continue
+		}
+
+		msg.Room = c.room
+		msg.Username = c.username
+		msg.Timestamp = time.Now().UTC().Format(time.RFC3339)
+		b, _ := json.Marshal(msg)
+		RDB.Publish(ctx, "room:"+c.room, string(b))
+	}
 }
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
 	log.Printf("🔧 New WebSocket connection request")
 	room := r.URL.Query().Get("room")
 	if room == "" {
-		log.Printf("🔧 Missing room parameter")
 		http.Error(w, "Room parameter is required", http.StatusBadRequest)
 		return
 	}
 
-	// Verify JWT passed as query param and derive username from token
 	tokenStr := r.URL.Query().Get("token")
 	if tokenStr == "" {
 		http.Error(w, "Missing token", http.StatusUnauthorized)
 		return
 	}
-
-	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok || t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
 		return jwtSecret, nil
 	})
-	if err != nil {
+	if err != nil || !token.Valid {
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return
 	}
-	if !token.Valid {
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
-		return
-	}
-
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		http.Error(w, "Invalid token claims", http.StatusUnauthorized)
 		return
 	}
-
 	if expRaw, ok := claims["exp"]; ok {
 		switch exp := expRaw.(type) {
 		case float64:
@@ -100,94 +214,36 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-
 	username, ok := claims["username"].(string)
 	if !ok || username == "" {
 		http.Error(w, "Username missing in token", http.StatusUnauthorized)
 		return
 	}
 
-	log.Printf("🔧 WebSocket connection request for room: %s, username: %s", room, username)
-
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("🔧 WS upgrade error: %v", err)
+		log.Printf("WS upgrade error: %v", err)
 		return
 	}
 
-	log.Printf("🔧 WebSocket upgraded successfully for %s in room %s", username, room)
-
-	clientsLock.Lock()
-	if clients[room] == nil {
-		clients[room] = make(map[*websocket.Conn]*sync.Mutex)
+	c := &client{conn: ws, send: make(chan []byte, 64), room: room, username: username}
+	roomsLock.Lock()
+	if rooms[room] == nil {
+		rooms[room] = make(map[*client]struct{})
 	}
-	clients[room][ws] = &sync.Mutex{}
-	clientsLock.Unlock()
+	rooms[room][c] = struct{}{}
+	roomsLock.Unlock()
 
-	userAdded := false
-
-	// Add user to online users immediately upon connection
 	onlineUsersLock.Lock()
 	if onlineUsers[room] == nil {
 		onlineUsers[room] = make(map[string]bool)
-		log.Printf("🔧 Created new online users map for room %s", room)
 	}
 	onlineUsers[room][username] = true
-	userAdded = true
-	log.Printf("🔧 Added user %s to online users for room %s. Current online users: %v", username, room, onlineUsers[room])
 	onlineUsersLock.Unlock()
 
-	// Broadcast join message with a small delay to ensure client is ready
-	go func() {
-		time.Sleep(100 * time.Millisecond) // Small delay to ensure client is ready
-		joinMsg := Message{
-			Room:      room,
-			Username:  username,
-			Message:   "joined the room",
-			Type:      "system",
-			Timestamp: time.Now().UTC().Format(time.RFC3339),
-		}
-		msgBytes, _ := json.Marshal(joinMsg)
+	go writePump(c)
+	go readPump(c)
 
-		// Save join message to Redis chat history
-		RDB.LPush(ctx, "chat_history:"+room, msgBytes)
-		RDB.LTrim(ctx, "chat_history:"+room, 0, 99) // Keep last 100 messages
-
-		// Broadcast to all clients
-		RDB.Publish(ctx, "room:"+room, string(msgBytes))
-		log.Printf("[Room %s] Sent join message for user '%s'", room, username)
-	}()
-
-	defer func() {
-		log.Printf("🔧 WebSocket connection closing for %s in room %s", username, room)
-		clientsLock.Lock()
-		ws.Close()
-		delete(clients[room], ws)
-		clientsLock.Unlock()
-		if userAdded && username != "" {
-			onlineUsersLock.Lock()
-			if onlineUsers[room] != nil {
-				log.Printf("🔧 Removing user %s from online users in room %s", username, room)
-				delete(onlineUsers[room], username)
-				log.Printf("🔧 Remaining online users in room %s: %v", room, onlineUsers[room])
-				// Broadcast leave message
-				leaveMsg := Message{
-					Room:      room,
-					Username:  username,
-					Message:   "left the room",
-					Type:      "system",
-					Timestamp: time.Now().UTC().Format(time.RFC3339),
-				}
-				msgBytes, _ := json.Marshal(leaveMsg)
-				RDB.Publish(ctx, "room:"+room, string(msgBytes))
-				log.Printf("🔧 Published leave message: %s", string(msgBytes))
-			}
-			onlineUsersLock.Unlock()
-		}
-		log.Printf("🔧 Client %s disconnected from room: %s", username, room)
-	}()
-
-	// Ensure only one subscription per room
 	subLock.Lock()
 	if !subscriptions[room] {
 		subscriptions[room] = true
@@ -197,53 +253,15 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		subLock.Unlock()
 	}
 
-	for {
-		var msg Message
-		if err := ws.ReadJSON(&msg); err != nil {
-			log.Printf("Error reading JSON or client disconnected: %v", err)
-			break
-		}
-
-		log.Printf("[Room %s] Received message from %s: type=%s, message=%s", room, username, msg.Type, msg.Message)
-
-		// Handle username update messages
-		if msg.Type == "username_update" {
-			oldUsername := msg.Username
-			newUsername := msg.Message // Using message field to store new username
-
-			log.Printf("[Room %s] Received username update: %s -> %s", room, oldUsername, newUsername)
-
-			// Update online users tracking
-			onlineUsersLock.Lock()
-			if onlineUsers[room] != nil {
-				log.Printf("[Room %s] Before update - Online users: %v", room, onlineUsers[room])
-				delete(onlineUsers[room], oldUsername)
-				onlineUsers[room][newUsername] = true
-				log.Printf("[Room %s] After update - Online users: %v", room, onlineUsers[room])
-			} else {
-				log.Printf("[Room %s] No online users map found for room", room)
-			}
-			onlineUsersLock.Unlock()
-
-			// Broadcast username change message
-			changeMsg := Message{
-				Room:      room,
-				Username:  oldUsername,
-				Message:   fmt.Sprintf("changed username to %s", newUsername),
-				Type:      "system",
-				Timestamp: time.Now().UTC().Format(time.RFC3339),
-			}
-			msgBytes, _ := json.Marshal(changeMsg)
-			RDB.Publish(ctx, "room:"+room, string(msgBytes))
-			log.Printf("[Room %s] Broadcasted username change message: %s", room, string(msgBytes))
-			continue
-		}
-
-		msg.Room = room
-		msg.Timestamp = time.Now().UTC().Format(time.RFC3339)
-		msgBytes, _ := json.Marshal(msg)
-		RDB.Publish(ctx, "room:"+room, string(msgBytes))
-	}
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		join := Message{Room: room, Username: username, Message: "joined the room", Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+		b, _ := json.Marshal(join)
+		RDB.LPush(ctx, "chat_history:"+room, b)
+		RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
+		RDB.Publish(ctx, "room:"+room, string(b))
+		log.Printf("[Room %s] join: %s", room, username)
+	}()
 }
 
 func subscribeToRoom(room string) {
@@ -251,27 +269,17 @@ func subscribeToRoom(room string) {
 	defer pubsub.Close()
 	ch := pubsub.Channel()
 
-	for msg := range ch {
-		var receivedMsg Message
-		if err := json.Unmarshal([]byte(msg.Payload), &receivedMsg); err != nil {
-			log.Printf("Error decoding message: %v", err)
+	for m := range ch {
+		var received Message
+		if err := json.Unmarshal([]byte(m.Payload), &received); err != nil {
+			log.Printf("decode error: %v", err)
 			continue
 		}
+		b, _ := json.Marshal(received)
+		RDB.LPush(ctx, "chat_history:"+room, b)
+		RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
 
-		// Save message to history
-		msgBytes, _ := json.Marshal(receivedMsg)
-		RDB.LPush(ctx, "chat_history:"+room, msgBytes)
-		RDB.LTrim(ctx, "chat_history:"+room, 0, 99) // Keep last 100 messages
-
-		clientsLock.Lock()
-		if _, exists := clients[receivedMsg.Room]; exists {
-			for client, mutex := range clients[receivedMsg.Room] {
-				mutex.Lock()
-				client.WriteJSON(receivedMsg)
-				mutex.Unlock()
-			}
-		}
-		clientsLock.Unlock()
+		enqueueToRoom(room, b)
 	}
 }
 
@@ -279,29 +287,36 @@ func main() {
 	flag.Parse()
 	InitRedis()
 
-	defaultRooms := []string{"backrooms", "political", "overwatch is dead"}
-	for _, room := range defaultRooms {
+	for _, room := range []string{"backrooms", "political", "overwatch is dead"} {
 		RDB.SAdd(ctx, "rooms", room)
 	}
 
-	handler := NewHandler(RDB, jwtSecret)
-	p := ":" + port
+	h := NewHandler(RDB, jwtSecret)
+
 	http.HandleFunc("/ws", handleConnections)
-	http.HandleFunc("/login", WithCORS(handler.LoginHandler))
-	http.HandleFunc("/register", WithCORS(handler.RegisterHandler))
-	http.HandleFunc("/user-info", WithCORS(handler.WithAuth(handler.UserInfoHandler)))
-	http.HandleFunc("/history", WithCORS(handler.WithAuth(handler.GetChatHistoryHandler)))
-	http.HandleFunc("/rooms", WithCORS(handler.WithAuth(handler.GetRoomsHandler)))
-	http.HandleFunc("/subscribe", WithCORS(handler.WithAuth(handler.SubscribeToRoomHandler)))
-	http.HandleFunc("/online-users", WithCORS(handler.WithAuth(handler.GetOnlineUsersHandler)))
-	http.HandleFunc("/room-usernames", WithCORS(handler.GetRoomUsernamesHandler))
-	http.HandleFunc("/create-room", WithCORS(handler.WithAuth(handler.CreateRoomHandler)))
-	http.HandleFunc("/update-username", WithCORS(handler.UpdateUsernameHandler))
-	http.HandleFunc("/update-password", WithCORS(handler.UpdatePasswordHandler))
-	http.HandleFunc("/debug-users", WithCORS(handler.DebugUsersHandler))
-	log.Println("Server started on port", port)
-	err := http.ListenAndServe(p, nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+	http.HandleFunc("/login", WithCORS(h.LoginHandler))
+	http.HandleFunc("/register", WithCORS(h.RegisterHandler))
+	http.HandleFunc("/user-info", WithCORS(h.WithAuth(h.UserInfoHandler)))
+	http.HandleFunc("/history", WithCORS(h.WithAuth(h.GetChatHistoryHandler)))
+	http.HandleFunc("/rooms", WithCORS(h.WithAuth(h.GetRoomsHandler)))
+	http.HandleFunc("/subscribe", WithCORS(h.WithAuth(h.SubscribeToRoomHandler)))
+	http.HandleFunc("/online-users", WithCORS(h.WithAuth(h.GetOnlineUsersHandler)))
+	http.HandleFunc("/room-usernames", WithCORS(h.GetRoomUsernamesHandler))
+	http.HandleFunc("/create-room", WithCORS(h.WithAuth(h.CreateRoomHandler)))
+	http.HandleFunc("/update-username", WithCORS(h.UpdateUsernameHandler))
+	http.HandleFunc("/update-password", WithCORS(h.UpdatePasswordHandler))
+	http.HandleFunc("/debug-users", WithCORS(h.DebugUsersHandler))
+
+	addr := ":" + port
+	log.Println("Server starting on", addr)
+
+	server := &http.Server{
+		Addr:         addr,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  75 * time.Second,
+	}
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatal("ListenAndServe:", err)
 	}
 }
