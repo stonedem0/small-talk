@@ -251,9 +251,9 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 	onlineUsers[room][username] = true
 	onlineUsersLock.Unlock()
 
-	go writePump(c)
-	go readPump(c)
-
+	a.wg.Add(2)
+	go func() { defer a.wg.Done(); writePump(c) }()
+	go func() { defer a.wg.Done(); readPump(c) }()
 	subLock.Lock()
 	if !subscriptions[room] {
 		subscriptions[room] = true
@@ -301,9 +301,21 @@ type app struct {
 }
 
 func (a *app) gracefulShutdown(ctx context.Context) {
-	a.cancel()
-	a.wg.Wait()
-	log.Println("Server stopped")
+	_ = a.server.Shutdown(ctx)
+	roomsLock.RLock()
+	for _, set := range rooms {
+		for c := range set {
+			close(c.send)
+			_ = c.conn.Close()
+		}
+	}
+	roomsLock.RUnlock()
+	done := make(chan struct{})
+	go func() { a.wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-ctx.Done():
+	}
 }
 
 func main() {
