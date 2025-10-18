@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -17,6 +18,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 )
 
 var (
@@ -29,6 +31,12 @@ var (
 
 	subscriptions = make(map[string]bool)
 	subLock       sync.Mutex
+
+	rooms     = make(map[string]map[*client]struct{})
+	roomsLock sync.RWMutex
+
+	roomSubs   = make(map[string]*redis.PubSub)
+	roomSubsMu sync.Mutex
 )
 
 func init() {
@@ -56,12 +64,15 @@ type client struct {
 	send     chan []byte
 	room     string
 	username string
+	closed   atomic.Bool
 }
 
-var (
-	rooms     = make(map[string]map[*client]struct{})
-	roomsLock sync.RWMutex
-)
+type app struct {
+	server   *http.Server
+	wg       sync.WaitGroup
+	shutting atomic.Bool
+	cancel   context.CancelFunc
+}
 
 // TODO: Lock this down later
 var upgrader = websocket.Upgrader{
@@ -90,6 +101,12 @@ func enqueueToRoom(room string, payload []byte) {
 		}
 	}
 	roomsLock.RUnlock()
+}
+
+func safeClose(ch chan []byte, flag *atomic.Bool) {
+	if flag.CompareAndSwap(false, true) {
+		close(ch)
+	}
 }
 
 func writePump(c *client) {
@@ -258,7 +275,7 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 	if !subscriptions[room] {
 		subscriptions[room] = true
 		subLock.Unlock()
-		go subscribeToRoom(room)
+		go subscribeToRoom(ctx, room)
 	} else {
 		subLock.Unlock()
 	}
@@ -274,47 +291,94 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-func subscribeToRoom(room string) {
-	pubsub := RDB.Subscribe(ctx, "room:"+room)
-	defer pubsub.Close()
-	ch := pubsub.Channel()
+func subscribeToRoom(ctx context.Context, room string) {
+	ps := RDB.Subscribe(ctx, "room:"+room)
 
-	for m := range ch {
-		var received Message
-		if err := json.Unmarshal([]byte(m.Payload), &received); err != nil {
-			log.Printf("decode error: %v", err)
-			continue
+	roomSubsMu.Lock()
+	roomSubs[room] = ps
+	roomSubsMu.Unlock()
+
+	defer func() {
+		roomSubsMu.Lock()
+		delete(roomSubs, room)
+		roomSubsMu.Unlock()
+		ps.Close() // stop Redis subscription
+		log.Printf("[Room %s] subscription stopped", room)
+	}()
+
+	ch := ps.Channel()
+	log.Printf("[Room %s] subscription started", room)
+
+	for {
+		select {
+		case m, ok := <-ch:
+			if !ok {
+				log.Printf("[Room %s] pubsub channel closed", room)
+				return
+			}
+			var received Message
+			if err := json.Unmarshal([]byte(m.Payload), &received); err != nil {
+				log.Printf("decode error in %s: %v", room, err)
+				continue
+			}
+			b, _ := json.Marshal(received)
+			if err := RDB.LPush(ctx, "chat_history:"+room, b).Err(); err != nil {
+				log.Printf("redis LPush error in %s: %v", room, err)
+			}
+			_ = RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
+
+			enqueueToRoom(room, b)
+		case <-ctx.Done():
+			log.Printf("[Room %s] context canceled, stopping subscription", room)
+			return
 		}
-		b, _ := json.Marshal(received)
-		RDB.LPush(ctx, "chat_history:"+room, b)
-		RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
-
-		enqueueToRoom(room, b)
 	}
-}
-
-type app struct {
-	server   *http.Server
-	wg       sync.WaitGroup
-	shutting atomic.Bool
-	cancel   context.CancelFunc
 }
 
 func (a *app) gracefulShutdown(ctx context.Context) {
-	_ = a.server.Shutdown(ctx)
+	start := time.Now()
+	log.Println("➜ graceful shutdown started")
+	a.shutting.Store(true)
+	shutdownMsg := Message{Type: "system", Message: "server_shutdown", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	b, _ := json.Marshal(shutdownMsg)
 	roomsLock.RLock()
+	for room := range rooms {
+		enqueueToRoom(room, b)
+	}
+	roomsLock.RUnlock()
+	if err := a.server.Shutdown(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		log.Printf("http shutdown error: %v", err)
+	}
+
+	roomSubsMu.Lock()
+	for room, ps := range roomSubs {
+		log.Printf("[Room %s] closing pubsub", room)
+		_ = ps.Close()
+		delete(roomSubs, room)
+	}
+	roomSubsMu.Unlock()
+
+	roomsLock.RLock()
+	var toClose []*client
 	for _, set := range rooms {
 		for c := range set {
-			close(c.send)
-			_ = c.conn.Close()
+			toClose = append(toClose, c)
 		}
 	}
 	roomsLock.RUnlock()
+	for _, c := range toClose {
+		_ = c.conn.WriteControl(websocket.CloseMessage, []byte{}, time.Now().Add(1*time.Second))
+		safeClose(c.send, &c.closed)
+		_ = c.conn.Close()
+	}
+
 	done := make(chan struct{})
 	go func() { a.wg.Wait(); close(done) }()
 	select {
 	case <-done:
+		log.Printf("✓ graceful shutdown finished in %s", time.Since(start))
 	case <-ctx.Done():
+		log.Printf("⚠ shutdown timed out after %s", time.Since(start))
 	}
 }
 
