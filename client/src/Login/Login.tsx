@@ -1,7 +1,7 @@
-import  { useState } from "react";
+import { useState } from "react";
 import "./Login.css";
 import PrimaryButton from "../components/PrimaryButton";
-import logo from "../assets/fella.png"; 
+import logo from "../assets/fella.png";
 import { API_URL } from "../config";
 import { useNavigate } from "react-router-dom";
 
@@ -20,7 +20,7 @@ const Popup = ({ setUsername, setToken }: PopupProps) => {
 
   const login = async () => {
     setError("");
-    
+
     const response = await fetch(`${API_URL}/login`, {
       method: "POST",
       headers: {
@@ -30,12 +30,12 @@ const Popup = ({ setUsername, setToken }: PopupProps) => {
     });
 
     const data = await response.json();
-    
+
     if (data.error) {
       setError(data.error);
       return;
     }
-    
+
     const token = data.token;
     if (!token) {
       setError("Invalid username or password");
@@ -107,9 +107,28 @@ const Popup = ({ setUsername, setToken }: PopupProps) => {
           {showRegister ? (
             <>
               <PrimaryButton onClick={register}>Register</PrimaryButton>
-              {registerSuccess && <p className="success-message">Registration successful! You can now log in.</p>}
+              {registerSuccess && (
+                <p className="success-message">
+                  Registration successful! You can now log in.
+                </p>
+              )}
               <div style={{ marginTop: 8 }}>
-                <span className="toggle-link" style={{ color: '#3366cc', cursor: 'pointer', textDecoration: 'underline', background: 'none', border: 'none', padding: 0 }} onClick={() => { setShowRegister(false); setError(""); setRegisterSuccess(false); }}>
+                <span
+                  className="toggle-link"
+                  style={{
+                    color: "#3366cc",
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                  }}
+                  onClick={() => {
+                    setShowRegister(false);
+                    setError("");
+                    setRegisterSuccess(false);
+                  }}
+                >
                   Back to Login
                 </span>
               </div>
@@ -118,7 +137,22 @@ const Popup = ({ setUsername, setToken }: PopupProps) => {
             <>
               <PrimaryButton onClick={login}>Log In</PrimaryButton>
               <div style={{ marginTop: 8 }}>
-                <span className="toggle-link" style={{ color: '#3366cc', cursor: 'pointer', textDecoration: 'underline', background: 'none', border: 'none', padding: 0 }} onClick={() => { setShowRegister(true); setError(""); setRegisterSuccess(false); }}>
+                <span
+                  className="toggle-link"
+                  style={{
+                    color: "#3366cc",
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                  }}
+                  onClick={() => {
+                    setShowRegister(true);
+                    setError("");
+                    setRegisterSuccess(false);
+                  }}
+                >
                   Don't have an account? Register
                 </span>
               </div>

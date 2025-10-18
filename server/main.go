@@ -29,7 +29,10 @@ var (
 )
 
 func init() {
-	_ = godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
 	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 }
 
