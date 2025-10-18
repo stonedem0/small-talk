@@ -183,7 +183,11 @@ func readPump(c *client) {
 	}
 }
 
-func handleConnections(w http.ResponseWriter, r *http.Request) {
+func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
+	if a.shutting.Load() {
+		http.Error(w, "Server is shutting down", http.StatusServiceUnavailable)
+		return
+	}
 	log.Printf("🔧 New WebSocket connection request")
 	room := r.URL.Query().Get("room")
 	if room == "" {
@@ -319,7 +323,7 @@ func main() {
 
 	h := NewHandler(RDB, jwtSecret)
 
-	http.HandleFunc("/ws", handleConnections)
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { handleConnections(a, w, r) })
 	http.HandleFunc("/login", WithCORS(h.LoginHandler))
 	http.HandleFunc("/register", WithCORS(h.RegisterHandler))
 	http.HandleFunc("/user-info", WithCORS(h.WithAuth(h.UserInfoHandler)))
