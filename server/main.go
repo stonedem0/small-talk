@@ -8,7 +8,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"sync"
+	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -286,10 +289,30 @@ func subscribeToRoom(room string) {
 	}
 }
 
+type app struct {
+	server   *http.Server
+	wg       sync.WaitGroup
+	shutting atomic.Bool
+	cancel   context.CancelFunc
+}
+
+func (a *app) gracefulShutdown(ctx context.Context) {
+	a.cancel()
+	a.wg.Wait()
+	log.Println("Server stopped")
+}
+
 func main() {
 	flag.Parse()
 	InitRedis()
 
+	root, cancel := context.WithCancel(context.Background())
+	a := &app{
+		server:   &http.Server{Addr: ":" + port},
+		wg:       sync.WaitGroup{},
+		shutting: atomic.Bool{},
+		cancel:   cancel,
+	}
 	for _, room := range []string{"backrooms", "political", "overwatch is dead"} {
 		RDB.SAdd(ctx, "rooms", room)
 	}
@@ -313,13 +336,17 @@ func main() {
 	addr := ":" + port
 	log.Println("Server starting on", addr)
 
-	server := &http.Server{
-		Addr:         addr,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  75 * time.Second,
-	}
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatal("ListenAndServe:", err)
-	}
+	go func() {
+		if err := a.server.ListenAndServe(); err != nil {
+			log.Fatal("ListenAndServe:", err)
+		}
+	}()
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+	a.shutting.Store(true)
+	shutdownCtx, cancel2 := context.WithTimeout(root, 15*time.Second)
+	defer cancel2()
+	a.gracefulShutdown(shutdownCtx)
+	log.Println("Server stopped")
 }
