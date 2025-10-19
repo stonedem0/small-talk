@@ -186,12 +186,19 @@
 
 #message-controls input[type="text"] {
   font-family: inherit;
-  width: 420px;
+  width: 100%;
+  min-width: 0; /* allow flex child to shrink */
   padding: 10px;
   border: 1px solid #b08cff;
   border-radius: 3px;
   background: linear-gradient(white, white) padding-box,
               linear-gradient(180deg, #e9d5ff, #f3e8ff) border-box;
+}
+
+.message-input-container {
+  display: flex;
+  width: 100%;
+  min-width: 0; /* allow flex child to shrink */
 }
 
 #message-controls input[type="text"]:focus {
@@ -276,6 +283,8 @@
   display: flex;
   width: 100%;
   box-sizing: border-box;
+  height: 44px;
+
 }
 
 .message-input {
@@ -294,6 +303,7 @@
   padding: 4px;
   border-left: 1px solid #b08cff;
   background: linear-gradient(to bottom, #fbf7ff, #efe5ff);
+  flex: 0 0 auto; /* size to content (button) only */
 }
 
 .formatting-separator {

@@ -307,6 +307,7 @@ const Chat = ({ username }: ChatProps) => {
                 S
               </button>
             </div>
+            <div className="message-input-container">
             <form onSubmit={sendMessage} id="submit" className="message-input-form">
               <input
                 ref={(input) => { inputRef.current = input; }}
@@ -321,6 +322,7 @@ const Chat = ({ username }: ChatProps) => {
                 <PrimaryButton type="submit" id="send-message">send</PrimaryButton>
               </div>
             </form>
+            </div>
           </div>
         </div>
         <div className="online-users-sidebar">
