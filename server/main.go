@@ -91,16 +91,15 @@ type Message struct {
 
 func enqueueToRoom(room string, payload []byte) {
 	roomsLock.RLock()
-	set := rooms[room]
-	for c := range set {
+	for c := range rooms[room] {
 		select {
 		case c.send <- payload:
 		default:
-			close(c.send)
-			delete(set, c)
+			safeClose(c.send, &c.closed)
 		}
 	}
 	roomsLock.RUnlock()
+
 }
 
 func safeClose(ch chan []byte, flag *atomic.Bool) {
@@ -109,11 +108,19 @@ func safeClose(ch chan []byte, flag *atomic.Bool) {
 	}
 }
 
+// sendClose tries to initiate a WS close handshake cleanly.
+func sendClose(conn *websocket.Conn) {
+	_ = conn.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server_shutdown"),
+		time.Now().Add(1*time.Second),
+	)
+}
+
 func writePump(c *client) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
 	}()
 
 	for {
@@ -143,7 +150,7 @@ func readPump(c *client) {
 			delete(set, c)
 		}
 		roomsLock.Unlock()
-		close(c.send)
+		safeClose(c.send, &c.closed)
 		c.conn.Close()
 
 		onlineUsersLock.Lock()
@@ -367,18 +374,20 @@ func (a *app) gracefulShutdown(ctx context.Context) {
 	}
 	roomsLock.RUnlock()
 	for _, c := range toClose {
-		_ = c.conn.WriteControl(websocket.CloseMessage, []byte{}, time.Now().Add(1*time.Second))
+		// sendClose(c.conn)
 		safeClose(c.send, &c.closed)
-		_ = c.conn.Close()
+		c.conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+
 	}
 
 	done := make(chan struct{})
 	go func() { a.wg.Wait(); close(done) }()
 	select {
 	case <-done:
-		log.Printf("✓ graceful shutdown finished in %s", time.Since(start))
 	case <-ctx.Done():
-		log.Printf("⚠ shutdown timed out after %s", time.Since(start))
+		for _, c := range toClose {
+			_ = c.conn.Close()
+		}
 	}
 }
 
