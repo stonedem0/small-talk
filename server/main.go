@@ -3,17 +3,22 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"sync"
+	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 )
 
 var (
@@ -26,6 +31,12 @@ var (
 
 	subscriptions = make(map[string]bool)
 	subLock       sync.Mutex
+
+	rooms     = make(map[string]map[*client]struct{})
+	roomsLock sync.RWMutex
+
+	roomSubs   = make(map[string]*redis.PubSub)
+	roomSubsMu sync.Mutex
 )
 
 func init() {
@@ -53,12 +64,15 @@ type client struct {
 	send     chan []byte
 	room     string
 	username string
+	closed   atomic.Bool
 }
 
-var (
-	rooms     = make(map[string]map[*client]struct{})
-	roomsLock sync.RWMutex
-)
+type app struct {
+	server   *http.Server
+	wg       sync.WaitGroup
+	shutting atomic.Bool
+	cancel   context.CancelFunc
+}
 
 // TODO: Lock this down later
 var upgrader = websocket.Upgrader{
@@ -77,23 +91,36 @@ type Message struct {
 
 func enqueueToRoom(room string, payload []byte) {
 	roomsLock.RLock()
-	set := rooms[room]
-	for c := range set {
+	for c := range rooms[room] {
 		select {
 		case c.send <- payload:
 		default:
-			close(c.send)
-			delete(set, c)
+			safeClose(c.send, &c.closed)
 		}
 	}
 	roomsLock.RUnlock()
+
+}
+
+func safeClose(ch chan []byte, flag *atomic.Bool) {
+	if flag.CompareAndSwap(false, true) {
+		close(ch)
+	}
+}
+
+// sendClose tries to initiate a WS close handshake cleanly.
+func sendClose(conn *websocket.Conn) {
+	_ = conn.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server_shutdown"),
+		time.Now().Add(1*time.Second),
+	)
 }
 
 func writePump(c *client) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
 	}()
 
 	for {
@@ -101,7 +128,10 @@ func writePump(c *client) {
 		case msg, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if !ok {
-				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				_ = c.conn.WriteControl(
+					websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server_shutdown"),
+					time.Now().Add(1*time.Second))
 				return
 			}
 			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
@@ -123,7 +153,7 @@ func readPump(c *client) {
 			delete(set, c)
 		}
 		roomsLock.Unlock()
-		close(c.send)
+		safeClose(c.send, &c.closed)
 		c.conn.Close()
 
 		onlineUsersLock.Lock()
@@ -180,7 +210,11 @@ func readPump(c *client) {
 	}
 }
 
-func handleConnections(w http.ResponseWriter, r *http.Request) {
+func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
+	if a.shutting.Load() {
+		http.Error(w, "Server is shutting down", http.StatusServiceUnavailable)
+		return
+	}
 	log.Printf("🔧 New WebSocket connection request")
 	room := r.URL.Query().Get("room")
 	if room == "" {
@@ -244,14 +278,14 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	onlineUsers[room][username] = true
 	onlineUsersLock.Unlock()
 
-	go writePump(c)
-	go readPump(c)
-
+	a.wg.Add(2)
+	go func() { defer a.wg.Done(); writePump(c) }()
+	go func() { defer a.wg.Done(); readPump(c) }()
 	subLock.Lock()
 	if !subscriptions[room] {
 		subscriptions[room] = true
 		subLock.Unlock()
-		go subscribeToRoom(room)
+		go subscribeToRoom(ctx, room)
 	} else {
 		subLock.Unlock()
 	}
@@ -267,22 +301,94 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-func subscribeToRoom(room string) {
-	pubsub := RDB.Subscribe(ctx, "room:"+room)
-	defer pubsub.Close()
-	ch := pubsub.Channel()
+func subscribeToRoom(ctx context.Context, room string) {
+	ps := RDB.Subscribe(ctx, "room:"+room)
 
-	for m := range ch {
-		var received Message
-		if err := json.Unmarshal([]byte(m.Payload), &received); err != nil {
-			log.Printf("decode error: %v", err)
-			continue
+	roomSubsMu.Lock()
+	roomSubs[room] = ps
+	roomSubsMu.Unlock()
+
+	defer func() {
+		roomSubsMu.Lock()
+		delete(roomSubs, room)
+		roomSubsMu.Unlock()
+		ps.Close() // stop Redis subscription
+		log.Printf("[Room %s] subscription stopped", room)
+	}()
+
+	ch := ps.Channel()
+	log.Printf("[Room %s] subscription started", room)
+
+	for {
+		select {
+		case m, ok := <-ch:
+			if !ok {
+				log.Printf("[Room %s] pubsub channel closed", room)
+				return
+			}
+			var received Message
+			if err := json.Unmarshal([]byte(m.Payload), &received); err != nil {
+				log.Printf("decode error in %s: %v", room, err)
+				continue
+			}
+			b, _ := json.Marshal(received)
+			if err := RDB.LPush(ctx, "chat_history:"+room, b).Err(); err != nil {
+				log.Printf("redis LPush error in %s: %v", room, err)
+			}
+			_ = RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
+
+			enqueueToRoom(room, b)
+		case <-ctx.Done():
+			log.Printf("[Room %s] context canceled, stopping subscription", room)
+			return
 		}
-		b, _ := json.Marshal(received)
-		RDB.LPush(ctx, "chat_history:"+room, b)
-		RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
+	}
+}
 
+func (a *app) gracefulShutdown(ctx context.Context) {
+	log.Println("➜ graceful shutdown started")
+	a.shutting.Store(true)
+	shutdownMsg := Message{Type: "system", Message: "server_shutdown", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	b, _ := json.Marshal(shutdownMsg)
+	roomsLock.RLock()
+	for room := range rooms {
 		enqueueToRoom(room, b)
+	}
+	roomsLock.RUnlock()
+
+	roomSubsMu.Lock()
+	for room, ps := range roomSubs {
+		log.Printf("[Room %s] closing pubsub", room)
+		_ = ps.Close()
+		delete(roomSubs, room)
+	}
+	roomSubsMu.Unlock()
+
+	roomsLock.RLock()
+	var toClose []*client
+	for _, set := range rooms {
+		for c := range set {
+			toClose = append(toClose, c)
+		}
+	}
+	roomsLock.RUnlock()
+	for _, c := range toClose {
+		safeClose(c.send, &c.closed)
+
+	}
+
+	done := make(chan struct{})
+	go func() { a.wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-ctx.Done():
+		for _, c := range toClose {
+			_ = c.conn.Close()
+		}
+	}
+
+	if err := a.server.Shutdown(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		log.Printf("http shutdown error: %v", err)
 	}
 }
 
@@ -290,13 +396,20 @@ func main() {
 	flag.Parse()
 	InitRedis()
 
+	root, cancel := context.WithCancel(context.Background())
+	a := &app{
+		server:   &http.Server{Addr: ":" + port},
+		wg:       sync.WaitGroup{},
+		shutting: atomic.Bool{},
+		cancel:   cancel,
+	}
 	for _, room := range []string{"backrooms", "political", "overwatch is dead"} {
 		RDB.SAdd(ctx, "rooms", room)
 	}
 
 	h := NewHandler(RDB, jwtSecret)
 
-	http.HandleFunc("/ws", handleConnections)
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { handleConnections(a, w, r) })
 	http.HandleFunc("/login", WithCORS(h.LoginHandler))
 	http.HandleFunc("/register", WithCORS(h.RegisterHandler))
 	http.HandleFunc("/user-info", WithCORS(h.WithAuth(h.UserInfoHandler)))
@@ -313,13 +426,17 @@ func main() {
 	addr := ":" + port
 	log.Println("Server starting on", addr)
 
-	server := &http.Server{
-		Addr:         addr,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  75 * time.Second,
-	}
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatal("ListenAndServe:", err)
-	}
+	go func() {
+		if err := a.server.ListenAndServe(); err != nil {
+			log.Fatal("ListenAndServe:", err)
+		}
+	}()
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+	a.shutting.Store(true)
+	shutdownCtx, cancel2 := context.WithTimeout(root, 15*time.Second)
+	defer cancel2()
+	a.gracefulShutdown(shutdownCtx)
+	log.Println("Server stopped")
 }

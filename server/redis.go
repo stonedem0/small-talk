@@ -33,14 +33,3 @@ func PublishMessage(room, message string) error {
 	ctx := context.Background()
 	return RDB.Publish(ctx, "room:"+room, message).Err()
 }
-
-func SubscribeToRoom(room string) {
-	ctx := context.Background()
-	pubsub := RDB.Subscribe(ctx, "room:"+room)
-	defer pubsub.Close()
-
-	ch := pubsub.Channel()
-	for msg := range ch {
-		log.Printf("[Room %s] %s\n", room, msg.Payload)
-	}
-}
