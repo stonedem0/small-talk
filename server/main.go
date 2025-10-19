@@ -122,13 +122,17 @@ func writePump(c *client) {
 	defer func() {
 		ticker.Stop()
 	}()
+	defer c.conn.Close()
 
 	for {
 		select {
 		case msg, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if !ok {
-				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				_ = c.conn.WriteControl(
+					websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server_shutdown"),
+					time.Now().Add(1*time.Second))
 				return
 			}
 			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
@@ -151,7 +155,6 @@ func readPump(c *client) {
 		}
 		roomsLock.Unlock()
 		safeClose(c.send, &c.closed)
-		c.conn.Close()
 
 		onlineUsersLock.Lock()
 		if onlineUsers[c.room] != nil {
@@ -343,7 +346,6 @@ func subscribeToRoom(ctx context.Context, room string) {
 }
 
 func (a *app) gracefulShutdown(ctx context.Context) {
-	start := time.Now()
 	log.Println("➜ graceful shutdown started")
 	a.shutting.Store(true)
 	shutdownMsg := Message{Type: "system", Message: "server_shutdown", Timestamp: time.Now().UTC().Format(time.RFC3339)}
@@ -374,9 +376,8 @@ func (a *app) gracefulShutdown(ctx context.Context) {
 	}
 	roomsLock.RUnlock()
 	for _, c := range toClose {
-		// sendClose(c.conn)
 		safeClose(c.send, &c.closed)
-		c.conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+		c.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 
 	}
 
