@@ -122,7 +122,6 @@ func writePump(c *client) {
 	defer func() {
 		ticker.Stop()
 	}()
-	defer c.conn.Close()
 
 	for {
 		select {
@@ -155,6 +154,7 @@ func readPump(c *client) {
 		}
 		roomsLock.Unlock()
 		safeClose(c.send, &c.closed)
+		c.conn.Close()
 
 		onlineUsersLock.Lock()
 		if onlineUsers[c.room] != nil {
