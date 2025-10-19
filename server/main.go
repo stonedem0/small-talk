@@ -355,9 +355,6 @@ func (a *app) gracefulShutdown(ctx context.Context) {
 		enqueueToRoom(room, b)
 	}
 	roomsLock.RUnlock()
-	if err := a.server.Shutdown(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		log.Printf("http shutdown error: %v", err)
-	}
 
 	roomSubsMu.Lock()
 	for room, ps := range roomSubs {
@@ -377,7 +374,6 @@ func (a *app) gracefulShutdown(ctx context.Context) {
 	roomsLock.RUnlock()
 	for _, c := range toClose {
 		safeClose(c.send, &c.closed)
-		c.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 
 	}
 
@@ -389,6 +385,10 @@ func (a *app) gracefulShutdown(ctx context.Context) {
 		for _, c := range toClose {
 			_ = c.conn.Close()
 		}
+	}
+
+	if err := a.server.Shutdown(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		log.Printf("http shutdown error: %v", err)
 	}
 }
 

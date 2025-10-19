@@ -12,6 +12,7 @@
 const WebSocket = require("ws");
 const axios = require("axios");
 const yargs = require("yargs/yargs");
+const { execFileSync } = require("child_process");
 const { hideBin } = require("yargs/helpers");
 
 const argv = yargs(hideBin(process.argv))
@@ -22,8 +23,8 @@ const argv = yargs(hideBin(process.argv))
   })
   .option("pid", {
     type: "number",
-    demandOption: true,
-    describe: "Server PID to SIGTERM",
+    demandOption: false,
+    describe: "Server PID to SIGTERM (optional; will auto-resolve if omitted)",
   })
   .option("clients", {
     type: "number",
@@ -42,7 +43,7 @@ const argv = yargs(hideBin(process.argv))
   }).argv;
 
 const WS_URL = argv.url;
-const PID = argv.pid;
+let PID = argv.pid;
 const NUM_CLIENTS = argv.clients;
 const NUM_MESSAGES = argv.messages;
 const ROOM = argv.room;
@@ -54,6 +55,8 @@ function wait(ms) {
 async function makeClient(id, slow = false) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(WS_URL);
+    // Track per-client shutdown state for better close diagnostics
+    ws._meta = { id, sawShutdown: false };
 
     ws.on("open", () => {
       console.log(`[client ${id}] open`);
@@ -78,11 +81,16 @@ async function makeClient(id, slow = false) {
     });
 
     ws.on("close", (code, reason) => {
+      const reasonStr = reason && reason.length ? reason.toString() : "";
+      const fromServerFrame = code !== 1006; // 1006 means no close frame was received
+      const afterShutdown = !!(ws._meta && ws._meta.sawShutdown);
       console.log(
-        `[client ${id}] closed: code=${code} reason=${
-          reason && reason.toString()
-        }`
+        `[client ${id}] closed: code=${code} reason=${reasonStr} fromServerFrame=${fromServerFrame} afterShutdown=${afterShutdown}`
       );
+      // Record for summary
+      if (globalThis.__closeEvents) {
+        globalThis.__closeEvents.push({ id, code, reason: reasonStr, fromServerFrame, afterShutdown });
+      }
     });
 
     ws.on("message", (buf) => {
@@ -90,10 +98,25 @@ async function makeClient(id, slow = false) {
         const msg = JSON.parse(buf.toString());
         if (msg && msg.type === "system" && msg.message === "server_shutdown") {
           console.log(`[client ${id}] got server_shutdown`);
+          if (ws._meta) ws._meta.sawShutdown = true;
         }
       } catch {}
     });
   });
+}
+
+function resolvePidFromUrl(urlStr) {
+  try {
+    const u = new URL(urlStr);
+    const port = u.port ? Number(u.port) : u.protocol === "wss:" ? 443 : 80;
+    if (!port) return null;
+    // macOS: lsof -nP -iTCP:PORT -sTCP:LISTEN -t
+    const out = execFileSync("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"], { encoding: "utf8" });
+    const lines = out.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    return lines.length ? Number(lines[0]) : null;
+  } catch (e) {
+    return null;
+  }
 }
 
 async function publishBurst(publisherWs, n) {
@@ -162,6 +185,8 @@ async function tryNewConnect(id, timeoutMs = 3000) {
 }
 
 (async function main() {
+  // Collect close events for a summary at the end
+  globalThis.__closeEvents = [];
   console.log("Test starting");
   console.log(
     "WS URL:",
@@ -205,14 +230,37 @@ async function tryNewConnect(id, timeoutMs = 3000) {
   // 4) wait a short moment to let server fanout
   await wait(500);
 
-  // 5) send SIGTERM to server PID
-  console.log(`sending SIGTERM to pid ${PID}`);
-  try {
-    process.kill(PID, "SIGTERM");
-    console.log("SIGTERM sent");
-  } catch (err) {
-    console.error("Failed to send SIGTERM:", err && err.message);
-    // still proceed to test connection behavior
+  // 5) send SIGTERM to server PID (auto-resolve if missing/invalid)
+  if (!PID) {
+    PID = resolvePidFromUrl(WS_URL);
+    if (PID) {
+      console.log(`resolved PID from port: ${PID}`);
+    } else {
+      console.warn("Could not resolve PID from URL. Pass --pid explicitly.");
+    }
+  }
+  if (PID) {
+    console.log(`sending SIGTERM to pid ${PID}`);
+    try {
+      process.kill(PID, "SIGTERM");
+      console.log("SIGTERM sent");
+    } catch (err) {
+      console.error("Failed to send SIGTERM:", err && err.message);
+      // If ESRCH (no such process), try to resolve again and retry once
+      const retryPid = resolvePidFromUrl(WS_URL);
+      if (retryPid && retryPid !== PID) {
+        PID = retryPid;
+        console.log(`retrying SIGTERM to resolved pid ${PID}`);
+        try {
+          process.kill(PID, "SIGTERM");
+          console.log("SIGTERM sent on retry");
+        } catch (e2) {
+          console.error("Retry SIGTERM failed:", e2 && e2.message);
+        }
+      }
+    }
+  } else {
+    console.warn("No PID available; skipping SIGTERM step.");
   }
 
   // 6) attempt new connections (they should fail fast / be refused)
@@ -247,6 +295,28 @@ async function tryNewConnect(id, timeoutMs = 3000) {
       c.ws.terminate();
     } catch (e) {}
   }
+
+  // Short summary of close codes observed
+  const counts = new Map();
+  for (const e of globalThis.__closeEvents) {
+    const key = String(e.code);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  const summary = [...counts.entries()].map(([code, count]) => `${code}: ${count}`).join(", ");
+  console.log(`Close code summary: { ${summary} }`);
+  const afterShutdownStats = globalThis.__closeEvents.reduce(
+    (acc, e) => {
+      if (e.afterShutdown) acc.after++;
+      else acc.before++;
+      if (e.fromServerFrame) acc.withFrame++;
+      else acc.withoutFrame++;
+      return acc;
+    },
+    { after: 0, before: 0, withFrame: 0, withoutFrame: 0 }
+  );
+  console.log(
+    `Close timing/frame summary: afterShutdown=${afterShutdownStats.after}, beforeShutdown=${afterShutdownStats.before}, withFrame=${afterShutdownStats.withFrame}, withoutFrame=${afterShutdownStats.withoutFrame}`
+  );
 
   console.log("Test finished.");
   process.exit(0);
