@@ -277,6 +277,32 @@
   border-top-right-radius: 2px;
 }
 
+.emoji-picker {
+  display: grid;
+  grid-template-columns: repeat(10, 1.6rem);
+  gap: 4px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #b08cff;
+  border-top: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.emoji-item {
+  font-size: 1.1rem;
+  line-height: 1;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid #e5d4ff;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.emoji-item:hover {
+  background: #f6f0ff;
+}
+
 .message-input-form {
   display: flex;
   width: 100%;
