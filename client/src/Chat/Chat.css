@@ -190,7 +190,6 @@
   min-width: 0; /* allow flex child to shrink */
   padding: 10px;
   border: 1px solid #b08cff;
-  border-radius: 3px;
   background: linear-gradient(white, white) padding-box,
               linear-gradient(180deg, #e9d5ff, #f3e8ff) border-box;
 }
@@ -217,7 +216,7 @@
   background: linear-gradient(90deg, #d8b4fe, #f0abfc, #d8b4fe);
   background-size: 200% 100%;
   animation: pulse 1.2s ease-in-out infinite;
-  border-radius: 4px;
+
 }
 
 
@@ -259,7 +258,6 @@
 /* Message Controls Styles */
 .message-controls-container {
   border: 1px solid #b08cff;
-  border-radius: 4px;
   overflow: hidden;
   box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.8), inset -1px -1px 0 rgba(0, 0, 0, 0.08), 0 0 0 1px #d9c4ff;
   padding: 0;
@@ -270,7 +268,7 @@
   align-items: center;
   background: #eadcff; /* flat background */
   padding: 4px;
-  gap: 2px;
+  gap: 4px;
   border-bottom: 1px solid #b08cff;
   width: 100%;
   box-sizing: border-box;
@@ -290,7 +288,6 @@
 .message-input {
   flex: 1;
   border: 1px solid #b08cff;
-  border-radius: 3px;
   padding: 10px;
   background-color: white;
   outline: none;
