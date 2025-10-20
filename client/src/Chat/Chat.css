@@ -1,20 +1,19 @@
 #chat-container {
   display: flex;
   flex-direction: row;
-  background-color: white;
-  border-top: none;
-  border-radius: 6px;
+  background: var(--deep-purple);
+  padding: 0px 5px 5px 5px;
   color: black;
-  width: 100%;
-  max-width: 100%;
+  box-sizing: border-box; /* ensure padding stays inside */
 }
 
 .chat-room {
-  background: var(--purple-gradient);
+  background: #ffffff; /* inner white panel */
   flex: 1;
   display: flex;
   flex-direction: row;
   min-width: 0;
+  overflow: hidden; 
 }
 
 .chat-header {
@@ -163,17 +162,13 @@
 
 #messages {
   margin: 0px 0px 0px 5px;
-  /* background: linear-gradient(to bottom, 
-    rgba(74, 0, 247, 0.09) 0%, 
-    rgba(255, 105, 180, 0.09) 100%), 
-    white; */
-  background: white;
+  background: linear-gradient(to bottom, #ffffff 0%, #faf5ff 100%);
   padding: 10px;
   max-height: 330px;
-  border: 1px solid gray;
+  border: 1px solid #b08cff;
   border-top: none;
-  /* min-height: 430px; */
   overflow-y: auto;
+  box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #e9d7ff;
 }
 
 #messages p {
@@ -185,18 +180,24 @@
   display: flex;
   flex-direction: column;
   margin: 0px 0px 5px 5px;
-  border-right: 1px solid gray;
-  background-color: white;
-  /* padding: 10px; */
+  border-right: 1px solid #b08cff;
+  background: linear-gradient(to bottom, #ffffff 0%, #f7efff 100%);
 }
 
 #message-controls input[type="text"] {
   font-family: inherit;
-  width: 420px;
+  width: 100%;
+  min-width: 0; /* allow flex child to shrink */
   padding: 10px;
-  border: 2px solid transparent;;
+  border: 1px solid #b08cff;
   background: linear-gradient(white, white) padding-box,
-              linear-gradient(90deg, #00bfff, #8a2be2) border-box;
+              linear-gradient(180deg, #e9d5ff, #f3e8ff) border-box;
+}
+
+.message-input-container {
+  display: flex;
+  width: 100%;
+  min-width: 0; /* allow flex child to shrink */
 }
 
 #message-controls input[type="text"]:focus {
@@ -215,7 +216,7 @@
   background: linear-gradient(90deg, #d8b4fe, #f0abfc, #d8b4fe);
   background-size: 200% 100%;
   animation: pulse 1.2s ease-in-out infinite;
-  border-radius: 4px;
+
 }
 
 
@@ -256,20 +257,19 @@
 
 /* Message Controls Styles */
 .message-controls-container {
-  border: 1px solid var(--scroll-thumb-bg);
-  border-radius: 3px;
+  border: 1px solid #b08cff;
   overflow: hidden;
-  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12), 0 0 0 1px #caaaff;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.8), inset -1px -1px 0 rgba(0, 0, 0, 0.08), 0 0 0 1px #d9c4ff;
   padding: 0;
 }
 
 .formatting-toolbar {
   display: flex;
   align-items: center;
-  background: linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  background: #eadcff; /* flat background */
   padding: 4px;
-  gap: 1px;
-  border-bottom: 1px solid var(--scroll-thumb-bg);
+  gap: 4px;
+  border-bottom: 1px solid #b08cff;
   width: 100%;
   box-sizing: border-box;
   margin: 0;
@@ -281,21 +281,26 @@
   display: flex;
   width: 100%;
   box-sizing: border-box;
+  height: 44px;
+
 }
 
 .message-input {
   flex: 1;
-  border: none;
+  border: 1px solid #b08cff;
   padding: 10px;
   background-color: white;
   outline: none;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
 }
 
 .send-button-container {
   display: flex;
   align-items: center;
   padding: 4px;
-  border-left: 1px solid var(--scroll-thumb-bg);
+  border-left: 1px solid #b08cff;
+  background: linear-gradient(to bottom, #fbf7ff, #efe5ff);
+  flex: 0 0 auto; /* size to content (button) only */
 }
 
 .formatting-separator {
@@ -311,13 +316,13 @@
   width: 21px;
   position: relative;
   padding: 2px 0;
-  border: 1px solid var(--scroll-thumb-bg);
-  background: linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  border: 1px solid #a78bfa;
+  background: linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #c7a2ff 100%);
   color: #4a00f7;
-  border-radius: 2px;
+  border-radius: 3px;
   cursor: pointer;
   font-size: 10px;
-  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 1px rgba(0, 0, 0, 0.12);
+  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.85), inset -1px -1px 1px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255,255,255,0.6);
 }
 
 .formatting-button.bold {
