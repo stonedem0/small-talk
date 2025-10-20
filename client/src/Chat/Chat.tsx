@@ -25,10 +25,16 @@ const Chat = ({ username }: ChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const ws = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const EMOJIS = [
+    "😀","😃","😄","😁","😆","😅","😂","🙂","😉","😊",
+    "😍","😘","😜","🤪","😎","🤓","😏","😬","🥳","🤯",
+    "😇","🥰","🤗","🤔","🤤","😭","😤","😴","🤝","👍"
+  ];
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -178,6 +184,23 @@ const Chat = ({ username }: ChatProps) => {
     }, 0);
   };
 
+  const insertEmoji = (emoji: string) => {
+    const input = inputRef.current;
+    if (!input) {
+      setMessage((prev) => prev + emoji);
+      return;
+    }
+    const startPos = input.selectionStart ?? message.length;
+    const endPos = input.selectionEnd ?? message.length;
+    const newText = message.substring(0, startPos) + emoji + message.substring(endPos);
+    setMessage(newText);
+    setTimeout(() => {
+      input.focus();
+      const caret = startPos + emoji.length;
+      input.setSelectionRange(caret, caret);
+    }, 0);
+  };
+
   const MessageSkeleton = () => (
     <div className="message-skeleton-wrapper">
       {[...Array(8)].map((_, i) => (
@@ -306,7 +329,32 @@ const Chat = ({ username }: ChatProps) => {
               >
                 S
               </button>
+              <button
+                type="button"
+                className="formatting-button emoji-toggle"
+                data-tooltip="Emoji"
+                onClick={() => setShowEmojiPicker((v) => !v)}
+                aria-haspopup="true"
+                aria-expanded={showEmojiPicker}
+              >
+                😊
+              </button>
             </div>
+            {showEmojiPicker && (
+              <div className="emoji-picker" role="listbox">
+                {EMOJIS.map((e) => (
+                  <button
+                    type="button"
+                    key={e}
+                    className="emoji-item"
+                    onClick={() => { insertEmoji(e); setShowEmojiPicker(false); }}
+                    aria-label={`emoji ${e}`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="message-input-container">
             <form onSubmit={sendMessage} id="submit" className="message-input-form">
               <input
