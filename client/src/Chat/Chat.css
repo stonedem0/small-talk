@@ -194,6 +194,13 @@
               linear-gradient(180deg, #e9d5ff, #f3e8ff) border-box;
 }
 
+/* Override the generic 100% width for link editor inputs */
+#message-controls .link-form input[type="text"] {
+  width: auto;
+}
+#message-controls .link-input { width: 140px; }
+#message-controls .link-text-input { width: 160px; }
+
 .message-input-container {
   display: flex;
   width: 100%;
@@ -312,27 +319,41 @@
 }
 
 .link-form {
-  display: flex;
-  gap: 6px;
-  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  height: 26px; /* similar to toolbar overall height */
   background: #fff;
   border-left: 1px solid #b08cff;
   border-right: 1px solid #b08cff;
   border-bottom: 1px solid #b08cff;
+  width: auto;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  align-self: flex-start;
 }
 
 .link-input, .link-text-input {
-  flex: 1;
+  flex: 0 0 auto;
+  width: 120px;
+  min-width: 0;
   border: 1px solid #b08cff;
   border-radius: 3px;
-  padding: 6px 8px;
+  padding: 2px 4px;
+  font-size: 11px;
+  height: 22px;
+  box-sizing: border-box;
 }
 
 .link-insert, .link-cancel {
   border: 1px solid #a78bfa;
   background: linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 100%);
   border-radius: 3px;
-  padding: 6px 10px;
+  padding: 2px 6px;
+  font-size: 11px;
+  height: 22px;
+  min-width: 56px;
   cursor: pointer;
 }
 
