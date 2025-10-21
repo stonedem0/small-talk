@@ -26,6 +26,9 @@ const Chat = ({ username }: ChatProps) => {
   const [message, setMessage] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkUrl, setLinkUrl] = useState<string>("https://");
+  const [linkText, setLinkText] = useState<string>("");
 
   const ws = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -201,19 +204,32 @@ const Chat = ({ username }: ChatProps) => {
     }, 0);
   };
 
-  const insertLink = () => {
+  const toggleLinkForm = () => {
     const input = inputRef.current;
-    const url = prompt("Enter URL (https://...):", "https://");
-    if (!url) return;
-    // Basic normalization
-    const href = url.trim();
+    if (input) {
+      const startPos = input.selectionStart ?? message.length;
+      const endPos = input.selectionEnd ?? message.length;
+      const selectedText = message.substring(startPos, endPos);
+      setLinkText(selectedText);
+    }
+    setLinkUrl((prev) => (prev && prev !== "https://" ? prev : "https://"));
+    setShowLinkForm((v) => !v);
+  };
+
+  const handleInsertLink = () => {
+    if (!linkUrl || !/^https?:\/\//i.test(linkUrl.trim())) {
+      // very light validation; require http/https
+      setLinkUrl((u) => (u?.trim() ? u : "https://"));
+      return;
+    }
+    const input = inputRef.current;
     const startPos = input?.selectionStart ?? message.length;
     const endPos = input?.selectionEnd ?? message.length;
-    const selectedText = message.substring(startPos, endPos);
-    const textLabel = selectedText || prompt("Optional link text (leave blank to use URL):", "") || href;
-    const md = `[${textLabel}](${href})`;
+    const label = (linkText && linkText.trim()) ? linkText.trim() : linkUrl.trim();
+    const md = `[${label}](${linkUrl.trim()})`;
     const newText = message.substring(0, startPos) + md + message.substring(endPos);
     setMessage(newText);
+    setShowLinkForm(false);
     setTimeout(() => {
       if (input) {
         input.focus();
@@ -359,7 +375,7 @@ const Chat = ({ username }: ChatProps) => {
                 type="button"
                 className="formatting-button link"
                 data-tooltip="Insert link"
-                onClick={insertLink}
+                onClick={toggleLinkForm}
               >
                 🔗
               </button>
@@ -374,6 +390,26 @@ const Chat = ({ username }: ChatProps) => {
                 😊
               </button>
             </div>
+            {showLinkForm && (
+              <div className="link-form" role="group" aria-label="Insert link">
+                <input
+                  type="text"
+                  className="link-input"
+                  placeholder="https://example.com"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                />
+                <input
+                  type="text"
+                  className="link-text-input"
+                  placeholder="Link text (optional)"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                />
+                <button type="button" className="link-insert" onClick={handleInsertLink}>Insert</button>
+                <button type="button" className="link-cancel" onClick={() => setShowLinkForm(false)}>Cancel</button>
+              </div>
+            )}
             {showEmojiPicker && (
               <div className="emoji-picker" role="listbox">
                 {EMOJIS.map((e) => (

@@ -311,6 +311,31 @@
 
 }
 
+.link-form {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: #fff;
+  border-left: 1px solid #b08cff;
+  border-right: 1px solid #b08cff;
+  border-bottom: 1px solid #b08cff;
+}
+
+.link-input, .link-text-input {
+  flex: 1;
+  border: 1px solid #b08cff;
+  border-radius: 3px;
+  padding: 6px 8px;
+}
+
+.link-insert, .link-cancel {
+  border: 1px solid #a78bfa;
+  background: linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 100%);
+  border-radius: 3px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
 .message-input {
   flex: 1;
   border: 1px solid #b08cff;
