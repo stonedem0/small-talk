@@ -201,6 +201,28 @@ const Chat = ({ username }: ChatProps) => {
     }, 0);
   };
 
+  const insertLink = () => {
+    const input = inputRef.current;
+    const url = prompt("Enter URL (https://...):", "https://");
+    if (!url) return;
+    // Basic normalization
+    const href = url.trim();
+    const startPos = input?.selectionStart ?? message.length;
+    const endPos = input?.selectionEnd ?? message.length;
+    const selectedText = message.substring(startPos, endPos);
+    const textLabel = selectedText || prompt("Optional link text (leave blank to use URL):", "") || href;
+    const md = `[${textLabel}](${href})`;
+    const newText = message.substring(0, startPos) + md + message.substring(endPos);
+    setMessage(newText);
+    setTimeout(() => {
+      if (input) {
+        input.focus();
+        const caret = startPos + md.length;
+        input.setSelectionRange(caret, caret);
+      }
+    }, 0);
+  };
+
   const MessageSkeleton = () => (
     <div className="message-skeleton-wrapper">
       {[...Array(8)].map((_, i) => (
@@ -269,6 +291,10 @@ const Chat = ({ username }: ChatProps) => {
                   text = text.replace(/~~(.*?)~~/g, '<del>$1</del>');
                   // Replace `code` with <code>
                   text = text.replace(/`(.*?)`/g, '<code style="background: rgba(139, 92, 246, 0.1); padding: 2px 4px; border-radius: 3px;">$1</code>');
+                  // Replace [text](url) with link
+                  text = text.replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#4f46e5; text-decoration: underline;">$1<\/a>');
+                  // Auto-link plain URLs (simple)
+                  text = text.replace(/(^|\s)(https?:\/\/[^\s<]+[^<.,)\s])/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#4f46e5; text-decoration: underline;">$2<\/a>');
                   return text;
                 };
 
@@ -328,6 +354,14 @@ const Chat = ({ username }: ChatProps) => {
                 onClick={() => insertFormatting("~~", "~~")}
               >
                 S
+              </button>
+              <button
+                type="button"
+                className="formatting-button link"
+                data-tooltip="Insert link"
+                onClick={insertLink}
+              >
+                🔗
               </button>
               <button
                 type="button"
