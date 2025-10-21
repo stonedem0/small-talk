@@ -26,6 +26,9 @@ const Chat = ({ username }: ChatProps) => {
   const [message, setMessage] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkUrl, setLinkUrl] = useState<string>("https://");
+  const [linkText, setLinkText] = useState<string>("");
 
   const ws = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -201,6 +204,41 @@ const Chat = ({ username }: ChatProps) => {
     }, 0);
   };
 
+  const toggleLinkForm = () => {
+    const input = inputRef.current;
+    if (input) {
+      const startPos = input.selectionStart ?? message.length;
+      const endPos = input.selectionEnd ?? message.length;
+      const selectedText = message.substring(startPos, endPos);
+      setLinkText(selectedText);
+    }
+    setLinkUrl((prev) => (prev && prev !== "https://" ? prev : "https://"));
+    setShowLinkForm((v) => !v);
+  };
+
+  const handleInsertLink = () => {
+    if (!linkUrl || !/^https?:\/\//i.test(linkUrl.trim())) {
+      // very light validation; require http/https
+      setLinkUrl((u) => (u?.trim() ? u : "https://"));
+      return;
+    }
+    const input = inputRef.current;
+    const startPos = input?.selectionStart ?? message.length;
+    const endPos = input?.selectionEnd ?? message.length;
+    const label = (linkText && linkText.trim()) ? linkText.trim() : linkUrl.trim();
+    const md = `[${label}](${linkUrl.trim()})`;
+    const newText = message.substring(0, startPos) + md + message.substring(endPos);
+    setMessage(newText);
+    setShowLinkForm(false);
+    setTimeout(() => {
+      if (input) {
+        input.focus();
+        const caret = startPos + md.length;
+        input.setSelectionRange(caret, caret);
+      }
+    }, 0);
+  };
+
   const MessageSkeleton = () => (
     <div className="message-skeleton-wrapper">
       {[...Array(8)].map((_, i) => (
@@ -269,6 +307,10 @@ const Chat = ({ username }: ChatProps) => {
                   text = text.replace(/~~(.*?)~~/g, '<del>$1</del>');
                   // Replace `code` with <code>
                   text = text.replace(/`(.*?)`/g, '<code style="background: rgba(139, 92, 246, 0.1); padding: 2px 4px; border-radius: 3px;">$1</code>');
+                  // Replace [text](url) with link
+                  text = text.replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#4f46e5; text-decoration: underline;">$1<\/a>');
+                  // Auto-link plain URLs (simple)
+                  text = text.replace(/(^|\s)(https?:\/\/[^\s<]+[^<.,)\s])/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#4f46e5; text-decoration: underline;">$2<\/a>');
                   return text;
                 };
 
@@ -331,6 +373,14 @@ const Chat = ({ username }: ChatProps) => {
               </button>
               <button
                 type="button"
+                className="formatting-button link"
+                data-tooltip="Insert link"
+                onClick={toggleLinkForm}
+              >
+                🔗
+              </button>
+              <button
+                type="button"
                 className="formatting-button emoji-toggle"
                 data-tooltip="Emoji"
                 onClick={() => setShowEmojiPicker((v) => !v)}
@@ -340,6 +390,26 @@ const Chat = ({ username }: ChatProps) => {
                 😊
               </button>
             </div>
+            {showLinkForm && (
+              <div className="link-form" role="group" aria-label="Insert link">
+                <input
+                  type="text"
+                  className="link-input"
+                  placeholder="https://example.com"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                />
+                <input
+                  type="text"
+                  className="link-text-input"
+                  placeholder="Link text (optional)"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                />
+                <button type="button" className="link-insert" onClick={handleInsertLink}>Insert</button>
+                <button type="button" className="link-cancel" onClick={() => setShowLinkForm(false)}>Cancel</button>
+              </div>
+            )}
             {showEmojiPicker && (
               <div className="emoji-picker" role="listbox">
                 {EMOJIS.map((e) => (
