@@ -16,7 +16,7 @@ const Rooms = () => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
-      console.log("No token found");
+      // No token found
       // navigate("/login");
       return;
     }
@@ -37,7 +37,7 @@ const Rooms = () => {
         setRooms(allRooms);
       })
       .catch((error) => {
-        console.error("Fetch error:", error);
+        // Fetch error
       });
 
     // Fetch online user counts
@@ -49,7 +49,7 @@ const Rooms = () => {
       .then((response) => response.json())
       .then((data) => setUserCounts(data))
       .catch((error) => {
-        console.error("User count fetch error:", error);
+        // User count fetch error
       });
   }, []);
 

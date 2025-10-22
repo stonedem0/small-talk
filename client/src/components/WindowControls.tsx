@@ -7,9 +7,9 @@ interface WindowControlsProps {
   onClose?: () => void;
 }
 
-const defaultMinimize = () => console.log("Minimize clicked");
-const defaultFullscreen = () => console.log("Fullscreen clicked");
-const defaultClose = () => console.log("Close clicked");
+const defaultMinimize = () => {};
+const defaultFullscreen = () => {};
+const defaultClose = () => {};
 
 const WindowControls: React.FC<WindowControlsProps> = ({
   onMinimize = defaultMinimize,

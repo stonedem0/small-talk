@@ -7,7 +7,6 @@ import Window from "./components/Window";
 import "./App.css";
 
 const App = () => {
-  console.log("App component rendering");
   
   const [username, setUsername] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -16,17 +15,14 @@ const App = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log("App useEffect running");
     const storedUsername = localStorage.getItem("username");
     const storedToken = localStorage.getItem("token");
-    console.log("Loading from localStorage:", { storedUsername, storedToken });
     
     if (storedToken) {
       setToken(storedToken);
       if (storedUsername) {
         setUsername(storedUsername);
       } else {
-        console.log("Token exists but no username found - fetching from server");
         // Fetch username from server using the token
         fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/user-info`, {
           headers: {
@@ -46,7 +42,7 @@ const App = () => {
           }
         })
         .catch(error => {
-          console.error("Failed to fetch username:", error);
+          // Failed to fetch username
           // If we can't fetch the username, clear the token and redirect to login
           localStorage.removeItem("token");
           setToken(null);
@@ -73,7 +69,6 @@ const App = () => {
   }, [location.pathname]);
 
 
-  console.log(username, token);
 
   return (
       <div id="main-container">
