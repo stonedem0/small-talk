@@ -22,9 +22,10 @@ import (
 )
 
 var (
-	ctx       = context.Background()
-	jwtSecret []byte
-	port      = getenv("PORT", "8080")
+	ctx          = context.Background()
+	jwtSecret    []byte
+	port         = getenv("PORT", "8080")
+	debugEnabled = getenv("DEBUG", "") == "true"
 
 	onlineUsers     = make(map[string]map[string]bool) // room -> username -> online
 	onlineUsersLock sync.Mutex
@@ -165,7 +166,9 @@ func readPump(c *client) {
 		leave := Message{Room: c.room, Username: c.username, Message: "left the room", Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 		b, _ := json.Marshal(leave)
 		RDB.Publish(ctx, "room:"+c.room, string(b))
-		log.Printf("[Room %s] %s disconnected", c.room, c.username)
+		if debugEnabled {
+			log.Printf("[Room %s] %s disconnected", c.room, c.username)
+		}
 	}()
 
 	c.conn.SetReadLimit(1 << 20)
@@ -215,7 +218,9 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Server is shutting down", http.StatusServiceUnavailable)
 		return
 	}
-	log.Printf("🔧 New WebSocket connection request")
+	if debugEnabled {
+		log.Printf("🔧 New WebSocket connection request")
+	}
 	room := r.URL.Query().Get("room")
 	if room == "" {
 		http.Error(w, "Room parameter is required", http.StatusBadRequest)
@@ -297,7 +302,9 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 		RDB.LPush(ctx, "chat_history:"+room, b)
 		RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
 		RDB.Publish(ctx, "room:"+room, string(b))
-		log.Printf("[Room %s] join: %s", room, username)
+		if debugEnabled {
+			log.Printf("[Room %s] join: %s", room, username)
+		}
 	}()
 }
 
@@ -313,17 +320,23 @@ func subscribeToRoom(ctx context.Context, room string) {
 		delete(roomSubs, room)
 		roomSubsMu.Unlock()
 		ps.Close() // stop Redis subscription
-		log.Printf("[Room %s] subscription stopped", room)
+		if debugEnabled {
+			log.Printf("[Room %s] subscription stopped", room)
+		}
 	}()
 
 	ch := ps.Channel()
-	log.Printf("[Room %s] subscription started", room)
+	if debugEnabled {
+		log.Printf("[Room %s] subscription started", room)
+	}
 
 	for {
 		select {
 		case m, ok := <-ch:
 			if !ok {
-				log.Printf("[Room %s] pubsub channel closed", room)
+				if debugEnabled {
+					log.Printf("[Room %s] pubsub channel closed", room)
+				}
 				return
 			}
 			var received Message
@@ -339,7 +352,9 @@ func subscribeToRoom(ctx context.Context, room string) {
 
 			enqueueToRoom(room, b)
 		case <-ctx.Done():
-			log.Printf("[Room %s] context canceled, stopping subscription", room)
+			if debugEnabled {
+				log.Printf("[Room %s] context canceled, stopping subscription", room)
+			}
 			return
 		}
 	}
@@ -358,7 +373,9 @@ func (a *app) gracefulShutdown(ctx context.Context) {
 
 	roomSubsMu.Lock()
 	for room, ps := range roomSubs {
-		log.Printf("[Room %s] closing pubsub", room)
+		if debugEnabled {
+			log.Printf("[Room %s] closing pubsub", room)
+		}
 		_ = ps.Close()
 		delete(roomSubs, room)
 	}

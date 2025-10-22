@@ -52,11 +52,11 @@ const Chat = ({ username }: ChatProps) => {
         if (data.includes(roomName || "")) {
           setIsValidRoom(true);
         } else {
-          console.warn("🚫 Invalid room:", roomName);
+          // Invalid room, redirect
           navigate("/");
         }
       } catch (error) {
-        console.error("❌ Error fetching rooms:", error);
+        // Failed to fetch rooms
       }
     };
 
@@ -80,46 +80,36 @@ const Chat = ({ username }: ChatProps) => {
         } else {
           setMessages([]);
         }
-        console.log('🔧 Creating WebSocket connection for room:', roomName, 'username:', username);
         const token = localStorage.getItem("token") || "";
         ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`);
         
         ws.current.onopen = () => {
-          console.log("🔧 WebSocket connected successfully");
           setIsLoadingMessages(false);
         };
         
         // Make WebSocket accessible globally for username updates
         (window as any).currentWebSocket = ws.current;
-        console.log('🔧 WebSocket made globally accessible:', ws.current);
+        // Expose WS for username update flow
 
         ws.current.onmessage = (event) => {
-          console.log('🔧 Received WebSocket message:', event.data);
           const newMessage: Message = JSON.parse(event.data);
-          console.log('🔧 Parsed message:', newMessage);
         
           setMessages((prev) => [...prev, newMessage]);
         };
 
-        ws.current.onclose = () => {
-          console.log('🔧 WebSocket connection closed');
-        };
+        ws.current.onclose = () => {};
       } catch (error) {
-        console.error("Failed to set up chat:", error);
+        // network or setup error
       }
     };
     setupChat();
     return () => {
-      console.log('🔧 Cleaning up WebSocket connection');
       if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-        console.log('🔧 Closing open WebSocket connection');
         ws.current.close();
       } else {
-        console.log('🔧 WebSocket was not open, closing anyway');
         ws.current?.close();
       }
       // Clean up global WebSocket reference
-      console.log('🔧 Removing global WebSocket reference');
       delete (window as any).currentWebSocket;
     };
   }, [isValidRoom, roomName, username]);

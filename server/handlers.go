@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -114,7 +113,7 @@ func (h *Handler) GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	messages, err := RDB.LRange(ctx, "chat_history:"+room, 0, 99).Result()
 	if err != nil {
-		log.Printf("history error: %v", err)
+		// history error
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -258,7 +257,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := tok.SignedString(h.JWTSecret)
 	if err != nil {
-		log.Println("LoginHandler: sign token:", err)
+		// token signing error
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to generate token"})
 		return
@@ -444,7 +443,7 @@ func (h *Handler) DebugUsersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	users, err := RDB.HGetAll(ctx, "users").Result()
 	if err != nil {
-		log.Printf("DebugUsersHandler: %v", err)
+		// DebugUsersHandler error
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to get users"})
 		return
