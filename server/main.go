@@ -420,7 +420,7 @@ func main() {
 		shutting: atomic.Bool{},
 		cancel:   cancel,
 	}
-	for _, room := range []string{"backrooms", "political", "overwatch is dead"} {
+	for _, room := range []string{"gaming", "music", "anime", "programming", "chilling", "nerd_herd", "pets", "emo"} {
 		RDB.SAdd(ctx, "rooms", room)
 	}
 
