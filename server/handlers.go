@@ -38,7 +38,8 @@ func WithCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		if len(allowedOrigins) == 0 {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
+			http.Error(w, "CORS origin not allowed", http.StatusForbidden)
+			return
 		} else {
 			allowed := false
 			for _, o := range allowedOrigins {

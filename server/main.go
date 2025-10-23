@@ -89,7 +89,7 @@ type app struct {
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		if len(allowedOrigins) == 0 {
-			return true
+			return false
 		}
 		origin := r.Header.Get("Origin")
 		for _, o := range allowedOrigins {
