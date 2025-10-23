@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -22,10 +23,11 @@ import (
 )
 
 var (
-	ctx          = context.Background()
-	jwtSecret    []byte
-	port         = getenv("PORT", "8080")
-	debugEnabled = getenv("DEBUG", "") == "true"
+	ctx            = context.Background()
+	jwtSecret      []byte
+	port           = getenv("PORT", "8080")
+	debugEnabled   = getenv("DEBUG", "") == "true"
+	allowedOrigins []string
 
 	onlineUsers     = make(map[string]map[string]bool) // room -> username -> online
 	onlineUsersLock sync.Mutex
@@ -46,6 +48,15 @@ func init() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+	if v := os.Getenv("CORS_ORIGINS"); v != "" {
+		parts := strings.Split(v, ",")
+		for _, p := range parts {
+			o := strings.TrimSpace(p)
+			if o != "" {
+				allowedOrigins = append(allowedOrigins, o)
+			}
+		}
+	}
 }
 
 func getenv(k, def string) string {
@@ -75,10 +86,18 @@ type app struct {
 	cancel   context.CancelFunc
 }
 
-// TODO: Lock this down later
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true
+		if len(allowedOrigins) == 0 {
+			return true
+		}
+		origin := r.Header.Get("Origin")
+		for _, o := range allowedOrigins {
+			if origin == o {
+				return true
+			}
+		}
+		return false
 	},
 }
 
