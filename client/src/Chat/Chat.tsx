@@ -4,6 +4,52 @@ import "./Chat.css";
 import { API_URL, WS_URL } from "../config";
 import { format } from 'date-fns';
 import PrimaryButton from "../components/PrimaryButton";
+// Simple sanitizer that whitelists a small set of tags/attrs
+const sanitizeHtml = (dirty: string): string => {
+  const allowedTags = new Set(["STRONG","EM","U","DEL","CODE","A"]);
+  const allowedAttrs = new Set(["href","target","rel","class"]);
+  const container = document.createElement("div");
+  container.innerHTML = dirty;
+
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      const tag = el.tagName;
+      if (!allowedTags.has(tag)) {
+        const text = document.createTextNode(el.textContent || "");
+        el.replaceWith(text);
+        return; 
+      }
+      for (const attr of Array.from(el.attributes)) {
+        if (!allowedAttrs.has(attr.name)) {
+          el.removeAttribute(attr.name);
+          continue;
+        }
+        if (el.tagName === "A" && attr.name === "href") {
+          const value = attr.value.trim();
+          if (!/^https?:\/\//i.test(value)) {
+            el.removeAttribute("href");
+          }
+        }
+      }
+      if (el.tagName === "A") {
+        el.setAttribute("rel", "noopener noreferrer");
+        if (el.getAttribute("target") !== "_blank") {
+          el.setAttribute("target", "_blank");
+        }
+        el.classList.add("msg-link");
+      }
+      if (el.tagName === "CODE") {
+        el.classList.add("msg-code");
+      }
+    }
+    for (const child of Array.from(node.childNodes)) {
+      walk(child);
+    }
+  };
+  walk(container);
+  return container.innerHTML;
+};
 
 interface ChatProps {
   username: string;
@@ -296,12 +342,12 @@ const Chat = ({ username }: ChatProps) => {
                   // Replace ~~strikethrough~~ with <del>
                   text = text.replace(/~~(.*?)~~/g, '<del>$1</del>');
                   // Replace `code` with <code>
-                  text = text.replace(/`(.*?)`/g, '<code style="background: rgba(139, 92, 246, 0.1); padding: 2px 4px; border-radius: 3px;">$1</code>');
+                  text = text.replace(/`(.*?)`/g, '<code class="msg-code">$1</code>');
                   // Replace [text](url) with link
-                  text = text.replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#4f46e5; text-decoration: underline;">$1<\/a>');
+                  text = text.replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="msg-link">$1</a>');
                   // Auto-link plain URLs (simple)
-                  text = text.replace(/(^|\s)(https?:\/\/[^\s<]+[^<.,)\s])/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#4f46e5; text-decoration: underline;">$2<\/a>');
-                  return text;
+                  text = text.replace(/(^|\s)(https?:\/\/[^\s<]+[^<.,)\s])/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer" class="msg-link">$2</a>');
+                  return sanitizeHtml(text);
                 };
 
                 return (
@@ -309,7 +355,7 @@ const Chat = ({ username }: ChatProps) => {
                     {timeStr && <span style={{ color: "#c084fc" }}>[{timeStr}] </span>}
                     <strong style={{ color: "#ff69b4" }}>{msg.username}:</strong> 
                     <span 
-                      style={{ color: "#8b5cf6" }}
+                      className="msg-text"
                       dangerouslySetInnerHTML={{ __html: " " + formatMessage(msg.message) }}
                     />
                   </p>
