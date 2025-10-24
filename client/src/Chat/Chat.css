@@ -440,3 +440,7 @@
 .formatting-button:hover::after {
   opacity: 1;
 }
+
+#messages .msg-text { color: #8b5cf6; }
+#messages .msg-link { color: #4f46e5; text-decoration: underline; }
+#messages .msg-code { background: rgba(139, 92, 246, 0.1); padding: 2px 4px; border-radius: 3px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
