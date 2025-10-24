@@ -255,8 +255,9 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	userJSON, err := RDB.HGet(ctx, "users", username).Result()
 	if err != nil {
 		if strings.Contains(err.Error(), "redis: nil") {
+			// Normalize to avoid user enumeration
 			w.WriteHeader(http.StatusUnauthorized)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "User not found"})
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
@@ -270,8 +271,9 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(stored.Password), []byte(password)); err != nil {
+		// Normalize to avoid user enumeration
 		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid password"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
 	}
 	claims := jwt.MapClaims{"username": username, "exp": jwt.NewNumericDate(time.Now().Add(24 * time.Hour))}
@@ -451,8 +453,9 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	userJSON, err := RDB.HGet(ctx, "users", req.Username).Result()
 	if err != nil {
+		// Normalize to avoid user enumeration
 		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "User not found"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
 	}
 	var stored Credentials
@@ -462,8 +465,9 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(stored.Password), []byte(req.CurrentPassword)); err != nil {
+		// Normalize to avoid user enumeration
 		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid current password"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
 	}
 	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
