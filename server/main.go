@@ -248,7 +248,30 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenStr := r.URL.Query().Get("token")
+	// Prefer Authorization: Bearer <token>; fallback to Sec-WebSocket-Protocol or query token
+	var tokenStr string
+	if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
+		tokenStr = strings.TrimPrefix(auth, "Bearer ")
+	}
+	if tokenStr == "" {
+		if proto := r.Header.Get("Sec-WebSocket-Protocol"); proto != "" {
+			// Support either single token or comma-separated list where one item is Bearer <token>
+			for _, p := range strings.Split(proto, ",") {
+				p = strings.TrimSpace(p)
+				if strings.HasPrefix(p, "Bearer ") {
+					tokenStr = strings.TrimPrefix(p, "Bearer ")
+					break
+				}
+				// If no Bearer prefix, accept raw token for simplicity
+				if tokenStr == "" && p != "" {
+					tokenStr = p
+				}
+			}
+		}
+	}
+	if tokenStr == "" {
+		tokenStr = r.URL.Query().Get("token")
+	}
 	if tokenStr == "" {
 		http.Error(w, "Missing token", http.StatusUnauthorized)
 		return
@@ -283,7 +306,30 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ws, err := upgrader.Upgrade(w, r, nil)
+	// Echo back a selected subprotocol if the client sent one (required by browsers when specified)
+	var respHeader http.Header
+	if proto := r.Header.Get("Sec-WebSocket-Protocol"); proto != "" {
+		// Choose the first acceptable protocol we parsed earlier
+		// Reconstruct from the original header to ensure exact echo
+		// Prefer Bearer token entry
+		var chosen string
+		parts := strings.Split(proto, ",")
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if strings.HasPrefix(p, "Bearer ") {
+				chosen = p
+				break
+			}
+		}
+		if chosen == "" && len(parts) > 0 {
+			chosen = strings.TrimSpace(parts[0])
+		}
+		if chosen != "" {
+			respHeader = http.Header{}
+			respHeader.Set("Sec-WebSocket-Protocol", chosen)
+		}
+	}
+	ws, err := upgrader.Upgrade(w, r, respHeader)
 	if err != nil {
 		log.Printf("WS upgrade error: %v", err)
 		return
