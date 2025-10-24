@@ -457,7 +457,7 @@ func main() {
 	http.HandleFunc("/create-room", WithCORS(h.WithAuth(h.CreateRoomHandler)))
 	http.HandleFunc("/update-username", WithCORS(h.WithAuth(h.UpdateUsernameHandler)))
 	http.HandleFunc("/update-password", WithCORS(h.WithAuth(h.UpdatePasswordHandler)))
-	http.HandleFunc("/debug-users", WithCORS(h.DebugUsersHandler))
+	// debug endpoint removed
 
 	addr := ":" + port
 	log.Println("Server starting on", addr)

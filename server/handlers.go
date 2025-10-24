@@ -481,24 +481,7 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
 }
 
-func (h *Handler) DebugUsersHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	users, err := RDB.HGetAll(ctx, "users").Result()
-	if err != nil {
-		// DebugUsersHandler error
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to get users"})
-		return
-	}
-	names := make([]string, 0, len(users))
-	for u := range users {
-		names = append(names, u)
-	}
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{"userCount": len(users), "usernames": names})
-}
+// DebugUsersHandler removed
 
 func (h *Handler) UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	username, err := h.VerifyToken(r)
