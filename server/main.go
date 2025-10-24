@@ -43,11 +43,13 @@ var (
 )
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+	// Load .env if present; ok if missing (use system env in prod)
+	_ = godotenv.Load()
+	secret := os.Getenv("JWT_SECRET")
+	if strings.TrimSpace(secret) == "" {
+		log.Fatal("JWT_SECRET is required; set it via environment or .env")
 	}
-	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+	jwtSecret = []byte(secret)
 	if v := os.Getenv("CORS_ORIGINS"); v != "" {
 		parts := strings.Split(v, ",")
 		for _, p := range parts {
