@@ -43,11 +43,13 @@ var (
 )
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+	// Load .env if present; ok if missing (use system env in prod)
+	_ = godotenv.Load()
+	secret := os.Getenv("JWT_SECRET")
+	if strings.TrimSpace(secret) == "" {
+		log.Fatal("JWT_SECRET is required; set it via environment or .env")
 	}
-	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+	jwtSecret = []byte(secret)
 	if v := os.Getenv("CORS_ORIGINS"); v != "" {
 		parts := strings.Split(v, ",")
 		for _, p := range parts {
@@ -246,7 +248,30 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenStr := r.URL.Query().Get("token")
+	// Prefer Authorization: Bearer <token>; fallback to Sec-WebSocket-Protocol or query token
+	var tokenStr string
+	if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
+		tokenStr = strings.TrimPrefix(auth, "Bearer ")
+	}
+	if tokenStr == "" {
+		if proto := r.Header.Get("Sec-WebSocket-Protocol"); proto != "" {
+			// Support either single token or comma-separated list where one item is Bearer <token>
+			for _, p := range strings.Split(proto, ",") {
+				p = strings.TrimSpace(p)
+				if strings.HasPrefix(p, "Bearer ") {
+					tokenStr = strings.TrimPrefix(p, "Bearer ")
+					break
+				}
+				// If no Bearer prefix, accept raw token for simplicity
+				if tokenStr == "" && p != "" {
+					tokenStr = p
+				}
+			}
+		}
+	}
+	if tokenStr == "" {
+		tokenStr = r.URL.Query().Get("token")
+	}
 	if tokenStr == "" {
 		http.Error(w, "Missing token", http.StatusUnauthorized)
 		return
@@ -281,7 +306,30 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ws, err := upgrader.Upgrade(w, r, nil)
+	// Echo back a selected subprotocol if the client sent one (required by browsers when specified)
+	var respHeader http.Header
+	if proto := r.Header.Get("Sec-WebSocket-Protocol"); proto != "" {
+		// Choose the first acceptable protocol we parsed earlier
+		// Reconstruct from the original header to ensure exact echo
+		// Prefer Bearer token entry
+		var chosen string
+		parts := strings.Split(proto, ",")
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if strings.HasPrefix(p, "Bearer ") {
+				chosen = p
+				break
+			}
+		}
+		if chosen == "" && len(parts) > 0 {
+			chosen = strings.TrimSpace(parts[0])
+		}
+		if chosen != "" {
+			respHeader = http.Header{}
+			respHeader.Set("Sec-WebSocket-Protocol", chosen)
+		}
+	}
+	ws, err := upgrader.Upgrade(w, r, respHeader)
 	if err != nil {
 		log.Printf("WS upgrade error: %v", err)
 		return
@@ -455,9 +503,9 @@ func main() {
 	http.HandleFunc("/online-users", WithCORS(h.WithAuth(h.GetOnlineUsersHandler)))
 	http.HandleFunc("/room-usernames", WithCORS(h.GetRoomUsernamesHandler))
 	http.HandleFunc("/create-room", WithCORS(h.WithAuth(h.CreateRoomHandler)))
-	http.HandleFunc("/update-username", WithCORS(h.UpdateUsernameHandler))
-	http.HandleFunc("/update-password", WithCORS(h.UpdatePasswordHandler))
-	http.HandleFunc("/debug-users", WithCORS(h.DebugUsersHandler))
+	http.HandleFunc("/update-username", WithCORS(h.WithAuth(h.UpdateUsernameHandler)))
+	http.HandleFunc("/update-password", WithCORS(h.WithAuth(h.UpdatePasswordHandler)))
+	// debug endpoint removed
 
 	addr := ":" + port
 	log.Println("Server starting on", addr)

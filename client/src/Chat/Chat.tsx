@@ -127,10 +127,16 @@ const Chat = ({ username }: ChatProps) => {
           setMessages([]);
         }
         const token = localStorage.getItem("token") || "";
-        ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`);
+        // Send token via subprotocol; also include query fallback for compatibility while debugging
+        ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`, [
+          token
+        ].filter(Boolean));
         
         ws.current.onopen = () => {
           setIsLoadingMessages(false);
+        };
+        ws.current.onerror = (e) => {
+          console.error("WebSocket error", e);
         };
         
         // Make WebSocket accessible globally for username updates

@@ -255,8 +255,9 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	userJSON, err := RDB.HGet(ctx, "users", username).Result()
 	if err != nil {
 		if strings.Contains(err.Error(), "redis: nil") {
+			// Normalize to avoid user enumeration
 			w.WriteHeader(http.StatusUnauthorized)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "User not found"})
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
@@ -270,8 +271,9 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(stored.Password), []byte(password)); err != nil {
+		// Normalize to avoid user enumeration
 		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid password"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
 	}
 	claims := jwt.MapClaims{"username": username, "exp": jwt.NewNumericDate(time.Now().Add(24 * time.Hour))}
@@ -347,6 +349,18 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
+	// Ensure the caller is the account owner
+	tokenUser, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	if tokenUser != req.OldUsername {
+		w.WriteHeader(http.StatusForbidden)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Forbidden"})
+		return
+	}
 	if req.OldUsername == "" || req.NewUsername == "" || req.Room == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Old username, new username, and room are required"})
@@ -420,6 +434,18 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
+	// Ensure the caller is the account owner
+	tokenUser, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	if tokenUser != req.Username {
+		w.WriteHeader(http.StatusForbidden)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Forbidden"})
+		return
+	}
 	if req.Username == "" || req.CurrentPassword == "" || req.NewPassword == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Username, current password, and new password are required"})
@@ -427,8 +453,9 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	userJSON, err := RDB.HGet(ctx, "users", req.Username).Result()
 	if err != nil {
+		// Normalize to avoid user enumeration
 		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "User not found"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
 	}
 	var stored Credentials
@@ -438,8 +465,9 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(stored.Password), []byte(req.CurrentPassword)); err != nil {
+		// Normalize to avoid user enumeration
 		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid current password"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
 	}
 	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
@@ -457,24 +485,7 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
 }
 
-func (h *Handler) DebugUsersHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	users, err := RDB.HGetAll(ctx, "users").Result()
-	if err != nil {
-		// DebugUsersHandler error
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to get users"})
-		return
-	}
-	names := make([]string, 0, len(users))
-	for u := range users {
-		names = append(names, u)
-	}
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{"userCount": len(users), "usernames": names})
-}
+// DebugUsersHandler removed
 
 func (h *Handler) UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	username, err := h.VerifyToken(r)
