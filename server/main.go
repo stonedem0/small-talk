@@ -455,8 +455,8 @@ func main() {
 	http.HandleFunc("/online-users", WithCORS(h.WithAuth(h.GetOnlineUsersHandler)))
 	http.HandleFunc("/room-usernames", WithCORS(h.GetRoomUsernamesHandler))
 	http.HandleFunc("/create-room", WithCORS(h.WithAuth(h.CreateRoomHandler)))
-	http.HandleFunc("/update-username", WithCORS(h.UpdateUsernameHandler))
-	http.HandleFunc("/update-password", WithCORS(h.UpdatePasswordHandler))
+	http.HandleFunc("/update-username", WithCORS(h.WithAuth(h.UpdateUsernameHandler)))
+	http.HandleFunc("/update-password", WithCORS(h.WithAuth(h.UpdatePasswordHandler)))
 	http.HandleFunc("/debug-users", WithCORS(h.DebugUsersHandler))
 
 	addr := ":" + port
