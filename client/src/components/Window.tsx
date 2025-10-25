@@ -263,6 +263,13 @@ const Window = ({
                   </div>
                 )}
               </div>
+              {/* Additional decorative/action icons */}
+              <button id="icon-drive" className="menu-button" title="Drive" aria-label="Drive" data-tooltip="Drive"></button>
+              <button id="icon-downloads" className="menu-button" title="Downloads" aria-label="Downloads" data-tooltip="Downloads"></button>
+              <button id="icon-folder" className="menu-button" title="Folder" aria-label="Folder" data-tooltip="Folder"></button>
+              <button id="icon-folder-alt" className="menu-button" title="Folder alt" aria-label="Folder alt" data-tooltip="Folder alt"></button>
+              <button id="icon-music" className="menu-button" title="Music" aria-label="Music" data-tooltip="Music"></button>
+              <button id="icon-speaker" className="menu-button" title="Speaker" aria-label="Speaker" data-tooltip="Speaker"></button>
               <div className="profile-menu-wrapper">
                 <button
                   id="chat-options"

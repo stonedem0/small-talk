@@ -179,6 +179,13 @@
   background-position: center;
 }
 
+#icon-drive { background-image: url("../assets/icons/drive-01.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }
+#icon-downloads { background-image: url("../assets/icons/downloads.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }
+#icon-folder { background-image: url("../assets/icons/folder-02.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }
+#icon-folder-alt { background-image: url("../assets/icons/folder-05.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }
+#icon-music { background-image: url("../assets/icons/music-01.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }
+#icon-speaker { background-image: url("../assets/icons/speaker.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }
+
 .username {
 align-self: center;
 }
