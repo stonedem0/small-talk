@@ -45,6 +45,16 @@ const Window = ({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showChatMenu, setShowChatMenu] = useState(false);
 
+  const toggleProfileMenu = () => {
+    setShowChatMenu(false);
+    setShowProfileMenu((v) => !v);
+  };
+
+  const toggleChatMenu = () => {
+    setShowProfileMenu(false);
+    setShowChatMenu((v) => !v);
+  };
+
   const handleClose = () => {
     if (onClose) {
       onClose();
@@ -238,7 +248,7 @@ const Window = ({
                   id="edit-profile"
                   className="menu-button"
                   title="Edit profile"
-                  onClick={() => setShowProfileMenu((v) => !v)}
+                  onClick={toggleProfileMenu}
                   aria-haspopup="true"
                   aria-expanded={showProfileMenu}
                 ></button>
@@ -254,7 +264,7 @@ const Window = ({
                   id="chat-options"
                   className="menu-button"
                   title="Chat options"
-                  onClick={() => setShowChatMenu((v) => !v)}
+                  onClick={toggleChatMenu}
                   aria-haspopup="true"
                   aria-expanded={showChatMenu}
                 ></button>
