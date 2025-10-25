@@ -101,6 +101,31 @@
   border: none;
   padding: 0;
   cursor: pointer;
+  position: relative;
+}
+
+/* Simple tooltip using data-tooltip attribute */
+.window-menu .menu-button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in-out;
+  margin-bottom: 4px;
+  z-index: 1000;
+}
+
+.window-menu .menu-button:hover::after {
+  opacity: 1;
 }
 
 #leave-room {

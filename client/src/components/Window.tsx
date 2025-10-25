@@ -240,6 +240,8 @@ const Window = ({
                   id="leave-room"
                   className="menu-button"
                   title="Leave room"
+                  aria-label="Leave room"
+                  data-tooltip="Leave room"
                   onClick={handleClose}
                 ></button>
               )}
@@ -248,6 +250,8 @@ const Window = ({
                   id="edit-profile"
                   className="menu-button"
                   title="Edit profile"
+                  aria-label="Edit profile"
+                  data-tooltip="Edit profile"
                   onClick={toggleProfileMenu}
                   aria-haspopup="true"
                   aria-expanded={showProfileMenu}
@@ -264,6 +268,8 @@ const Window = ({
                   id="chat-options"
                   className="menu-button"
                   title="Chat options"
+                  aria-label="Chat options"
+                  data-tooltip="Chat options"
                   onClick={toggleChatMenu}
                   aria-haspopup="true"
                   aria-expanded={showChatMenu}
