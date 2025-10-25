@@ -81,13 +81,12 @@
 .window-menu {
   width: 100%;
   display: flex;
-  padding: 3px;
+  padding: 10px;
   justify-content: flex-start;
   color: white;
   border-bottom: 1px solid grey;
-  display: flex;
   gap: 10px;
-  height: 36px;
+  height: 23px;
   margin-left: 5px;
   margin-right: 5px;
   background-color: white;
@@ -95,8 +94,8 @@
 }
 
 #leave-room {
-  background-image: url("../assets/leave.png");
-  background-size: 22px;
+  background-image: url("../assets/icons/exit.png");
+  background-size: 24px;
   background-repeat: no-repeat;
   background-position: center;
 } 

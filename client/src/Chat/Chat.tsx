@@ -98,11 +98,10 @@ const Chat = ({ username }: ChatProps) => {
         if (data.includes(roomName || "")) {
           setIsValidRoom(true);
         } else {
-          // Invalid room, redirect
           navigate("/");
         }
       } catch (error) {
-        // Failed to fetch rooms
+        console.error("Failed to fetch rooms", error);
       }
     };
 
@@ -139,9 +138,7 @@ const Chat = ({ username }: ChatProps) => {
           console.error("WebSocket error", e);
         };
         
-        // Make WebSocket accessible globally for username updates
         (window as any).currentWebSocket = ws.current;
-        // Expose WS for username update flow
 
         ws.current.onmessage = (event) => {
           const newMessage: Message = JSON.parse(event.data);
@@ -151,7 +148,7 @@ const Chat = ({ username }: ChatProps) => {
 
         ws.current.onclose = () => {};
       } catch (error) {
-        // network or setup error
+        console.error("Failed to setup chat", error);
       }
     };
     setupChat();
@@ -218,11 +215,9 @@ const Chat = ({ username }: ChatProps) => {
       input.focus();
       
       if (selectedText.length > 0) {
-        // If text was selected, place cursor after the formatted text
         const newCursorPos = startPos + start.length + selectedText.length + end.length;
         input.setSelectionRange(newCursorPos, newCursorPos);
       } else {
-        // If no text was selected, place cursor between the formatting symbols
         const cursorPos = startPos + start.length;
         input.setSelectionRange(cursorPos, cursorPos);
       }

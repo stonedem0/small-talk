@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import WindowControls from "./WindowControls";
 import "./Window.css";
@@ -34,6 +34,7 @@ const Window = ({
   onTabClick,
 }: WindowProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showUsernameForm, setShowUsernameForm] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [newUsername, setNewUsername] = useState("");
@@ -222,12 +223,14 @@ const Window = ({
         {onSignOut && (
           <div className="window-menu-container">
             <div className="window-menu">
-              <button
-                id="leave-room"
-                className="menu-button"
-                title="Leave room"
-                onClick={handleClose}
-              ></button>
+              {location.pathname !== "/" && location.pathname !== "/home" && (
+                <button
+                  id="leave-room"
+                  className="menu-button"
+                  title="Leave room"
+                  onClick={handleClose}
+                ></button>
+              )}
               <button
                 id="change-username"
                 className="menu-button"
