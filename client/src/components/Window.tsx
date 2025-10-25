@@ -42,6 +42,7 @@ const Window = ({
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const handleClose = () => {
     if (onClose) {
@@ -231,18 +232,22 @@ const Window = ({
                   onClick={handleClose}
                 ></button>
               )}
-              <button
-                id="change-username"
-                className="menu-button"
-                title="Change username"
-                onClick={() => setShowUsernameForm(true)}
-              ></button>
-              <button
-                id="change-password"
-                className="menu-button"
-                title="Change password"
-                onClick={() => setShowPasswordForm(true)}
-              ></button>
+              <div className="profile-menu-wrapper">
+                <button
+                  id="edit-profile"
+                  className="menu-button"
+                  title="Edit profile"
+                  onClick={() => setShowProfileMenu((v) => !v)}
+                  aria-haspopup="true"
+                  aria-expanded={showProfileMenu}
+                ></button>
+                {showProfileMenu && (
+                  <div className="profile-menu" role="menu">
+                    <button role="menuitem" onClick={() => { setShowUsernameForm(true); setShowProfileMenu(false); }}>Change username</button>
+                    <button role="menuitem" onClick={() => { setShowPasswordForm(true); setShowProfileMenu(false); }}>Change password</button>
+                  </div>
+                )}
+              </div>
               <button
                 id="create-room"
                 className="menu-button"
