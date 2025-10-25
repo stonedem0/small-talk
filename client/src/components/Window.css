@@ -147,15 +147,8 @@
   background: #f6f0ff;
 }
 
-#create-room {
-  background-image: url("../assets/create.png");
-  background-size: 22px;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-#sign-out {
-  background-image: url("../assets/signout.png");
+#chat-options {
+  background-image: url("../assets/icons/chat.png");
   background-size: 22px;
   background-repeat: no-repeat;
   background-position: center;

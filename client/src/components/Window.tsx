@@ -43,6 +43,7 @@ const Window = ({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showChatMenu, setShowChatMenu] = useState(false);
 
   const handleClose = () => {
     if (onClose) {
@@ -248,18 +249,22 @@ const Window = ({
                   </div>
                 )}
               </div>
-              <button
-                id="create-room"
-                className="menu-button"
-                title="Create room"
-                onClick={onCreateRoom}
-              ></button>
-              <button
-                id="sign-out"
-                className="menu-button"
-                title="Sign out"
-                onClick={onSignOut}
-              ></button>
+              <div className="profile-menu-wrapper">
+                <button
+                  id="chat-options"
+                  className="menu-button"
+                  title="Chat options"
+                  onClick={() => setShowChatMenu((v) => !v)}
+                  aria-haspopup="true"
+                  aria-expanded={showChatMenu}
+                ></button>
+                {showChatMenu && (
+                  <div className="profile-menu" role="menu">
+                    <button role="menuitem" onClick={() => { onCreateRoom(); setShowChatMenu(false); }}>Create room</button>
+                    <button role="menuitem" onClick={() => { onSignOut && onSignOut(); setShowChatMenu(false); }}>Sign out</button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
