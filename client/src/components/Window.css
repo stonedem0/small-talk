@@ -68,6 +68,10 @@
   font-weight: bold;
 }
 
+.window-title { display: flex; align-items: center; gap: 6px; }
+.window-title-icon { width: 18px; height: 18px; background-image: url("../assets/icons/bin.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }
+.window-title-text { line-height: 18px; }
+
 .window-menu-container {
   display: flex;
   gap: 10px;

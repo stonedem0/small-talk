@@ -208,7 +208,10 @@ const Window = ({
     <div className="window" style={{ width, height, top, left }}>
       <div className="window-header">
         <div className="window-header-top">
-          <span>{title}</span>
+          <div className="window-title" title={title} aria-label={title}>
+            <span className="window-title-icon" aria-hidden="true"></span>
+            <span className="window-title-text">{title}</span>
+          </div>
           <WindowControls />
         </div>
 
