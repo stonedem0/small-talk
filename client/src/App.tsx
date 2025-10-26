@@ -27,7 +27,8 @@ const App = () => {
         fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/user-info`, {
           headers: {
             "Authorization": `Bearer ${storedToken}`
-          }
+          },
+          credentials: 'include'
         })
         .then(response => {
           if (response.ok) {
