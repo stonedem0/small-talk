@@ -384,8 +384,8 @@
 
 /* Custom tooltip styles */
 .formatting-button {
-  height: 20px;
-  width: 21px;
+  height: 23px;
+  width: 28px;
   position: relative;
   padding: 2px 0;
   border: 1px solid #a78bfa;
@@ -393,7 +393,7 @@
   color: #4a00f7;
   border-radius: 3px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 15px;
   box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.85), inset -1px -1px 1px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255,255,255,0.6);
 }
 

@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import WindowControls from "./WindowControls";
 import "./Window.css";
@@ -34,6 +34,7 @@ const Window = ({
   onTabClick,
 }: WindowProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showUsernameForm, setShowUsernameForm] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [newUsername, setNewUsername] = useState("");
@@ -41,6 +42,18 @@ const Window = ({
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showChatMenu, setShowChatMenu] = useState(false);
+
+  const toggleProfileMenu = () => {
+    setShowChatMenu(false);
+    setShowProfileMenu((v) => !v);
+  };
+
+  const toggleChatMenu = () => {
+    setShowProfileMenu(false);
+    setShowChatMenu((v) => !v);
+  };
 
   const handleClose = () => {
     if (onClose) {
@@ -195,7 +208,10 @@ const Window = ({
     <div className="window" style={{ width, height, top, left }}>
       <div className="window-header">
         <div className="window-header-top">
-          <span>{title}</span>
+          <div className="window-title" title={title} aria-label={title}>
+            <span className="window-title-icon" aria-hidden="true"></span>
+            <span className="window-title-text">{title}</span>
+          </div>
           <WindowControls />
         </div>
 
@@ -222,36 +238,59 @@ const Window = ({
         {onSignOut && (
           <div className="window-menu-container">
             <div className="window-menu">
-              <button
-                id="leave-room"
-                className="menu-button"
-                title="Leave room"
-                onClick={handleClose}
-              ></button>
-              <button
-                id="change-username"
-                className="menu-button"
-                title="Change username"
-                onClick={() => setShowUsernameForm(true)}
-              ></button>
-              <button
-                id="change-password"
-                className="menu-button"
-                title="Change password"
-                onClick={() => setShowPasswordForm(true)}
-              ></button>
-              <button
-                id="create-room"
-                className="menu-button"
-                title="Create room"
-                onClick={onCreateRoom}
-              ></button>
-              <button
-                id="sign-out"
-                className="menu-button"
-                title="Sign out"
-                onClick={onSignOut}
-              ></button>
+              {location.pathname !== "/" && location.pathname !== "/home" && (
+                <button
+                  id="leave-room"
+                  className="menu-button"
+                  title="Leave room"
+                  aria-label="Leave room"
+                  data-tooltip="Leave room"
+                  onClick={handleClose}
+                ></button>
+              )}
+              <div className="profile-menu-wrapper">
+                <button
+                  id="edit-profile"
+                  className="menu-button"
+                  title="Edit profile"
+                  aria-label="Edit profile"
+                  data-tooltip="Edit profile"
+                  onClick={toggleProfileMenu}
+                  aria-haspopup="true"
+                  aria-expanded={showProfileMenu}
+                ></button>
+                {showProfileMenu && (
+                  <div className="profile-menu" role="menu">
+                    <button role="menuitem" onClick={() => { setShowUsernameForm(true); setShowProfileMenu(false); }}>Change username</button>
+                    <button role="menuitem" onClick={() => { setShowPasswordForm(true); setShowProfileMenu(false); }}>Change password</button>
+                  </div>
+                )}
+              </div>
+              {/* Additional decorative/action icons */}
+              <button id="icon-drive" className="menu-button" title="Drive" aria-label="Drive" data-tooltip="Drive"></button>
+              <button id="icon-downloads" className="menu-button" title="Downloads" aria-label="Downloads" data-tooltip="Downloads"></button>
+              <button id="icon-folder" className="menu-button" title="Folder" aria-label="Folder" data-tooltip="Folder"></button>
+              <button id="icon-folder-alt" className="menu-button" title="Folder alt" aria-label="Folder alt" data-tooltip="Folder alt"></button>
+              <button id="icon-music" className="menu-button" title="Music" aria-label="Music" data-tooltip="Music"></button>
+              <button id="icon-speaker" className="menu-button" title="Speaker" aria-label="Speaker" data-tooltip="Speaker"></button>
+              <div className="profile-menu-wrapper">
+                <button
+                  id="chat-options"
+                  className="menu-button"
+                  title="Chat options"
+                  aria-label="Chat options"
+                  data-tooltip="Chat options"
+                  onClick={toggleChatMenu}
+                  aria-haspopup="true"
+                  aria-expanded={showChatMenu}
+                ></button>
+                {showChatMenu && (
+                  <div className="profile-menu" role="menu">
+                    <button role="menuitem" onClick={() => { onCreateRoom(); setShowChatMenu(false); }}>Create room</button>
+                    <button role="menuitem" onClick={() => { onSignOut && onSignOut(); setShowChatMenu(false); }}>Sign out</button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
