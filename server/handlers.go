@@ -25,13 +25,14 @@ type Credentials struct {
 }
 
 type Handler struct {
-	RDB       *redis.Client
-	JWTSecret []byte
-	Ctx       context.Context
+	RDB           *redis.Client
+	JWTSecret     []byte
+	RefreshSecret []byte
+	Ctx           context.Context
 }
 
-func NewHandler(rdb *redis.Client, jwtSecret []byte) *Handler {
-	return &Handler{RDB: rdb, JWTSecret: jwtSecret, Ctx: context.Background()}
+func NewHandler(rdb *redis.Client, jwtSecret []byte, refreshSecret []byte) *Handler {
+	return &Handler{RDB: rdb, JWTSecret: jwtSecret, RefreshSecret: refreshSecret, Ctx: context.Background()}
 }
 
 func WithCORS(next http.HandlerFunc) http.HandlerFunc {
@@ -60,6 +61,7 @@ func WithCORS(next http.HandlerFunc) http.HandlerFunc {
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -285,6 +287,21 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to generate token"})
 		return
 	}
+	// issue refresh token cookie
+	rclaims := jwt.MapClaims{"username": username, "exp": jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour))}
+	rtok := jwt.NewWithClaims(jwt.SigningMethodHS256, rclaims)
+	rSigned, err := rtok.SignedString(h.RefreshSecret)
+	if err == nil {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    rSigned,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   false,
+			SameSite: http.SameSiteLaxMode,
+			Expires:  time.Now().Add(7 * 24 * time.Hour),
+		})
+	}
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Login successful", "token": signed})
 }
 
@@ -415,6 +432,20 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 	change := Message{Room: req.Room, Username: req.OldUsername, Message: fmt.Sprintf("changed username to %s", req.NewUsername), Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 	b, _ := json.Marshal(change)
 	RDB.Publish(ctx, "room:"+req.Room, string(b))
+	// rotate refresh cookie as well
+	rclaims := jwt.MapClaims{"username": req.NewUsername, "exp": jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour))}
+	rtok := jwt.NewWithClaims(jwt.SigningMethodHS256, rclaims)
+	if rSigned, err2 := rtok.SignedString(h.RefreshSecret); err2 == nil {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    rSigned,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   false,
+			SameSite: http.SameSiteLaxMode,
+			Expires:  time.Now().Add(7 * 24 * time.Hour),
+		})
+	}
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Username updated successfully", "token": signed, "newUsername": req.NewUsername})
 }
 
@@ -495,6 +526,66 @@ func (h *Handler) UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = json.NewEncoder(w).Encode(map[string]string{"username": username})
+}
+
+func (h *Handler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	c, err := r.Cookie("refresh_token")
+	if err != nil || c.Value == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Missing refresh token"})
+		return
+	}
+	token, err := jwt.Parse(c.Value, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok || t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return h.RefreshSecret, nil
+	})
+	if err != nil || !token.Valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid refresh token"})
+		return
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid claims"})
+		return
+	}
+	username, _ := claims["username"].(string)
+	if username == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid claims"})
+		return
+	}
+	// issue new access token
+	aclaims := jwt.MapClaims{"username": username, "exp": jwt.NewNumericDate(time.Now().Add(24 * time.Hour))}
+	atok := jwt.NewWithClaims(jwt.SigningMethodHS256, aclaims)
+	signed, err := atok.SignedString(h.JWTSecret)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to issue token"})
+		return
+	}
+	// rotate refresh
+	rclaims := jwt.MapClaims{"username": username, "exp": jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour))}
+	rtok := jwt.NewWithClaims(jwt.SigningMethodHS256, rclaims)
+	if rSigned, err2 := rtok.SignedString(h.RefreshSecret); err2 == nil {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    rSigned,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   false,
+			SameSite: http.SameSiteLaxMode,
+			Expires:  time.Now().Add(7 * 24 * time.Hour),
+		})
+	}
+	_ = json.NewEncoder(w).Encode(map[string]string{"token": signed})
 }
 
 func (h *Handler) VerifyToken(r *http.Request) (string, error) {
