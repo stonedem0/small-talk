@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { API_URL, WS_URL } from "../config";
+import { authFetch } from "../utils/authFetch";
 import { format } from 'date-fns';
 import PrimaryButton from "../components/PrimaryButton";
 // Simple sanitizer that whitelists a small set of tags/attrs
@@ -88,7 +89,7 @@ const Chat = ({ username }: ChatProps) => {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await fetch(`${API_URL}/rooms`, {
+        const response = await authFetch(`${API_URL}/rooms`, {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem("token")}`
           }
@@ -113,7 +114,7 @@ const Chat = ({ username }: ChatProps) => {
 
     const setupChat = async () => {
       try {
-        const response = await fetch(`${API_URL}/history?room=${roomName}`, {
+        const response = await authFetch(`${API_URL}/history?room=${roomName}`, {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem("token")}`
           }
@@ -169,7 +170,7 @@ const Chat = ({ username }: ChatProps) => {
     let interval: number;
     const fetchOnlineUsers = async () => {
       try {
-        const response = await fetch(`${API_URL}/room-usernames`);
+        const response = await authFetch(`${API_URL}/room-usernames`);
         if (!response.ok) throw new Error("Failed to fetch online users");
         const data: Record<string, string[]> = await response.json();
         setOnlineUsers(data[roomName!] || []);

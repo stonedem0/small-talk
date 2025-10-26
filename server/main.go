@@ -25,6 +25,7 @@ import (
 var (
 	ctx            = context.Background()
 	jwtSecret      []byte
+	refreshSecret  []byte
 	port           = getenv("PORT", "8080")
 	debugEnabled   = getenv("DEBUG", "") == "true"
 	allowedOrigins []string
@@ -50,6 +51,11 @@ func init() {
 		log.Fatal("JWT_SECRET is required; set it via environment or .env")
 	}
 	jwtSecret = []byte(secret)
+	rsec := os.Getenv("REFRESH_JWT_SECRET")
+	if strings.TrimSpace(rsec) == "" {
+		log.Fatal("REFRESH_JWT_SECRET is required; set it via environment or .env")
+	}
+	refreshSecret = []byte(rsec)
 	if v := os.Getenv("CORS_ORIGINS"); v != "" {
 		parts := strings.Split(v, ",")
 		for _, p := range parts {
@@ -491,12 +497,13 @@ func main() {
 		RDB.SAdd(ctx, "rooms", room)
 	}
 
-	h := NewHandler(RDB, jwtSecret)
+	h := NewHandler(RDB, jwtSecret, refreshSecret)
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { handleConnections(a, w, r) })
 	http.HandleFunc("/login", WithCORS(h.LoginHandler))
 	http.HandleFunc("/register", WithCORS(h.RegisterHandler))
 	http.HandleFunc("/user-info", WithCORS(h.WithAuth(h.UserInfoHandler)))
+	http.HandleFunc("/refresh", WithCORS(h.RefreshHandler))
 	http.HandleFunc("/history", WithCORS(h.WithAuth(h.GetChatHistoryHandler)))
 	http.HandleFunc("/rooms", WithCORS(h.WithAuth(h.GetRoomsHandler)))
 	http.HandleFunc("/subscribe", WithCORS(h.WithAuth(h.SubscribeToRoomHandler)))

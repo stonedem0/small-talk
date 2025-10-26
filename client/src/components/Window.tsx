@@ -190,7 +190,7 @@ const Window = ({
     if (!roomName) {
       return;
     }
-    const response = await fetch(`${API_URL}/create-room`, {
+      const response = await fetch(`${API_URL}/create-room`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${localStorage.getItem("token")}`
