@@ -11,7 +11,7 @@ import (
 
 var appHealth atomic.Value
 
-func healthzHandler(w http.ResponseWriter, r *http.Request) {
+func HealthzHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -24,7 +24,7 @@ func healthzHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
-func heartbeatHandler(w http.ResponseWriter, r *http.Request) {
+func HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -41,7 +41,7 @@ func heartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
-func joinHandler(w http.ResponseWriter, r *http.Request) {
+func JoinHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return

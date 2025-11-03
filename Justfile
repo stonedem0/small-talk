@@ -26,6 +26,10 @@ server-prod:
 client-prod:
   cd apps/app/client && npm run preview
 
+# Run Directory service (set DIRECTORY_PORT to override, default 8081)
+directory:
+  cd apps/directory && DIRECTORY_PORT=${DIRECTORY_PORT:-8081} go run .
+
 # Deploy React client (dist folder) to EC2
 deploy-client:
   just build
