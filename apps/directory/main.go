@@ -15,7 +15,7 @@ func main() {
 	})
 	http.HandleFunc("/health", HealthHandler)
 	http.HandleFunc("/heartbeat", st.HeartbeatHandler)
-	http.HandleFunc("/join", JoinHandler)
+	http.HandleFunc("/join", st.JoinHandler)
 	port := os.Getenv("DIRECTORY_PORT")
 	if port == "" {
 		port = "8081"

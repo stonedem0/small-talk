@@ -2,9 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 )
@@ -72,7 +70,6 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "AppID and WSURL are required"})
 		return
 	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	a, ok := s.apps[hb.AppID]
@@ -80,31 +77,39 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 		a = &App{AppID: hb.AppID}
 		s.apps[hb.AppID] = a
 	}
+	a.WSURL = hb.WSURL
+	a.Total = hb.Total
+	if hb.Rooms != nil {
+		a.Rooms = hb.Rooms
+	}
+	a.Draining = hb.Draining
+	a.LastSeen = time.Now()
+	a.Healthy = true
 
-	// body, _ := io.ReadAll(r.Body)
-	// _ = r.Body.Close()
-	log.Printf("heartbeat: %s", hb)
-	// appHealth.Store(string(body))
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("ok"))
 }
 
-func JoinHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request method"})
-		return
-	}
-	room := strings.TrimSpace(r.URL.Query().Get("room"))
+func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
+	room := r.URL.Query().Get("room")
 	if room == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Room parameter is required"})
+		w.Write([]byte("Room parameter is required"))
 		return
 	}
-	_ = json.NewEncoder(w).Encode(map[string]string{"room": room, "message": "joined"})
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, a := range s.apps {
+		if a.Healthy && !a.Draining && a.WSURL != "" {
+			// later: add HRW + capacity check. for now just return ws url.
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"wss_url": a.WSURL + "?room=" + room,
+			})
+			return
+		}
+	}
+	http.Error(w, "no healthy apps", http.StatusServiceUnavailable)
+
 }
 
 func (s *State) MarkStale() {
