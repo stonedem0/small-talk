@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 func main() {
@@ -21,5 +22,12 @@ func main() {
 	}
 	addr := ":" + port
 	log.Printf("Directory service starting on %s", addr)
+	// background: mark apps/owners stale over time
+	go func() {
+		t := time.NewTicker(2 * time.Second)
+		for range t.C {
+			st.MarkStale()
+		}
+	}()
 	http.ListenAndServe(addr, nil)
 }

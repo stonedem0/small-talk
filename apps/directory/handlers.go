@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -82,9 +81,9 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 		s.apps[hb.AppID] = a
 	}
 
-	body, _ := io.ReadAll(r.Body)
-	_ = r.Body.Close()
-	log.Printf("heartbeat: %s", string(body))
+	// body, _ := io.ReadAll(r.Body)
+	// _ = r.Body.Close()
+	log.Printf("heartbeat: %s", hb)
 	// appHealth.Store(string(body))
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
@@ -106,4 +105,13 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = json.NewEncoder(w).Encode(map[string]string{"room": room, "message": "joined"})
+}
+
+func (s *State) MarkStale() {
+	now := time.Now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, a := range s.apps {
+		a.Healthy = !a.Draining && now.Sub(a.LastSeen) <= s.healthyTTL
+	}
 }
