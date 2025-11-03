@@ -1,10 +1,10 @@
 # Run Go server with air
 server:
-  cd server && air
+  cd apps/app/server && air
 
 # Run React client with Vite
 client:
-  cd client && npm run dev
+  cd apps/app/client && npm run dev
 
 # Run both servers concurrently using shell
 dev:
@@ -12,7 +12,7 @@ dev:
 
 # Build React client
 build:
-  cd client && npm run build
+  cd apps/app/client && npm run build
 
 # Run in production (Go server + built React app)
 start:
@@ -20,30 +20,30 @@ start:
 
 # Run Go server in production
 server-prod:
-  cd server && go run main.go
+  cd apps/app/server && go run main.go
 
 # Preview built React app in production
 client-prod:
-  cd client && npm run preview
+  cd apps/app/client && npm run preview
 
 # Deploy React client (dist folder) to EC2
 deploy-client:
   just build
-  ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/client'
-  scp -i $SSH_KEY -r client/dist/ ubuntu@$EC2_IP:/home/ubuntu/small-talk/client/
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/apps/app/client'
+  scp -i $SSH_KEY -r apps/app/client/dist/ ubuntu@$EC2_IP:/home/ubuntu/small-talk/apps/app/client/
   ssh -i $SSH_KEY ubuntu@$EC2_IP 'sudo systemctl restart react-client'
 
 # Deploy Go server to EC2
 deploy-server:
-  ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/server'
-  scp -i $SSH_KEY -r server/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/server/
-  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/server && GO111MODULE=on /usr/local/go/bin/go build -o chat-server && sudo systemctl restart chat-server'
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/apps/app/server'
+  scp -i $SSH_KEY -r apps/app/server/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/apps/app/server/
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/apps/app/server && GO111MODULE=on /usr/local/go/bin/go build -o chat-server && sudo systemctl restart chat-server'
 
 # Deploy both frontend (dist) and backend simultaneously
 deploy:
   just build
-  ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/client /home/ubuntu/small-talk/server'
-  scp -i $SSH_KEY -r client/dist/ ubuntu@$EC2_IP:/home/ubuntu/small-talk/client/
-  scp -i $SSH_KEY -r server/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/server/
-  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/server && GO111MODULE=on /usr/local/go/bin/go build -o chat-server && sudo systemctl restart chat-server && sudo systemctl restart react-client'
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/apps/app/client /home/ubuntu/small-talk/apps/app/server'
+  scp -i $SSH_KEY -r apps/app/client/dist/ ubuntu@$EC2_IP:/home/ubuntu/small-talk/apps/app/client/
+  scp -i $SSH_KEY -r apps/app/server/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/apps/app/server/
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/apps/app/server && GO111MODULE=on /usr/local/go/bin/go build -o chat-server && sudo systemctl restart chat-server && sudo systemctl restart react-client'
 

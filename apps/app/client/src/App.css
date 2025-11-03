@@ -1,0 +1,176 @@
+:root {
+  --deep-purple: #4a00f7;
+  --purple-gradient: linear-gradient(
+    to bottom,
+    rgba(74, 0, 247, 1) 47%,
+    rgba(120, 44, 255, 1) 75%
+  );
+  --close-gradient: linear-gradient(
+    to bottom,
+    rgba(199, 1, 149, 1) 0%,
+    rgba(247, 37, 133, 1) 35%,
+    rgba(247, 88, 88, 1) 100%
+  );
+  --window-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --button-shadow: inset 0 3px 5px rgba(255, 255, 255, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+  --button-shadow-active: inset 0 3px 6px rgba(0, 0, 0, 0.4);
+  --header-shadow: inset 0 3px 5px rgba(255, 255, 255, 0.6);
+}
+
+html,
+body {
+  height: 100%; 
+  margin: 0;
+  padding: 0;
+  background-image: url("./assets/bg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  font-family: "Trebuchet MS";
+  font-size: 15px;
+}
+
+#main-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 39px;
+}
+
+
+.username {
+  color: var(--deep-purple);
+}
+
+.sign-out-btn {
+  background-color: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.sign-out-btn:hover {
+  background-color: #ff5252;
+}
+
+* {
+  font-family: "Trebuchet MS";
+}
+
+/* Scrollbar Variables */
+:root {
+  --scroll-track-bg: #f1f1f1;
+  --scroll-thumb-bg: #4a00f7;
+  --scroll-thumb-shadow-light: #ffffff;
+  --scroll-thumb-shadow-dark: #2a00d7;
+  --scroll-button-bg: #ccc;
+  --scroll-button-shadow-light: #ffffff;
+  --scroll-button-shadow-dark: #a2a2a2;
+  --scroll-arrow-color: #1C1C1C;
+}
+
+/* Custom Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 18px;
+}
+
+::-webkit-scrollbar:horizontal {
+  height: 18px;
+}
+
+::-webkit-scrollbar-track {
+  background: linear-gradient(to right, #fff9ff 0%, #f4effc 10%, #ebe0fd 100%);
+  
+}
+
+::-webkit-scrollbar-thumb {
+  height: 115px;
+  background-color: transparent !important;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'><rect fill='%23784cff' opacity='0.6' x='2' y='4' width='12' height='1'/><rect fill='%23784cff' opacity='0.6' x='2' y='7' width='12' height='1'/><rect fill='%23784cff' opacity='0.6' x='2' y='10' width='12' height='1'/></svg>"),
+    linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  background-repeat: no-repeat, no-repeat !important;
+  background-position: center, center !important;
+  background-size: auto, cover;
+  border: 1px solid var(--scroll-thumb-bg) !important;
+  box-shadow:
+    inset 1px 1px 1px rgba(255, 255, 255, 0.6),
+    inset -1px -1px 1px rgba(0, 0, 0, 0.12),
+    0 0 0 1px #caaaff;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  box-shadow: inset -2px 2px 1px var(--scroll-thumb-shadow-light),
+    inset 2px -2px 1px #636265 !important;
+}
+
+::-webkit-scrollbar-button {
+  background-color: var(--scroll-button-shadow-light) !important;
+  height: 16px;
+  width: 20px;
+  border: 1px solid var(--scroll-thumb-bg) !important;
+  display: block !important;
+}
+
+::-webkit-scrollbar-button:vertical:decrement {
+  height: 18px;
+  width: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='4,10 8,6 12,10' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), 
+  linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  background-repeat: no-repeat, no-repeat !important;
+  background-position: center;
+
+}
+
+::-webkit-scrollbar-button:vertical:increment {
+  height: 18px;
+  width: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='4,6 8,10 12,6' fill='none'  stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),   linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  background-repeat: no-repeat;
+  background-position: center;
+
+}
+
+::-webkit-scrollbar-button:horizontal:decrement {
+  height: 18px;
+  width: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='10,4 6,8 10,12' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+::-webkit-scrollbar-button:horizontal:increment {
+  height: 18px;
+  width: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='6,4 10,8 6,12' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+::-webkit-scrollbar-button:vertical:increment:start,
+::-webkit-scrollbar-button:vertical:decrement:end {
+  display: none !important;
+  border: none !important;
+}
+
+::-webkit-scrollbar-button:horizontal:increment:start,
+::-webkit-scrollbar-button:horizontal:decrement:end {
+  display: none !important;
+  border: none !important;
+}
+
+
+
+/* Firefox support */
+@-moz-document url-prefix() {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb-bg) var(--scroll-track-bg);
+  }
+}
+
