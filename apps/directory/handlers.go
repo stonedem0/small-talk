@@ -5,7 +5,11 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/stonedem0/small-talk/internal/shared"
 )
+
+const ROOM_CAPACITY = 300 // max users per room
 
 type Heartbeat struct {
 	AppID      string         `json:"app_id"`
@@ -16,13 +20,13 @@ type Heartbeat struct {
 }
 
 type App struct {
-	AppID    string
-	WSURL    string
-	Total    int
-	Rooms    map[string]int
-	Draining bool
-	LastSeen time.Time
-	Healthy  bool
+	AppID      string
+	WSURL      string
+	UsersTotal int
+	Rooms      map[string]int
+	Draining   bool
+	LastSeen   time.Time
+	Healthy    bool
 }
 
 type State struct {
@@ -76,7 +80,7 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 		s.apps[hb.AppID] = a
 	}
 	a.WSURL = hb.WSURL
-	a.Total = hb.UsersTotal
+	a.UsersTotal = hb.UsersTotal
 	if hb.Rooms != nil {
 		a.Rooms = hb.Rooms
 	}
@@ -89,25 +93,79 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	room := r.URL.Query().Get("room")
 	if room == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Room parameter is required"))
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "room parameter is required"})
 		return
 	}
+
+	// keep health fresh
+	s.MarkStale()
+
+	apps := s.GetHealthyAppIDs()
+	if len(apps) == 0 {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "no healthy apps"})
+		return
+	}
+
+	ranked := shared.RankApps(room, apps)
+
+	for _, appID := range ranked {
+		if !s.BelowRoomLimit(appID, room) {
+			continue
+		}
+		ws, ok := s.WSURL(appID)
+		if !ok || ws == "" {
+			continue
+		}
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"wss_url": ws + "?room=" + room,
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusTooManyRequests)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": "room_full"})
+}
+
+func (s *State) WSURL(appID string) (string, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	a, ok := s.apps[appID]
+	if !ok {
+		return "", false
+	}
+	return a.WSURL, a.WSURL != ""
+}
+
+func (s *State) BelowRoomLimit(appID, room string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	a, ok := s.apps[appID]
+	if !ok {
+		return false
+	}
+	cur := 0
+	if a.Rooms != nil {
+		cur = a.Rooms[room]
+	}
+	return cur < ROOM_CAPACITY
+}
+
+func (s *State) GetHealthyAppIDs() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	appIDs := make([]string, 0)
 	for _, a := range s.apps {
 		if a.Healthy && !a.Draining && a.WSURL != "" {
-			// later: add HRW + capacity check. for now just return ws url.
-			_ = json.NewEncoder(w).Encode(map[string]string{
-				"wss_url": a.WSURL + "?room=" + room,
-			})
-			return
+			appIDs = append(appIDs, a.AppID)
 		}
 	}
-	http.Error(w, "no healthy apps", http.StatusServiceUnavailable)
-
+	return appIDs
 }
 
 func (s *State) MarkStale() {
