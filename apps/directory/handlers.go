@@ -7,14 +7,12 @@ import (
 	"time"
 )
 
-// var appHealth atomic.Value
-
 type Heartbeat struct {
-	AppID    string         `json:"app_id"`
-	WSURL    string         `json:"ws_url"` // e.g. wss://app-7.example.com/ws
-	Rooms    map[string]int `json:"rooms,omitempty"`
-	Total    int            `json:"total,omitempty"`
-	Draining bool
+	AppID      string         `json:"app_id"`
+	WSURL      string         `json:"ws_url"` // e.g. wss://app-7.example.com/ws
+	Rooms      map[string]int `json:"rooms,omitempty"`
+	UsersTotal int            `json:"total,omitempty"`
+	Draining   bool
 }
 
 type App struct {
@@ -78,7 +76,7 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 		s.apps[hb.AppID] = a
 	}
 	a.WSURL = hb.WSURL
-	a.Total = hb.Total
+	a.Total = hb.UsersTotal
 	if hb.Rooms != nil {
 		a.Rooms = hb.Rooms
 	}
