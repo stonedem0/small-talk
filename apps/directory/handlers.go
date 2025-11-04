@@ -16,7 +16,7 @@ type Heartbeat struct {
 	WSURL      string         `json:"ws_url"` // e.g. wss://app-7.example.com/ws
 	Rooms      map[string]int `json:"rooms,omitempty"`
 	UsersTotal int            `json:"total,omitempty"`
-	Draining   bool
+	Draining   bool           `json:"draining,omitempty"`
 }
 
 type App struct {
@@ -101,8 +101,6 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "room parameter is required"})
 		return
 	}
-
-	// keep health fresh
 	s.MarkStale()
 
 	apps := s.GetHealthyAppIDs()
