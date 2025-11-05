@@ -1,6 +1,7 @@
-node_modules/
-.env
-server/tmp/
-client/dist/
+**/.env
+**/node_modules/
+**/dist/
+**/tmp/
+**/*.log
 server/small-talk
 server/chat-server
