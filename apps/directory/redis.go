@@ -32,6 +32,9 @@ func Init() {
 
 func Owner(room string) (string, error) {
 	val, err := RDB.Get(ctx, key(room)).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
 	return val, err
 }
 
