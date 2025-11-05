@@ -103,6 +103,14 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	s.MarkStale()
 
+	if owner, _ := Owner(room); owner != "" {
+		if a, ok := s.getApp(owner); ok && a.Healthy && !a.Draining && s.belowRoomLimit(owner, room) {
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"wss_url": a.WSURL + "?room=" + room,
+			})
+			return
+		}
+	}
 	apps := s.GetHealthyAppIDs()
 	if len(apps) == 0 {
 		w.WriteHeader(http.StatusServiceUnavailable)
@@ -113,17 +121,24 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 	ranked := shared.RankApps(room, apps)
 
 	for _, appID := range ranked {
-		if !s.BelowRoomLimit(appID, room) {
+		if !s.belowRoomLimit(appID, room) {
 			continue
 		}
-		ws, ok := s.WSURL(appID)
-		if !ok || ws == "" {
+		claimed, err := TryClaim(room, appID)
+		if err != nil || !claimed {
 			continue
 		}
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"wss_url": ws + "?room=" + room,
-		})
-		return
+		if a, ok := s.getApp(appID); ok && a.WSURL != "" {
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"wss_url": a.WSURL + "?room=" + room,
+			})
+			return
+		}
+		err = Release(room, appID)
+		if err != nil {
+			continue
+		}
+
 	}
 
 	w.WriteHeader(http.StatusTooManyRequests)
@@ -140,7 +155,7 @@ func (s *State) WSURL(appID string) (string, bool) {
 	return a.WSURL, a.WSURL != ""
 }
 
-func (s *State) BelowRoomLimit(appID, room string) bool {
+func (s *State) belowRoomLimit(appID, room string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	a, ok := s.apps[appID]
@@ -152,6 +167,13 @@ func (s *State) BelowRoomLimit(appID, room string) bool {
 		cur = a.Rooms[room]
 	}
 	return cur < ROOM_CAPACITY
+}
+
+func (s *State) getApp(id string) (*App, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	a, ok := s.apps[id]
+	return a, ok
 }
 
 func (s *State) GetHealthyAppIDs() []string {
