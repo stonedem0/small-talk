@@ -48,6 +48,7 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request method"})
@@ -62,6 +63,7 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request method"})
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	var hb Heartbeat
 	if err := json.NewDecoder(r.Body).Decode(&hb); err != nil {
 		log.Printf("heartbeat decode error: %v", err)
@@ -106,7 +108,7 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("heartbeat ok app=%s total=%d draining=%v", hb.AppID, hb.UsersTotal, hb.Draining)
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ok"))
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +135,7 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("join: owner app not eligible app=%s room=%s", owner, room)
 	}
-	apps := s.GetHealthyAppIDs()
+	apps := s.getHealthyAppIDs()
 	if len(apps) == 0 {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "no healthy apps"})
@@ -208,7 +210,7 @@ func (s *State) getApp(id string) (*App, bool) {
 	return a, ok
 }
 
-func (s *State) GetHealthyAppIDs() []string {
+func (s *State) getHealthyAppIDs() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	appIDs := make([]string, 0)
