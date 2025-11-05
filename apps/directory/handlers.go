@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -47,6 +48,7 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request method"})
@@ -61,13 +63,16 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request method"})
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	var hb Heartbeat
 	if err := json.NewDecoder(r.Body).Decode(&hb); err != nil {
+		log.Printf("heartbeat decode error: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
 	if hb.AppID == "" || hb.WSURL == "" {
+		log.Printf("heartbeat missing fields: app_id=%q ws_url=%q", hb.AppID, hb.WSURL)
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "AppID and WSURL are required"})
 		return
@@ -88,8 +93,22 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	a.LastSeen = time.Now()
 	a.Healthy = true
 
+	for room, count := range hb.Rooms {
+		if count > 0 {
+			if err := RefreshLease(room, hb.AppID); err != nil {
+				log.Printf("refresh lease error room=%s app=%s: %v", room, hb.AppID, err)
+			}
+		} else {
+			if err := Release(room, hb.AppID); err != nil {
+				log.Printf("release lease error room=%s app=%s: %v", room, hb.AppID, err)
+			}
+		}
+	}
+
+	log.Printf("heartbeat ok app=%s total=%d draining=%v", hb.AppID, hb.UsersTotal, hb.Draining)
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ok"))
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
@@ -99,35 +118,65 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 	if room == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "room parameter is required"})
+		log.Printf("join: missing room param")
 		return
 	}
 	s.MarkStale()
 
-	apps := s.GetHealthyAppIDs()
+	if owner, err := Owner(room); err != nil {
+		log.Printf("join: owner lookup error room=%s: %v", room, err)
+	} else if owner != "" {
+		if a, ok := s.getApp(owner); ok && a.Healthy && !a.Draining && s.belowRoomLimit(owner, room) {
+			log.Printf("join: using owner app=%s for room=%s", owner, room)
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"wss_url": a.WSURL + "?room=" + room,
+			})
+			return
+		}
+		log.Printf("join: owner app not eligible app=%s room=%s", owner, room)
+	}
+	apps := s.getHealthyAppIDs()
 	if len(apps) == 0 {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "no healthy apps"})
+		log.Printf("join: no healthy apps for room=%s", room)
 		return
 	}
 
 	ranked := shared.RankApps(room, apps)
 
 	for _, appID := range ranked {
-		if !s.BelowRoomLimit(appID, room) {
+		if !s.belowRoomLimit(appID, room) {
+			log.Printf("join: app over room limit app=%s room=%s", appID, room)
 			continue
 		}
-		ws, ok := s.WSURL(appID)
-		if !ok || ws == "" {
+		claimed, err := TryClaim(room, appID)
+		if err != nil {
+			log.Printf("join: try-claim error room=%s app=%s: %v", room, appID, err)
 			continue
 		}
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"wss_url": ws + "?room=" + room,
-		})
-		return
+		if !claimed {
+			log.Printf("join: try-claim conflict room=%s app=%s", room, appID)
+			continue
+		}
+		if a, ok := s.getApp(appID); ok && a.WSURL != "" {
+			log.Printf("join: assigned app=%s for room=%s", appID, room)
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"wss_url": a.WSURL + "?room=" + room,
+			})
+			return
+		}
+		err = Release(room, appID)
+		if err != nil {
+			log.Printf("join: release error room=%s app=%s: %v", room, appID, err)
+			continue
+		}
+
 	}
 
 	w.WriteHeader(http.StatusTooManyRequests)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": "room_full"})
+	log.Printf("join: room full room=%s", room)
 }
 
 func (s *State) WSURL(appID string) (string, bool) {
@@ -140,7 +189,7 @@ func (s *State) WSURL(appID string) (string, bool) {
 	return a.WSURL, a.WSURL != ""
 }
 
-func (s *State) BelowRoomLimit(appID, room string) bool {
+func (s *State) belowRoomLimit(appID, room string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	a, ok := s.apps[appID]
@@ -154,7 +203,14 @@ func (s *State) BelowRoomLimit(appID, room string) bool {
 	return cur < ROOM_CAPACITY
 }
 
-func (s *State) GetHealthyAppIDs() []string {
+func (s *State) getApp(id string) (*App, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	a, ok := s.apps[id]
+	return a, ok
+}
+
+func (s *State) getHealthyAppIDs() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	appIDs := make([]string, 0)
