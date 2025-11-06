@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
-import { API_URL, WS_URL } from "../config";
+import { API_URL } from "../config";
 import { authFetch } from "../utils/authFetch";
 import { format } from 'date-fns';
 import PrimaryButton from "../components/PrimaryButton";
+
+const DIR_URL = (import.meta as any).env?.VITE_DIRECTORY_URL || "http://localhost:8081";
 // Simple sanitizer that whitelists a small set of tags/attrs
 const sanitizeHtml = (dirty: string): string => {
   const allowedTags = new Set(["STRONG","EM","U","DEL","CODE","A"]);
@@ -127,10 +129,13 @@ const Chat = ({ username }: ChatProps) => {
           setMessages([]);
         }
         const token = localStorage.getItem("token") || "";
-        // Send token via subprotocol; also include query fallback for compatibility while debugging
-        ws.current = new WebSocket(`${WS_URL}/ws?room=${roomName}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`, [
-          token
-        ].filter(Boolean));
+        const joinRes = await authFetch(`${DIR_URL}/join?room=${encodeURIComponent(roomName!)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!joinRes.ok) throw new Error(`join failed: ${joinRes.status}`);
+        const { wss_url, app_id } = await joinRes.json();
+        console.log("directory/join →", { wss_url, app_id });
+        ws.current = new WebSocket(wss_url, [`Bearer ${token}`]);
         
         ws.current.onopen = () => {
           setIsLoadingMessages(false);
