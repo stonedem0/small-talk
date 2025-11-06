@@ -16,7 +16,7 @@ func main() {
 	})
 	http.HandleFunc("/health", HealthHandler)
 	http.HandleFunc("/heartbeat", st.HeartbeatHandler)
-	http.HandleFunc("/join", st.JoinHandler)
+	http.HandleFunc("/join", withCORSAndAuth(true, st.JoinHandler))
 	port := os.Getenv("DIRECTORY_PORT")
 	if port == "" {
 		port = "8081"

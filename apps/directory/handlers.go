@@ -2,11 +2,15 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stonedem0/small-talk/internal/shared"
 )
 
@@ -41,6 +45,107 @@ func NewState() *State {
 		apps:       make(map[string]*App),
 		healthyTTL: 10 * time.Second,
 	}
+}
+func withCORSAndAuth(requireAuth bool, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if o := allowOrigin(origin); o != "" {
+			w.Header().Set("Access-Control-Allow-Origin", o)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Vary", "Origin")
+		}
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if requireAuth {
+			tok := extractBearer(r)
+			if tok == "" {
+				w.WriteHeader(http.StatusUnauthorized)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "missing token"})
+				return
+			}
+			if _, err := requireJWT(tok); err != nil {
+				w.WriteHeader(http.StatusUnauthorized)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid token"})
+				return
+			}
+		}
+
+		next.ServeHTTP(w, r)
+	}
+}
+
+var allowedOrigins = func() []string {
+	s := os.Getenv("DIRECTORY_CORS_ORIGINS")
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if v := strings.TrimSpace(p); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}()
+
+func allowOrigin(origin string) string {
+	if origin == "" {
+		return ""
+	}
+	if len(allowedOrigins) == 0 {
+		return origin // dev: reflect
+	}
+	for _, a := range allowedOrigins {
+		if a == origin {
+			return origin
+		}
+	}
+	return ""
+}
+
+func dirJWTSecret() []byte {
+	if v := os.Getenv("DIRECTORY_JWT_SECRET"); strings.TrimSpace(v) != "" {
+		return []byte(v)
+	}
+	return []byte(os.Getenv("JWT_SECRET"))
+}
+
+func extractBearer(r *http.Request) string {
+	if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
+		return strings.TrimPrefix(auth, "Bearer ")
+	}
+	if v := r.URL.Query().Get("token"); v != "" {
+		return v
+	}
+	return ""
+}
+
+func requireJWT(tokenStr string) (jwt.MapClaims, error) {
+	secret := dirJWTSecret()
+	if len(secret) == 0 {
+		return nil, fmt.Errorf("directory jwt secret not configured")
+	}
+	tok, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok || t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected jwt alg: %v", t.Header["alg"])
+		}
+		return secret, nil
+	})
+	if err != nil || !tok.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+	cl, ok := tok.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid claims")
+	}
+	return cl, nil
 }
 
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
