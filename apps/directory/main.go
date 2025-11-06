@@ -1,22 +1,21 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	_ = godotenv.Load()
 	st := NewState()
 	RedisInit()
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello, World!")
-	})
 	http.HandleFunc("/health", HealthHandler)
 	http.HandleFunc("/heartbeat", st.HeartbeatHandler)
-	http.HandleFunc("/join", st.JoinHandler)
+	http.HandleFunc("/join", withCORSAndAuth(true, st.JoinHandler))
 	port := os.Getenv("DIRECTORY_PORT")
 	if port == "" {
 		port = "8081"
