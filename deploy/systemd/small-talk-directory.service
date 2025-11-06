@@ -1,0 +1,24 @@
+[Unit]
+Description=Small Talk - Directory Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=smalltalk
+Group=smalltalk
+EnvironmentFile=/etc/small-talk/directory.env
+ExecStart=/usr/local/bin/small-talk-directory
+WorkingDirectory=/var/lib/small-talk
+Restart=always
+RestartSec=3
+KillSignal=SIGINT
+TimeoutStopSec=20
+AmbientCapabilities=
+NoNewPrivileges=true
+
+SyslogIdentifier=small-talk-directory
+
+[Install]
+WantedBy=multi-user.target
+

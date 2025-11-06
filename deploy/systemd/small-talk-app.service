@@ -1,0 +1,26 @@
+[Unit]
+Description=Small Talk - App Server
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=smalltalk
+Group=smalltalk
+EnvironmentFile=/etc/small-talk/app.env
+# If you deploy the binary elsewhere, update this path
+ExecStart=/usr/local/bin/small-talk-app
+WorkingDirectory=/var/lib/small-talk
+Restart=always
+RestartSec=3
+KillSignal=SIGINT
+TimeoutStopSec=20
+AmbientCapabilities=
+NoNewPrivileges=true
+
+# Journald log identifier
+SyslogIdentifier=small-talk-app
+
+[Install]
+WantedBy=multi-user.target
+

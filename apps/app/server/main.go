@@ -181,6 +181,7 @@ func readPump(c *client) {
 			delete(set, c)
 		}
 		roomsLock.Unlock()
+		roomsCounter.dec(c.room)
 		safeClose(c.send, &c.closed)
 		c.conn.Close()
 
@@ -254,21 +255,18 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Prefer Authorization: Bearer <token>; fallback to Sec-WebSocket-Protocol or query token
 	var tokenStr string
 	if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
 		tokenStr = strings.TrimPrefix(auth, "Bearer ")
 	}
 	if tokenStr == "" {
 		if proto := r.Header.Get("Sec-WebSocket-Protocol"); proto != "" {
-			// Support either single token or comma-separated list where one item is Bearer <token>
 			for _, p := range strings.Split(proto, ",") {
 				p = strings.TrimSpace(p)
 				if strings.HasPrefix(p, "Bearer ") {
 					tokenStr = strings.TrimPrefix(p, "Bearer ")
 					break
 				}
-				// If no Bearer prefix, accept raw token for simplicity
 				if tokenStr == "" && p != "" {
 					tokenStr = p
 				}
@@ -315,9 +313,6 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 	// Echo back a selected subprotocol if the client sent one (required by browsers when specified)
 	var respHeader http.Header
 	if proto := r.Header.Get("Sec-WebSocket-Protocol"); proto != "" {
-		// Choose the first acceptable protocol we parsed earlier
-		// Reconstruct from the original header to ensure exact echo
-		// Prefer Bearer token entry
 		var chosen string
 		parts := strings.Split(proto, ",")
 		for _, p := range parts {
@@ -348,6 +343,8 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 	}
 	rooms[room][c] = struct{}{}
 	roomsLock.Unlock()
+
+	roomsCounter.inc(room)
 
 	onlineUsersLock.Lock()
 	if onlineUsers[room] == nil {
@@ -436,6 +433,9 @@ func subscribeToRoom(ctx context.Context, room string) {
 func (a *app) gracefulShutdown(ctx context.Context) {
 	log.Println("➜ graceful shutdown started")
 	a.shutting.Store(true)
+	drainingFlag.Store(true)
+	sendHeartbeat()
+	a.cancel()
 	shutdownMsg := Message{Type: "system", Message: "server_shutdown", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 	b, _ := json.Marshal(shutdownMsg)
 	roomsLock.RLock()
@@ -487,6 +487,8 @@ func main() {
 	InitRedis()
 
 	root, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	startHeartbeat(root)
 	a := &app{
 		server:   &http.Server{Addr: ":" + port},
 		wg:       sync.WaitGroup{},
@@ -512,7 +514,6 @@ func main() {
 	http.HandleFunc("/create-room", WithCORS(h.WithAuth(h.CreateRoomHandler)))
 	http.HandleFunc("/update-username", WithCORS(h.WithAuth(h.UpdateUsernameHandler)))
 	http.HandleFunc("/update-password", WithCORS(h.WithAuth(h.UpdatePasswordHandler)))
-	// debug endpoint removed
 
 	addr := ":" + port
 	log.Println("Server starting on", addr)
