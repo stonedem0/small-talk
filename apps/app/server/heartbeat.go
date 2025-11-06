@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand/v2"
 	"net/http"
@@ -108,6 +109,7 @@ func sendHeartbeat() {
 		log.Printf("heartbeat: post error: %v", err)
 		return
 	}
+	fmt.Println("sent heartbeat")
 	_ = resp.Body.Close()
 	if resp.StatusCode != 200 {
 		log.Printf("heartbeat: non-200: %d", resp.StatusCode)
