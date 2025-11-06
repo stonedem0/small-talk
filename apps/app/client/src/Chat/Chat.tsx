@@ -135,7 +135,7 @@ const Chat = ({ username }: ChatProps) => {
         if (!joinRes.ok) throw new Error(`join failed: ${joinRes.status}`);
         const { wss_url, app_id } = await joinRes.json();
         console.log("directory/join →", { wss_url, app_id });
-        ws.current = new WebSocket(wss_url, [`Bearer ${token}`]);
+        ws.current = new WebSocket(wss_url, [token]);
         
         ws.current.onopen = () => {
           setIsLoadingMessages(false);
