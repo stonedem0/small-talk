@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/stonedem0/small-talk/internal/shared"
 )
 
 const ROOM_CAPACITY = 300 // max users per room
@@ -258,7 +257,14 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ranked := shared.RankApps(room, apps)
+	ranked := s.WeightedRankApps(room, apps)
+	for i := 0; i < len(ranked) && i < 3; i++ {
+		a := s.apps[ranked[i]]
+		if a != nil && a.Stats != nil {
+			log.Printf("rank %d: %s w=%.3f cpu=%.0f%% mem=%dMB users=%d",
+				i+1, a.AppID, nodeWeight(a), a.Stats.CPUPercent, a.Stats.RSSMB, a.UsersTotal)
+		}
+	}
 
 	for _, appID := range ranked {
 		if !s.belowRoomLimit(appID, room) {
