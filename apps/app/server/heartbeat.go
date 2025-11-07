@@ -29,6 +29,7 @@ type hbPayload struct {
 	Rooms      map[string]int `json:"rooms,omitempty"`
 	UsersTotal int            `json:"total,omitempty"`
 	Draining   bool           `json:"draining,omitempty"`
+	Stats      NodeStats      `json:"stats,omitempty"`
 }
 
 type roomCounters struct {
@@ -99,6 +100,7 @@ func sendHeartbeat() {
 		Rooms:      rooms, // only >0
 		UsersTotal: total,
 		Draining:   drainingFlag.Load(),
+		Stats:      collectNodeStats(),
 	}
 	b, _ := json.Marshal(payload)
 
