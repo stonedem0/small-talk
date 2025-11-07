@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-func score(room, appID string) uint64 {
+func Score(room, appID string) uint64 {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(room))
 	_, _ = h.Write([]byte("|"))
@@ -20,7 +20,7 @@ func RankApps(room string, appIDs []string) []string {
 	}
 	ps := make([]pair, 0, len(appIDs))
 	for _, id := range appIDs {
-		ps = append(ps, pair{id, score(room, id)})
+		ps = append(ps, pair{id, Score(room, id)})
 	}
 	sort.Slice(ps, func(i, j int) bool { return ps[i].s > ps[j].s })
 	out := make([]string, len(ps))

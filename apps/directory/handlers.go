@@ -16,12 +16,21 @@ import (
 
 const ROOM_CAPACITY = 300 // max users per room
 
+type NodeStats struct {
+	Goroutines    int
+	RSSMB         uint64
+	LastGCPauseMS uint64
+	NumGC         uint32
+	CPUPercent    float64
+}
+
 type Heartbeat struct {
 	AppID      string         `json:"app_id"`
 	WSURL      string         `json:"ws_url"` // e.g. wss://app-7.example.com/ws
 	Rooms      map[string]int `json:"rooms,omitempty"`
 	UsersTotal int            `json:"total,omitempty"`
 	Draining   bool           `json:"draining,omitempty"`
+	Stats      *NodeStats     `json:"stats,omitempty"`
 }
 
 type App struct {
@@ -32,6 +41,7 @@ type App struct {
 	Draining   bool
 	LastSeen   time.Time
 	Healthy    bool
+	Stats      *NodeStats
 }
 
 type State struct {
