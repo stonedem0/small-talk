@@ -1,14 +1,14 @@
 # Run Go server with air
-server:
-  cd apps/app/server && air
+server port="8080":
+  cd apps/app/server && PORT={{port}} air
 
 # Run React client with Vite
 client:
   cd apps/app/client && npm run dev
 
 # Run both servers concurrently using shell
-dev:
-  sh -c 'just server & just client'
+dev port="8080":
+  sh -c 'just server {{port}} & just client'
 
 # Build React client
 build:
@@ -19,16 +19,16 @@ start:
   sh -c 'just server-prod & just client-prod'
 
 # Run Go server in production
-server-prod:
-  cd apps/app/server && go run main.go
+server-prod port="8080":
+  cd apps/app/server && PORT={{port}} go run main.go
 
 # Preview built React app in production
 client-prod:
   cd apps/app/client && npm run preview
 
 # Run Directory service (set DIRECTORY_PORT to override, default 8081)
-directory:
-  cd apps/directory && DIRECTORY_PORT=${DIRECTORY_PORT:-8081} go run .
+directory port="8081":
+  cd apps/directory && DIRECTORY_PORT={{port}} go run .
 
 # Deploy React client (dist folder) to EC2
 deploy-client:
