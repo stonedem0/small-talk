@@ -1,6 +1,6 @@
 # Run Go server with air
 server port="8080":
-  cd apps/app/server && PORT={{port}} air
+  cd apps/app/server && PORT=$(printf "%s" {{port}} | sed 's/^port=//') air
 
 # Run React client with Vite
 client:
@@ -20,7 +20,7 @@ start:
 
 # Run Go server in production
 server-prod port="8080":
-  cd apps/app/server && PORT={{port}} go run main.go
+  cd apps/app/server && PORT=$(printf "%s" {{port}} | sed 's/^port=//') go run main.go
 
 # Preview built React app in production
 client-prod:
@@ -28,7 +28,7 @@ client-prod:
 
 # Run Directory service (set DIRECTORY_PORT to override, default 8081)
 directory port="8081":
-  cd apps/directory && DIRECTORY_PORT={{port}} go run .
+  cd apps/directory && DIRECTORY_PORT=$(printf "%s" {{port}} | sed 's/^port=//') go run .
 
 # Deploy React client (dist folder) to EC2
 deploy-client:

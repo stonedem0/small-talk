@@ -36,7 +36,7 @@ export default function () {
 
   const data = res.json();
   const url = data.wss_url; // e.g. ws://host:8080/ws?room=gaming
-  const params = { headers: { 'Sec-WebSocket-Protocol': `Bearer ${TOKEN}` } };
+  const params = { headers: { 'Sec-WebSocket-Protocol': `Bearer ${TOKEN}`, 'Origin': 'http://localhost:5173' } };
 
   const out = ws.connect(url, params, function (socket) {
     socket.on('open', function () {
