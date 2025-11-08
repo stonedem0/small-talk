@@ -11,10 +11,17 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/stonedem0/small-talk/internal/shared"
 )
 
 const ROOM_CAPACITY = 300 // max users per room
+
+type NodeStats struct {
+	Goroutines    int
+	RSSMB         uint64
+	LastGCPauseMS uint64
+	NumGC         uint32
+	CPUPercent    float64
+}
 
 type Heartbeat struct {
 	AppID      string         `json:"app_id"`
@@ -22,6 +29,7 @@ type Heartbeat struct {
 	Rooms      map[string]int `json:"rooms,omitempty"`
 	UsersTotal int            `json:"total,omitempty"`
 	Draining   bool           `json:"draining,omitempty"`
+	Stats      *NodeStats     `json:"stats,omitempty"`
 }
 
 type App struct {
@@ -32,6 +40,7 @@ type App struct {
 	Draining   bool
 	LastSeen   time.Time
 	Healthy    bool
+	Stats      *NodeStats
 }
 
 type State struct {
@@ -248,7 +257,14 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ranked := shared.RankApps(room, apps)
+	ranked := s.WeightedRankApps(room, apps)
+	for i := 0; i < len(ranked) && i < 3; i++ {
+		a := s.apps[ranked[i]]
+		if a != nil && a.Stats != nil {
+			log.Printf("rank %d: %s w=%.3f cpu=%.0f%% mem=%dMB users=%d",
+				i+1, a.AppID, nodeWeight(a), a.Stats.CPUPercent, a.Stats.RSSMB, a.UsersTotal)
+		}
+	}
 
 	for _, appID := range ranked {
 		if !s.belowRoomLimit(appID, room) {

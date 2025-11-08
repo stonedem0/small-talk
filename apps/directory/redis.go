@@ -22,6 +22,7 @@ func RedisInit() {
 	RDB = redis.NewClient(&redis.Options{
 		Addr:     os.Getenv("REDIS_ADDR"),
 		Password: os.Getenv("REDIS_PASSWORD"),
+		Username: os.Getenv("REDIS_USERNAME"),
 		DB:       0,
 	})
 	if err := RDB.Ping(ctx).Err(); err != nil {
