@@ -1,0 +1,18 @@
+# Directory service container
+FROM golang:1.23 as builder
+WORKDIR /src
+COPY . .
+# Build the directory service binary
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    cd apps/directory && go build -o /out/small-talk-directory
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=builder /out/small-talk-directory /usr/local/bin/small-talk-directory
+ENV DIRECTORY_PORT=8081
+EXPOSE 8081
+ENTRYPOINT ["/usr/local/bin/small-talk-directory"]
+
+

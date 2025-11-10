@@ -51,3 +51,18 @@ deploy:
   scp -i $SSH_KEY -r apps/app/server/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/apps/app/server/
   ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/apps/app/server && GO111MODULE=on /usr/local/go/bin/go build -o chat-server && sudo systemctl restart chat-server && sudo systemctl restart react-client'
 
+#
+# Local docker cluster for load testing
+#
+cluster-up count="3" base_port="8080" dir_port="8081":
+  COUNT=$(printf "%s" {{count}} | sed 's/^count=//') \
+  BASE_PORT=$(printf "%s" {{base_port}} | sed 's/^base_port=//') \
+  DIR_PORT=$(printf "%s" {{dir_port}} | sed 's/^dir_port=//') \
+  bash tests/load/docker/run-cluster.sh
+
+cluster-down count="3" base_port="8080" dir_port="8081":
+  COUNT=$(printf "%s" {{count}} | sed 's/^count=//') \
+  BASE_PORT=$(printf "%s" {{base_port}} | sed 's/^base_port=//') \
+  DIR_PORT=$(printf "%s" {{dir_port}} | sed 's/^dir_port=//') \
+  bash tests/load/docker/stop-cluster.sh
+
