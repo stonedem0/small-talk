@@ -2,7 +2,7 @@
 set -euo pipefail
 
 COUNT=${COUNT:-3}
-BASE_PORT=${BASE_PORT:-8080}
+BASE_PORT=${BASE_PORT:-8090}
 DIR_PORT=${DIR_PORT:-8081}
 # Normalize if passed like count=3 base_port=8080 dir_port=8081 (from Just)
 COUNT=${COUNT#count=}; COUNT=${COUNT//\"/}
@@ -46,8 +46,15 @@ docker run -d \
   smalltalk-directory:local
 
 echo "Starting ${COUNT} app instances..."
+# allocate host ports, skipping DIR_PORT if it collides
+next_port=${BASE_PORT}
+USED_PORTS=()
 for i in $(seq 1 "${COUNT}"); do
-  host_port=$((BASE_PORT + i - 1))
+  # skip directory port if overlapping
+  if [ "${next_port}" -eq "${DIR_PORT}" ]; then
+    next_port=$((next_port + 1))
+  fi
+  host_port=${next_port}
   name="smalltalk-app-${i}"
   docker rm -f "${name}" >/dev/null 2>&1 || true
   docker run -d \
@@ -58,17 +65,19 @@ for i in $(seq 1 "${COUNT}"); do
     -e CORS_ORIGINS="${CORS_ORIGINS}" \
     -e JWT_SECRET="${JWT_SECRET}" \
     -e REFRESH_JWT_SECRET="${REFRESH_JWT_SECRET}" \
-    -e DIRECTORY_URL="http://smalltalk-directory:8081" \
+    -e DIRECTORY_URL="http://host.docker.internal:${DIR_PORT}" \
     -e WS_PUBLIC_URL="ws://localhost:${host_port}/ws" \
     -e REDIS_ADDR="smalltalk-redis:6379" \
     smalltalk-app:local
   echo "  - ${name} on ws://localhost:${host_port}/ws"
+  USED_PORTS+=("${host_port}")
+  next_port=$((host_port + 1))
 done
 
 echo
 echo "Cluster up."
 echo "Directory:  http://localhost:${DIR_PORT}"
-echo "Apps:       ws://localhost:${BASE_PORT}.. ws range (${COUNT} instances)"
+echo "Apps:       ws://localhost:${USED_PORTS[*]}"
 echo "Run k6 with: DIR=http://localhost:${DIR_PORT} ROOM=gaming TOKEN=<jwt> k6 run tests/load/join-and-ws.js"
 
 
