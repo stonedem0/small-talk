@@ -37,7 +37,7 @@ const Rooms = () => {
         setRooms(allRooms);
       })
       .catch((error) => {
-        // Fetch error
+        console.error("rooms list fetch error", error);
       });
 
     // Fetch online user counts
@@ -49,7 +49,7 @@ const Rooms = () => {
       .then((response) => response.json())
       .then((data) => setUserCounts(data))
       .catch((error) => {
-        // User count fetch error
+        console.error("online-users fetch error", error);
       });
   }, []);
 

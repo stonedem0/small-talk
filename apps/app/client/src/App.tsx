@@ -43,6 +43,7 @@ const App = () => {
           }
         })
         .catch(error => {
+          console.error("user-info fetch error", error);
           // Failed to fetch username
           // If we can't fetch the username, clear the token and redirect to login
           localStorage.removeItem("token");
