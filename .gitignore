@@ -5,3 +5,4 @@
 **/*.log
 server/small-talk
 server/chat-server
+.DS_Store
