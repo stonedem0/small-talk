@@ -1,109 +1,175 @@
 # small talk ☁️
 
-a small, real-time chat experiment built with **go** and **react**.  
-nothing fancy — just websockets, redis, and curiosity.
+a small, real-time chat experiment built with **go** and **react**.
+nothing fancy — just websockets, redis, and curiosity… that accidentally grew into a tiny distributed system.
 
 ---
 
 ## structure
 
 ```
-client/   → react frontend  
-server/   → go backend  
-Justfile  → build & deploy tasks
+apps/
+  app/
+    server/     → go websocket backend
+    client/     → react frontend (vite)
+  directory/    → go directory service (room placement, hrw hashing, leases)
+internal/
+  shared/       → hrw hashing, shared structs, helpers
+Justfile        → build, run, deploy tasks
 ```
 
 ---
 
-## getting started
+## prerequisites
 
-### prerequisites
-- go 1.x  
-- node.js + npm  
-- [just](https://github.com/casey/just) (command runner)
+- go 1.22+
+- node.js + npm
+- redis 6+
+- just task runner
 
-### setup
+---
+
+## environment variables
+
+### app server (`apps/app/server`)
+```
+PORT=8080
+JWT_SECRET=your-secret
+REFRESH_JWT_SECRET=your-refresh-secret
+REDIS_ADDR=127.0.0.1:6379
+REDIS_PASSWORD=devpass123
+DIRECTORY_URL=http://localhost:8081
+CORS_ORIGINS=http://localhost:5173
+```
+
+### directory service (`apps/directory`)
+```
+DIRECTORY_PORT=8081
+JWT_SECRET=your-secret
+REDIS_ADDR=127.0.0.1:6379
+REDIS_PASSWORD=devpass123
+CORS_ORIGINS=http://localhost:5173
+```
+
+### react client (`apps/app/client`)
+```
+VITE_API_URL=http://localhost:8080
+VITE_DIRECTORY_URL=http://localhost:8081
+```
+
+---
+
+## installing
+
 ```bash
 git clone https://github.com/yourusername/small-talk.git
 cd small-talk
 
 # backend
-cd server
+cd apps/app/server
+go mod download
+
+# directory
+cd ../../directory
 go mod download
 
 # frontend
-cd ../client
+cd ../app/client
 npm install
 ```
 
 ---
 
-## dev mode
+## development workflow
 
-the project uses **just** for tasks:
+the entire workflow is powered by `just`.
 
+### run go server with hot reload
 ```bash
-just server   # run go server with hot reload
-just client   # run react client with vite
-just dev      # run both servers together
-just build    # build react app
-just start    # run in production mode
+just server port=8080
+```
+
+### run react client
+```bash
+just client
+```
+
+### run both
+```bash
+just dev port=8080
+```
+
+### build react
+```bash
+just build
+```
+
+### "prod-ish" local run
+```bash
+just start
 ```
 
 ---
 
-## deployment
+## directory service
 
-basic ec2 deployment via ssh:
+the directory is a lightweight control-plane responsible for:
 
+- receiving heartbeats from app nodes
+- tracking number of users per room/app
+- storing **room → app** ownership in redis using leases
+- preventing race conditions between nodes
+- choosing which node should serve a room via **HRW hashing**
+- weighted HRW (cpu/mem/users aware)
+
+### run it
 ```bash
-just deploy-server   # deploy go backend
-just deploy-client   # deploy react frontend
-just deploy          # deploy both
-```
-
-required env vars:
-```
-SSH_KEY   → path to ssh key  
-EC2_IP    → ec2 public ip
+just directory port=8081
 ```
 
 ---
 
-## ☁️ scaling plans
+## deployment to ec2
 
-this project started as a sandbox — a way to learn how far a single go + redis setup can stretch.  
-the long-term goal is to see if it can handle **tens of thousands** of concurrent websocket connections  
-without turning into a distributed monster or breaking the bank.
+requires:
+```
+SSH_KEY=~/.ssh/your-key.pem
+EC2_IP=x.x.x.x
+```
 
-### next steps
-- run multiple gateway instances behind an **aws alb**  
-- keep **redis** as shared pub/sub  
-- tune linux limits (`ulimit`, tcp keepalive, etc.) for high connection counts  
-- add small metrics for connections, memory, latency
+### deploy server
+```bash
+just deploy-server
+```
 
-### target capacity
-- ~10–20k sockets per instance  
-- scale to **~100k total** across 6–10 ec2 nodes  
-- single redis node for now
+### deploy client
+```bash
+just deploy-client
+```
 
-### cost awareness 💸
-this is just for fun and learning — not optimized for cost.  
-rough aws estimate for a 100k-connection experiment:
+### deploy both
+```bash
+just deploy
+```
 
-| service | est. monthly |
-|----------|--------------:|
-| ec2 (8× c7g.xlarge) | ~$850 |
-| alb | ~$200 |
-| redis (elasticache r7g.large/xlarge) | ~$320–640 |
-| **total (no egress)** | **≈ $1.4k–$1.7k** |
-| data transfer (depends on chat volume) | +$500–$4k |
+deployment uploads files, builds the go binary on ec2, and restarts
+systemd units (`chat-server`, `react-client`).
 
-for now, a **single node + redis** is enough for local and dev use.  
-i’ll scale it later when i want to benchmark real load.
+---
+
+## scaling plans 🧪
+
+- multi-node setup
+- directory as control-plane
+- HRW hashing
+- redis leases
+- heartbeats with metrics
+- weighted placement
+- draining mode
 
 ---
 
 ## license
 
 MIT
+
