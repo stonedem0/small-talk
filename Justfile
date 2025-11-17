@@ -6,10 +6,10 @@ server port="8080":
 client:
   cd apps/app/client && npm run dev
 
-# Run both servers concurrently using shell (and ensure local Redis is up)
+# Run both servers concurrently using shell (and ensure local Redis is up & ready)
 # Uses REDIS_PASSWORD from env; falls back to 'changeme' for dev-only convenience.
 dev port="8080":
-  sh -c 'PASS="${REDIS_PASSWORD:-changeme}"; just redis-up password="$PASS" && REDIS_ADDR=127.0.0.1:6379 REDIS_PASSWORD="$PASS" just server {{port}} & just client'
+  just server {{port}} & just client
 
 # Build React client
 build:
@@ -41,6 +41,10 @@ redis-up password="":
 redis-down:
   docker stop redis || true
   docker rm redis || true
+
+# Wait until Redis responds to PING (avoid race where server starts before Redis is ready)
+redis-wait password="":
+  sh -c 'PASS="{{password}}"; PASS="${PASS:-${REDIS_PASSWORD:-changeme}}"; for i in $$(seq 1 60); do docker exec redis redis-cli -a "$$PASS" PING >/dev/null 2>&1 && exit 0; sleep 0.5; done; echo "Redis not ready after 30s" >&2; exit 1'
 
 # Open a redis-cli shell against the local container (auths with the given password)
 redis-cli password="":

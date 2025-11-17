@@ -56,6 +56,7 @@ func init() {
 		log.Fatal("REFRESH_JWT_SECRET is required; set it via environment or .env")
 	}
 	refreshSecret = []byte(rsec)
+	internalAPIKey = os.Getenv("INTERNAL_API_KEY")
 	if v := os.Getenv("CORS_ORIGINS"); v != "" {
 		parts := strings.Split(v, ",")
 		for _, p := range parts {
