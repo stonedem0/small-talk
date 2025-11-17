@@ -19,7 +19,7 @@ var (
 	appID          = getenv("APP_ID", hostnameOrFallback())
 	wsPublicURL    = getenv("WS_PUBLIC_URL", "ws://localhost:8080/ws")
 	heartbeatEvery = envDuration("HEARTBEAT_INTERVAL", 5*time.Second)
-	internalAPIKey = os.Getenv("INTERNAL_API_KEY")
+	internalAPIKey string
 
 	httpc = &http.Client{Timeout: 1 * time.Second}
 )
