@@ -6,9 +6,10 @@ server port="8080":
 client:
   cd apps/app/client && npm run dev
 
-# Run both servers concurrently using shell
+# Run both servers concurrently using shell (and ensure local Redis is up)
+# Uses REDIS_PASSWORD from env; falls back to 'changeme' for dev-only convenience.
 dev port="8080":
-  sh -c 'just server {{port}} & just client'
+  sh -c 'PASS="${REDIS_PASSWORD:-changeme}"; just redis-up password="$PASS" && REDIS_ADDR=127.0.0.1:6379 REDIS_PASSWORD="$PASS" just server {{port}} & just client'
 
 # Build React client
 build:
@@ -29,6 +30,21 @@ client-prod:
 # Run Directory service (set DIRECTORY_PORT to override, default 8081)
 directory port="8081":
   cd apps/directory && DIRECTORY_PORT=$(printf "%s" {{port}} | sed 's/^port=//') go run .
+
+# --- Local Redis helpers (Docker) ---
+# Start (or restart) Redis on localhost:6379 with a password.
+# Password precedence: explicit param > $REDIS_PASSWORD > 'changeme'
+redis-up password="":
+  sh -c 'PASS="{{password}}"; PASS="${PASS:-${REDIS_PASSWORD:-changeme}}"; docker start redis >/dev/null 2>&1 || docker run --name redis -p 6379:6379 -d redis:7-alpine redis-server --appendonly yes --requirepass "$PASS"'
+
+# Stop and remove the Redis container
+redis-down:
+  docker stop redis || true
+  docker rm redis || true
+
+# Open a redis-cli shell against the local container (auths with the given password)
+redis-cli password="":
+  sh -c 'PASS="{{password}}"; PASS="${PASS:-${REDIS_PASSWORD:-changeme}}"; docker exec -it redis redis-cli -a "$PASS"'
 
 # Deploy React client (dist folder) to EC2
 deploy-client:
