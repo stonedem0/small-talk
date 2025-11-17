@@ -15,6 +15,9 @@ func main() {
 	st := NewState()
 	RedisInit()
 	key := os.Getenv("INTERNAL_API_KEY")
+	if os.Getenv("ENVIRONMENT") == "production" && key == "" {
+		log.Fatal("INTERNAL_API_KEY required in production")
+	}
 	http.HandleFunc("/health", withInternalKey(key, HealthHandler))
 	http.HandleFunc("/heartbeat", withInternalKey(key, st.HeartbeatHandler))
 	http.HandleFunc("/join", withCORSAndAuth(true, st.JoinHandler))
@@ -34,14 +37,11 @@ func main() {
 	http.ListenAndServe(addr, nil)
 }
 
-// withInternalKey authorizes requests using a shared key.
-// Accepts either:
-// - Header: X-Internal-Key: <key>
-// - Authorization: Bearer <key>
-// If INTERNAL_API_KEY is empty, auth is bypassed (dev).
+// In non-prod, if key is empty we bypass for developer convenience.
 func withInternalKey(key string, next http.HandlerFunc) http.HandlerFunc {
+	require := os.Getenv("ENVIRONMENT") == "production"
 	return func(w http.ResponseWriter, r *http.Request) {
-		if key == "" {
+		if !require && key == "" {
 			next(w, r)
 			return
 		}
