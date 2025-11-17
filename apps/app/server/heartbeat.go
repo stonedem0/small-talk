@@ -19,6 +19,7 @@ var (
 	appID          = getenv("APP_ID", hostnameOrFallback())
 	wsPublicURL    = getenv("WS_PUBLIC_URL", "ws://localhost:8080/ws")
 	heartbeatEvery = envDuration("HEARTBEAT_INTERVAL", 5*time.Second)
+	internalAPIKey string
 
 	httpc = &http.Client{Timeout: 1 * time.Second}
 )
@@ -106,6 +107,9 @@ func sendHeartbeat() {
 
 	req, _ := http.NewRequest("POST", directoryURL+"/heartbeat", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
+	if internalAPIKey != "" {
+		req.Header.Set("X-Internal-Key", internalAPIKey)
+	}
 	resp, err := httpc.Do(req)
 	if err != nil {
 		log.Printf("heartbeat: post error: %v", err)
