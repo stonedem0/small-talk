@@ -4,6 +4,7 @@ Small Talk - systemd deployment
 This directory contains unit files and environment templates to run both services on an Ubuntu/Debian EC2 instance via systemd.
 
 Services
+- redis.service — Redis cache/broker
 - small-talk-app.service — main chat app HTTP/WebSocket server
 - small-talk-directory.service — directory/placement service
 - react-client.service — frontend (Vite preview / static server)
@@ -27,12 +28,14 @@ Install (as root)
    # Edit and set secrets, CORS, Redis, etc.  chmod 600 the env files.
 
 4) Install unit files:
+   cp redis.service /etc/systemd/system/redis.service
    cp small-talk-app.service /etc/systemd/system/app.service
    cp small-talk-directory.service /etc/systemd/system/directory.service
    cp react-client.service /etc/systemd/system/react-client.service
    systemctl daemon-reload
 
 5) Enable and start:
+   systemctl enable --now redis.service
    systemctl enable --now app.service
    systemctl enable --now directory.service
    systemctl enable --now react-client.service

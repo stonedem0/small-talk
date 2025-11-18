@@ -1,0 +1,17 @@
+[Unit]
+Description=Redis Server
+After=network.target
+
+[Service]
+Type=notify
+User=root
+Group=redis
+ExecStart=/usr/bin/redis-server /etc/redis/redis.conf --supervised systemd
+ExecStop=/usr/bin/redis-cli shutdown
+Restart=always
+RuntimeDirectory=redis
+RuntimeDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target
+
