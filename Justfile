@@ -73,7 +73,7 @@ deploy:
 
 # Deploy Directory service to EC2
 deploy-directory:
-  ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/apps/directory'
+  ssh -i $SSH_KEY ubuntu@$EC2_IP_DIR 'mkdir -p /home/ubuntu/small-talk/apps/directory'
   scp -i $SSH_KEY -r apps/directory/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/apps/directory/
-  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/apps/directory && GO111MODULE=on $(command -v go) build -o directory-server && sudo systemctl restart directory-server'
+  ssh -i $SSH_KEY ubuntu@$EC2_IP_DIR 'cd /home/ubuntu/small-talk/apps/directory && GO111MODULE=on $(command -v go) build -o directory-server && sudo systemctl restart directory-server'
 
