@@ -153,7 +153,7 @@ just deploy
 ```
 
 deployment uploads files, builds the go binary on ec2, and restarts
-systemd units (`chat-server`, `react-client`).
+systemd units (`app`, `react-client`).
 
 ---
 

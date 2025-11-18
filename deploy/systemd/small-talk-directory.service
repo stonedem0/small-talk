@@ -4,12 +4,11 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-Type=simple
-User=smalltalk
-Group=smalltalk
-EnvironmentFile=/etc/small-talk/directory.env
-ExecStart=/usr/local/bin/small-talk-directory
-WorkingDirectory=/var/lib/small-talk
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/small-talk/apps/directory
+ExecStart=/home/ubuntu/small-talk/apps/directory/directory
+EnvironmentFile=/home/ubuntu/small-talk/apps/directory/directory.env
 Restart=always
 RestartSec=3
 KillSignal=SIGINT
