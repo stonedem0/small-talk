@@ -1,5 +1,13 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+const previewAllowedHosts =
+  (
+    process.env.VITE_PREVIEW_ALLOWED_HOSTS
+      ?.split(",")
+      .map((h) => h.trim())
+      .filter(Boolean)
+  ) ?? ["localhost", "127.0.0.1"];
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -10,10 +18,6 @@ export default defineConfig({
   preview: {
     host: "0.0.0.0",
     port: 4173,
-    allowedHosts: [
-      "localhost",
-      "127.0.0.1",
-      "ec2-18-175-194-80.eu-west-2.compute.amazonaws.com",
-    ],
+    allowedHosts: previewAllowedHosts,
   },
-})
+});
