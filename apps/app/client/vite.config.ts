@@ -10,6 +10,10 @@ export default defineConfig({
   preview: {
     host: "0.0.0.0",
     port: 4173,
-    allowedHosts: ["ec2-18-175-194-80.eu-west-2.compute.amazonaws.com"],
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      "ec2-18-175-194-80.eu-west-2.compute.amazonaws.com",
+    ],
   },
 })
