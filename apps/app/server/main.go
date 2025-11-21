@@ -45,7 +45,9 @@ var (
 
 func init() {
 	// Load .env if present; ok if missing (use system env in prod)
-	_ = godotenv.Load()
+	if err := godotenv.Load("app.env"); err != nil {
+		_ = godotenv.Load()
+	}
 	secret := os.Getenv("JWT_SECRET")
 	if strings.TrimSpace(secret) == "" {
 		log.Fatal("JWT_SECRET is required; set it via environment or .env")

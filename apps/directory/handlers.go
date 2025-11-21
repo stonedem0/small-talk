@@ -79,6 +79,7 @@ func withCORSAndAuth(requireAuth bool, next http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 			if _, err := requireJWT(tok); err != nil {
+				log.Printf("auth: invalid token (%v)", err)
 				w.WriteHeader(http.StatusUnauthorized)
 				_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid token"})
 				return

@@ -61,7 +61,7 @@ deploy-client:
 deploy-server:
   ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/apps/app/server'
   scp -i $SSH_KEY -r apps/app/server/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/apps/app/server/
-  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/apps/app/server && GO111MODULE=on /usr/local/go/bin/go build -o chat-server && sudo systemctl restart chat-server'
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/apps/app/server && GO111MODULE=on $(command -v go) build -o app && sudo systemctl restart app'
 
 # Deploy both frontend (dist) and backend simultaneously
 deploy:
@@ -69,5 +69,11 @@ deploy:
   ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/apps/app/client /home/ubuntu/small-talk/apps/app/server'
   scp -i $SSH_KEY -r apps/app/client/dist/ ubuntu@$EC2_IP:/home/ubuntu/small-talk/apps/app/client/
   scp -i $SSH_KEY -r apps/app/server/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/apps/app/server/
-  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/apps/app/server && GO111MODULE=on /usr/local/go/bin/go build -o chat-server && sudo systemctl restart chat-server && sudo systemctl restart react-client'
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/apps/app/server && GO111MODULE=on $(command -v go) build -o app && sudo systemctl restart app && sudo systemctl restart react-client'
+
+# Deploy Directory service to EC2
+deploy-directory:
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/apps/directory'
+  scp -i $SSH_KEY -r apps/directory/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/apps/directory/
+  ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/apps/directory && GO111MODULE=on $(command -v go) build -o directory-server && sudo systemctl restart directory-server'
 

@@ -4,18 +4,16 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-Type=simple
-User=smalltalk
-Group=smalltalk
-EnvironmentFile=/etc/small-talk/app.env
-# If you deploy the binary elsewhere, update this path
-ExecStart=/usr/local/bin/small-talk-app
-WorkingDirectory=/var/lib/small-talk
+# Adjust ownership/path if you deploy differently
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/small-talk/apps/app/server
+ExecStart=/home/ubuntu/small-talk/apps/app/server/app
+EnvironmentFile=/home/ubuntu/small-talk/apps/app/server/app.env
 Restart=always
 RestartSec=3
 KillSignal=SIGINT
 TimeoutStopSec=20
-AmbientCapabilities=
 NoNewPrivileges=true
 
 # Journald log identifier
@@ -23,4 +21,5 @@ SyslogIdentifier=small-talk-app
 
 [Install]
 WantedBy=multi-user.target
+
 
