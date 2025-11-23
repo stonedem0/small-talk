@@ -294,8 +294,12 @@
 .emoji-picker {
   display: grid;
   grid-template-columns: repeat(10, 1.6rem);
+  grid-auto-rows: 1.6rem;
+  justify-content: center;
+  justify-items: center;
+  align-items: center;
   gap: 4px;
-  padding: 6px;
+  padding: 8px 10px;
   background: #fff;
   border: 1px solid #b08cff;
   border-top: none;
@@ -303,14 +307,17 @@
 }
 
 .emoji-item {
-  font-size: 1.1rem;
-  line-height: 1;
+  font-size: 1.15rem;
   width: 1.6rem;
   height: 1.6rem;
   border: 1px solid #e5d4ff;
   background: #fff;
   border-radius: 4px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .emoji-item:hover {
