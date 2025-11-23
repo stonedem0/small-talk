@@ -384,7 +384,9 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	userJSON, err := RDB.HGet(ctx, "users", req.OldUsername).Result()
+	fmt.Println("userJSON>>>", userJSON, "err>>>", err, "req.OldUsername>>>", req.OldUsername)
 	if err != nil {
+		fmt.Println("error>>>", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "User not found"})
 		return
