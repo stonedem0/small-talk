@@ -192,6 +192,7 @@ const Window = ({
     if (!roomName) {
       return;
     }
+    try {
       const response = await fetch(`${API_URL}/create-room`, {
       method: "POST",
       headers: {
@@ -201,11 +202,14 @@ const Window = ({
     });
     if (!response.ok) {
       const errorText = await response.text();
-      alert('Failed to create room: ' + errorText);
-      return;
+        alert('Failed to create room: ' + errorText);
+        return;
+      }
+      alert("Room created successfully");
+      window.location.reload();
+    } catch (error) {
+      alert('Error creating room: ' + error);
     }
-    alert("Room created successfully");
-    window.location.reload();
   };
   return (
     <div className="window" style={{ width, height, top, left }}>
