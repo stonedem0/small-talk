@@ -200,7 +200,8 @@ const Window = ({
       body: JSON.stringify({ room: roomName })
     });
     if (!response.ok) {
-      // Failed to create room
+      const errorText = await response.text();
+      alert('Failed to create room: ' + errorText);
       return;
     }
     alert("Room created successfully");
