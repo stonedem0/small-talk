@@ -9,3 +9,4 @@ server/chat-server
 apps/app/server/app
 small-talk-app.tar.gz
 .DS_Store
+docs/aws-cli-commands.md
