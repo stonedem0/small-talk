@@ -74,7 +74,12 @@ chown -R "$APP_USER":"$APP_GROUP" "$INSTALL_DIR"
 
 TMP_TGZ=$(mktemp /tmp/small-talk.XXXXXX.tgz)
 log "downloading artifact from $SMALL_TALK_TARBALL_URL"
-curl -fsSL "$SMALL_TALK_TARBALL_URL" -o "$TMP_TGZ"
+# Allow private buckets by supporting s3:// URIs; fall back to HTTPS.
+if printf "%s" "$SMALL_TALK_TARBALL_URL" | grep -q '^s3://'; then
+  aws s3 cp "$SMALL_TALK_TARBALL_URL" "$TMP_TGZ"
+else
+  curl -fsSL "$SMALL_TALK_TARBALL_URL" -o "$TMP_TGZ"
+fi
 
 log "extracting artifact into $INSTALL_DIR"
 tar -xzf "$TMP_TGZ" -C "$INSTALL_DIR"
