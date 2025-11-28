@@ -2,6 +2,10 @@
 server port="8080":
   cd apps/app/server && PORT=$(printf "%s" {{port}} | sed 's/^port=//') air
 
+# Build Linux binary of the Go server (for packaging/deploy)
+server-build-linux:
+  cd apps/app/server && GOOS=linux GOARCH=amd64 go build -o app
+
 # Run React client with Vite
 client:
   cd apps/app/client && npm run dev
@@ -76,4 +80,3 @@ deploy-directory:
   ssh -i $SSH_KEY ubuntu@$EC2_IP 'mkdir -p /home/ubuntu/small-talk/apps/directory'
   scp -i $SSH_KEY -r apps/directory/* ubuntu@$EC2_IP:/home/ubuntu/small-talk/apps/directory/
   ssh -i $SSH_KEY ubuntu@$EC2_IP 'cd /home/ubuntu/small-talk/apps/directory && GO111MODULE=on $(command -v go) build -o directory-server && sudo systemctl restart directory-server'
-

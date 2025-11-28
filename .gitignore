@@ -5,4 +5,8 @@
 **/*.log
 server/small-talk
 server/chat-server
+.gocache/
+apps/app/server/app
+small-talk-app.tar.gz
 .DS_Store
+docs/aws-cli-commands.md

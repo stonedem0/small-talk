@@ -12,8 +12,9 @@ import (
 var RDB *redis.Client
 
 func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+	// Try to load env from app.env (prod) then .env (local); ok if missing when env vars are injected.
+	if err := godotenv.Load("app.env"); err != nil {
+		_ = godotenv.Load()
 	}
 }
 
