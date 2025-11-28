@@ -59,13 +59,13 @@ PUBLIC_IP=${PUBLIC_IP_OVERRIDE:-$(fetch_md "public-ipv4" || true)}
 APP_ID=${APP_ID:-$INSTANCE_ID}
 WS_PUBLIC_URL=${WS_PUBLIC_URL:-}
 if [ -z "$WS_PUBLIC_URL" ]; then
+  host=""
   if [ -n "$PUBLIC_DNS" ] && [ "$PUBLIC_DNS" != "unset" ]; then
-    WS_PUBLIC_URL="wss://${PUBLIC_DNS}/ws"
+    host="$PUBLIC_DNS"
   elif [ -n "$PUBLIC_IP" ]; then
-    WS_PUBLIC_URL="wss://${PUBLIC_IP}:8080/ws"
-  else
-    WS_PUBLIC_URL="ws://localhost:8080/ws"
+    host="$PUBLIC_IP"
   fi
+  WS_PUBLIC_URL="ws://${host:-localhost}:8080/ws"
 fi
 
 log "creating application directories at $INSTALL_DIR"
