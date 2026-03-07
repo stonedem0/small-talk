@@ -372,8 +372,6 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 		time.Sleep(100 * time.Millisecond)
 		join := Message{Room: room, Username: username, Message: "joined the room", Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 		b, _ := json.Marshal(join)
-		RDB.LPush(ctx, "chat_history:"+room, b)
-		RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
 		RDB.Publish(ctx, "room:"+room, string(b))
 		if debugEnabled {
 			log.Printf("[Room %s] join: %s", room, username)
@@ -392,7 +390,10 @@ func subscribeToRoom(ctx context.Context, room string) {
 		roomSubsMu.Lock()
 		delete(roomSubs, room)
 		roomSubsMu.Unlock()
-		ps.Close() // stop Redis subscription
+		ps.Close()
+		subLock.Lock()
+		delete(subscriptions, room)
+		subLock.Unlock()
 		if debugEnabled {
 			log.Printf("[Room %s] subscription stopped", room)
 		}

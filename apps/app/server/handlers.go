@@ -152,15 +152,26 @@ func (h *Handler) GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) 
 	_ = json.NewEncoder(w).Encode(history)
 }
 
+// fix this function to return the online users for a specific room
 func (h *Handler) GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	room := r.URL.Query().Get("room")
 	onlineUsersLock.Lock()
+	if room != "" {
+		count := 0
+		if users, ok := onlineUsers[room]; ok {
+			count = len(users)
+		}
+		onlineUsersLock.Unlock()
+		_ = json.NewEncoder(w).Encode(map[string]int{"count": count})
+		return
+	}
 	userCounts := make(map[string]int)
-	for room, users := range onlineUsers {
-		userCounts[room] = len(users)
+	for rm, users := range onlineUsers {
+		userCounts[rm] = len(users)
 	}
 	onlineUsersLock.Unlock()
 	_ = json.NewEncoder(w).Encode(userCounts)
