@@ -8,7 +8,7 @@ type WindowProps = {
   title: string;
   children: React.ReactNode;
   width?: number;
-  height?: number;
+  height?: number; // only set if you want a fixed height; omit to auto-size
   top?: string;
   left?: string;
   username?: string | null;
@@ -23,8 +23,8 @@ const Window = ({
   title,
   children,
   width = 400,
-  height = 200,
-  top = "30%",
+  height,
+  top = "50%",
   left = "50%",
   username,
   onSignOut,
@@ -98,7 +98,7 @@ const Window = ({
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
+      winRef.current?.requestFullscreen();
     } else {
       document.exitFullscreen();
     }
@@ -279,7 +279,7 @@ const Window = ({
     <div
       ref={winRef}
       className="window"
-      style={{ width, height, top, left, visibility: minimized ? "hidden" : undefined }}
+      style={{ width, ...(height !== undefined && { height }), top, left, visibility: minimized ? "hidden" : undefined }}
     >
       <div className="window-header">
         <div className="window-header-top">
