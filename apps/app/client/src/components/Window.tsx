@@ -45,7 +45,6 @@ const Window = ({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [minimized, setMinimized] = useState(false);
-  const [closed, setClosed] = useState(false);
   const winRef = useRef<HTMLDivElement>(null);
 
   const handleMinimize = () => {
@@ -116,7 +115,7 @@ const Window = ({
 
   const handleClose = () => {
     if (onClose) { onClose(); return; }
-    setClosed(true);
+    navigate("/");
   };
 
     const handleUsernameChange = async (e: React.FormEvent) => {
@@ -267,8 +266,6 @@ const Window = ({
       alert('Error creating room: ' + error);
     }
   };
-  if (closed) return null;
-
   return (
     <>
     {minimized && (
