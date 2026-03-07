@@ -31,6 +31,22 @@ func RedisInit() {
 	log.Println("Connected to Redis!")
 }
 
+// refreshLeaseScript atomically refreshes the TTL only if the caller owns the key.
+var refreshLeaseScript = redis.NewScript(`
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+    return redis.call('EXPIRE', KEYS[1], ARGV[2])
+end
+return 0
+`)
+
+// releaseScript atomically deletes the key only if the caller owns it.
+var releaseScript = redis.NewScript(`
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+    return redis.call('DEL', KEYS[1])
+end
+return 0
+`)
+
 func Owner(room string) (string, error) {
 	val, err := RDB.Get(ctx, key(room)).Result()
 	if err == redis.Nil {
@@ -44,25 +60,14 @@ func TryClaim(room, appID string) (bool, error) {
 }
 
 func RefreshLease(room, appID string) error {
-	cur, err := Owner(room)
-	if err != nil {
-		return err
-	}
-	if cur != appID {
-		return nil
-	}
-	_, err = RDB.Expire(ctx, key(room), leaseTTL).Result()
-	return err
+	ttlSecs := int(leaseTTL.Seconds())
+	return refreshLeaseScript.Run(ctx, RDB, []string{key(room)}, appID, ttlSecs).Err()
 }
 
 func Release(room, appID string) error {
-	cur, err := Owner(room)
-	if err != nil {
-		return err
-	}
-	if cur != appID {
+	err := releaseScript.Run(ctx, RDB, []string{key(room)}, appID).Err()
+	if err == redis.Nil {
 		return nil
 	}
-	_, err = RDB.Del(ctx, key(room)).Result()
 	return err
 }

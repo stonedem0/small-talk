@@ -2,6 +2,8 @@ package main
 
 import (
 	"runtime/metrics"
+
+	"github.com/shirou/gopsutil/v3/cpu"
 )
 
 type NodeStats struct {
@@ -13,7 +15,11 @@ type NodeStats struct {
 }
 
 func estimateCPUPercent() float64 {
-	return 0
+	pcts, err := cpu.Percent(0, false)
+	if err != nil || len(pcts) == 0 {
+		return 0
+	}
+	return pcts[0]
 }
 
 func collectNodeStats() NodeStats {
