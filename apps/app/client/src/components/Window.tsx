@@ -45,6 +45,7 @@ const Window = ({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [closed, setClosed] = useState(false);
   const winRef = useRef<HTMLDivElement>(null);
 
   const handleMinimize = () => {
@@ -114,13 +115,8 @@ const Window = ({
   };
 
   const handleClose = () => {
-    const win = winRef.current;
-    const finish = () => { if (onClose) onClose(); else navigate("/"); };
-    if (!win) { finish(); return; }
-    win.animate(
-      [{ opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(0.95)" }],
-      { duration: 300, easing: "ease", fill: "forwards" }
-    ).onfinish = finish;
+    if (onClose) { onClose(); return; }
+    setClosed(true);
   };
 
     const handleUsernameChange = async (e: React.FormEvent) => {
@@ -271,6 +267,8 @@ const Window = ({
       alert('Error creating room: ' + error);
     }
   };
+  if (closed) return null;
+
   return (
     <>
     {minimized && (
