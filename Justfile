@@ -35,6 +35,21 @@ client-prod:
 directory port="8081":
   cd apps/directory && DIRECTORY_PORT=$(printf "%s" {{port}} | sed 's/^port=//') go run .
 
+# --- Tests ---
+
+# Run all tests
+test:
+  cd apps/app/server && go test ./...
+  cd apps/directory && go test ./...
+
+# Run tests for the app server only
+test-server:
+  cd apps/app/server && go test ./... -v
+
+# Run tests for the directory service only
+test-directory:
+  cd apps/directory && go test ./... -v
+
 # --- Local Redis helpers (Docker) ---
 # Start (or restart) Redis on localhost:6379 with a password.
 # Password precedence: explicit param > $REDIS_PASSWORD > 'changeme'
