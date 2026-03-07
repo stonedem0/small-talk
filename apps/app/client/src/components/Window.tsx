@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import WindowControls from "./WindowControls";
 import "./Window.css";
 import { API_URL } from "../config";
@@ -8,7 +8,7 @@ type WindowProps = {
   title: string;
   children: React.ReactNode;
   width?: number;
-  height?: number;
+  height?: number; // only set if you want a fixed height; omit to auto-size
   top?: string;
   left?: string;
   username?: string | null;
@@ -23,8 +23,8 @@ const Window = ({
   title,
   children,
   width = 400,
-  height = 200,
-  top = "30%",
+  height,
+  top = "50%",
   left = "50%",
   username,
   onSignOut,
@@ -44,6 +44,65 @@ const Window = ({
   const [isUpdating, setIsUpdating] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showChatMenu, setShowChatMenu] = useState(false);
+  const [minimized, setMinimized] = useState(false);
+  const [closed, setClosed] = useState(false);
+  const winRef = useRef<HTMLDivElement>(null);
+
+  const handleMinimize = () => {
+    const win = winRef.current;
+    if (!win) return;
+
+    if (!minimized) {
+      // snapshot actual pixel position before WAAPI overrides the CSS transform
+      const rect = win.getBoundingClientRect();
+      win.style.transform = "none";
+      win.style.top = `${rect.top}px`;
+      win.style.left = `${rect.left}px`;
+      win.style.width = `${rect.width}px`;
+      win.style.height = `${rect.height}px`;
+
+      // translate toward bottom-left corner while shrinking to 0
+      const tx = -rect.left;
+      const ty = window.innerHeight - rect.bottom;
+
+      win.style.transformOrigin = "0% 100%";
+      win.getAnimations().forEach((a) => a.cancel());
+      const anim = win.animate(
+        [
+          { transform: "translate(0, 0) scale(1)" },
+          { transform: `translate(${tx}px, ${ty}px) scale(0)` },
+        ],
+        { duration: 600, easing: "ease-in-out", fill: "forwards" }
+      );
+      anim.onfinish = () => setMinimized(true);
+    } else {
+      setMinimized(false);
+      requestAnimationFrame(() => {
+        const w = winRef.current;
+        if (!w) return;
+        const rect = w.getBoundingClientRect();
+        const tx = -rect.left;
+        const ty = window.innerHeight - rect.bottom;
+        w.style.transformOrigin = "0% 100%";
+        w.getAnimations().forEach((a) => a.cancel());
+        w.animate(
+          [
+            { transform: `translate(${tx}px, ${ty}px) scale(0)` },
+            { transform: "translate(0, 0) scale(1)" },
+          ],
+          { duration: 300, easing: "ease-out", fill: "forwards" }
+        );
+      });
+    }
+  };
+
+  const handleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      winRef.current?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   const toggleProfileMenu = () => {
     setShowChatMenu(false);
@@ -56,11 +115,8 @@ const Window = ({
   };
 
   const handleClose = () => {
-    if (onClose) {
-      onClose();
-    } else {
-      navigate("/"); 
-    }
+    if (onClose) { onClose(); return; }
+    setClosed(true);
   };
 
     const handleUsernameChange = async (e: React.FormEvent) => {
@@ -211,15 +267,31 @@ const Window = ({
       alert('Error creating room: ' + error);
     }
   };
+  if (closed) return null;
+
   return (
-    <div className="window" style={{ width, height, top, left }}>
+    <>
+    {minimized && (
+      <button className="window-taskbar-pill" onClick={handleMinimize}>
+        {title}
+      </button>
+    )}
+    <div
+      ref={winRef}
+      className="window"
+      style={{ width, ...(height !== undefined && { height }), top, left, visibility: minimized ? "hidden" : undefined }}
+    >
       <div className="window-header">
         <div className="window-header-top">
           <div className="window-title" title={title} aria-label={title}>
             <span className="window-title-icon" aria-hidden="true"></span>
             <span className="window-title-text">{title}</span>
           </div>
-          <WindowControls />
+          <WindowControls
+            onMinimize={handleMinimize}
+            onFullscreen={handleFullscreen}
+            onClose={handleClose}
+          />
         </div>
 
         {tabs && tabs.length > 0 && (
@@ -369,6 +441,7 @@ const Window = ({
         {children}
       </div>
     </div>
+    </>
   );
 };
 

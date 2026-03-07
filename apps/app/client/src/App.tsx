@@ -89,8 +89,6 @@ const App = () => {
         <Window
           title="Fella connect"
           width={710}
-          top="20%"
-          left="50%"
           username={username}
           onSignOut={handleSignOut}
           tabs={["File", "Chat", "Appearance", "Settings"]}
