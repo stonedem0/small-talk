@@ -62,17 +62,17 @@
   font-size: 14px;
   text-decoration: none;
   transition: color 0.2s;
-  color: var(--deep-purple);
+  color: #ff47a3;
   white-space: nowrap;
 }
 
 .room-item a:hover {
-  color: var(--deep-purple);
+  color: #ff47a3;
   text-decoration: underline;
 }
 
 .room-item a:visited {
-  color: var(--deep-purple);
+  color: #ff47a3;
 }
 
 .room-item--rules a {
