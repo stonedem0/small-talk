@@ -304,7 +304,7 @@ const Window = ({
                   }`}
                   onClick={() => onTabClick?.(tab)}
                 >
-                  {tab.startsWith("_") ? tab : <u>{tab}</u>}
+                  {tab.startsWith("_") ? tab : <><u>{tab[0]}</u>{tab.slice(1)}</>}
                 </button>
               ))}
             </div>

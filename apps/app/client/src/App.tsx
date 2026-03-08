@@ -90,6 +90,7 @@ const App = () => {
         <Window
           title="Fella connect"
           width={710}
+          height={400}
           username={username}
           onClose={() => setWindowClosed(true)}
           onSignOut={handleSignOut}
@@ -103,8 +104,10 @@ const App = () => {
           }}
         >
           {tab === "File" && (
-            <div style={{ padding: "1rem" }}>
-              <h2>File</h2>
+            <div className="tab-container">
+              <div className="tab-body" style={{ padding: "1rem" }}>
+                <h2>File</h2>
+              </div>
             </div>
           )}
           {tab === "Chat" && (
@@ -115,14 +118,17 @@ const App = () => {
             </Routes>
           )}
           {tab === "Settings" && (
-            <div style={{ padding: "1rem" }}>
-              <h2>Settings</h2>
+            <div className="tab-container">
+              <div className="tab-body" style={{ padding: "1rem" }}>
+                <h2>Settings</h2>
+              </div>
             </div>
           )}
           {tab === "Appearance" && (
-            <div style={{ padding: "1rem" }}>
-              <h2>Appearance</h2>
-  
+            <div className="tab-container">
+              <div className="tab-body" style={{ padding: "1rem" }}>
+                <h2>Appearance</h2>
+              </div>
             </div>
           )}
         </Window>
