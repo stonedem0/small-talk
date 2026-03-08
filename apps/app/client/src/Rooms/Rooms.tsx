@@ -4,9 +4,13 @@ import "./Rooms.css";
 import { API_URL } from "../config";
 
 const Rooms = () => {
-  const [rooms, setRooms] = useState<string[]>([]);
+  const [grouped, setGrouped] = useState<{ [category: string]: string[] }>({});
+  const [collapsed, setCollapsed] = useState<{ [category: string]: boolean }>({});
   const [userCounts, setUserCounts] = useState<{ [room: string]: number }>({});
   const [username, setUsername] = useState<string | null>(null);
+
+  const toggleCategory = (cat: string) =>
+    setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
   useEffect(() => {
     const username = localStorage.getItem("username");
     if (username) {
@@ -15,26 +19,22 @@ const Rooms = () => {
   }, []);
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      // No token found
-      // navigate("/login");
-      return;
-    }
-    fetch(`${API_URL}/rooms`, {
+    if (!token) return;
+    fetch(`${API_URL}/rooms-with-categories`, {
       headers: {
         "Authorization": `Bearer ${localStorage.getItem("token")}`
       }
     })
       .then((response) => response.json())
-      .then((data) => {
-        const sortedData = data.sort((a: string, b: string) =>
-          a.toLowerCase() > b.toLowerCase() ? 1 : -1
-        );
-
-        const allRooms = [...new Set([...sortedData].sort((a, b) =>
-          a.toLowerCase() > b.toLowerCase() ? 1 : -1
-        ))];
-        setRooms(allRooms);
+      .then((data: { [cat: string]: string[] }) => {
+        const sorted: { [cat: string]: string[] } = {};
+        const initialCollapsed: { [cat: string]: boolean } = {};
+        Object.keys(data).sort().forEach(cat => {
+          sorted[cat] = data[cat].sort();
+          initialCollapsed[cat] = true;
+        });
+        setGrouped(sorted);
+        setCollapsed(initialCollapsed);
       })
       .catch((error) => {
         console.error("rooms list fetch error", error);
@@ -71,11 +71,23 @@ const Rooms = () => {
             <li className="room-item room-item--rules">
               <Link to="/rules">#rules</Link>
             </li>
-          {rooms.map((room, index) => (
-            <li key={index} className="room-item">
-              <Link to={`/${encodeURIComponent(room)}`}>
-                {room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
-              </Link>
+          {Object.entries(grouped).map(([category, rooms]) => (
+            <li key={category} className="room-category">
+              <button className="room-category-label" onClick={() => toggleCategory(category)}>
+                <span className={`room-category-arrow ${collapsed[category] ? "room-category-arrow--closed" : ""}`} />
+                {category.toLowerCase()}
+              </button>
+              {!collapsed[category] && (
+                <ul className="room-category-list">
+                  {rooms.map((room) => (
+                    <li key={room} className="room-item">
+                      <Link to={`/${encodeURIComponent(room)}`}>
+                        {room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           ))}
           </ul>

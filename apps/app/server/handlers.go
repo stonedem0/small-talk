@@ -96,6 +96,28 @@ func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(rooms)
 }
 
+func (h *Handler) GetRoomsWithCategoriesHandler(w http.ResponseWriter, r *http.Request) {
+	rooms, err := h.RDB.SMembers(h.Ctx, "rooms").Result()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
+	}
+	categoryMap, err := h.RDB.HGetAll(h.Ctx, "room:categories").Result()
+	if err != nil {
+		categoryMap = map[string]string{}
+	}
+	grouped := map[string][]string{}
+	for _, room := range rooms {
+		cat, ok := categoryMap[room]
+		if !ok || cat == "" {
+			cat = "General"
+		}
+		grouped[cat] = append(grouped[cat], room)
+	}
+	_ = json.NewEncoder(w).Encode(grouped)
+}
+
 // No longer checks in-memory clients map. Source of truth is Redis set "rooms".
 func (h *Handler) SubscribeToRoomHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
