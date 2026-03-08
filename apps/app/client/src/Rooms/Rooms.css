@@ -75,6 +75,10 @@
   color: var(--deep-purple);
 }
 
+.room-item--rules a {
+  font-weight: bold;
+}
+
 .create-room-button {
  margin: 7px;
 }

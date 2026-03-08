@@ -60,17 +60,17 @@ const Rooms = () => {
         <span className="username">
                   oh hai, <strong>{username || "User"}</strong>!
                 </span>
-          <p>Welcome to Small Talk!</p>
-          <p>Choose a room to start chatting with others.</p>
-          <p>Available rooms:</p>
-          <p>
-            Small Talk is a place to connect, share, and have fun conversations on any topic you like.<br />
-            Select a room from the list to join a discussion, or just browse to see what others are talking about.<br />
-            Don't see a topic you like? Feel free to suggest a new room to the community!
-          </p>
+          <p>glad you're here 👋</p>
+          <p><strong>small talk</strong> is a pet project built to learn distributed systems through something actually fun - real-time chat with high intensity data flow.</p>
+          <p>designed &amp; built by me. yes, all of it. yes, it works.</p>
+          <p>pick a room and say hi - check <strong>#rules</strong> first. break them and i will ban your ip, no warnings.</p>
+          <p>love, stonedemo 💜</p>
         </div>
         <div className="rooms-scroll-container">
           <ul className="rooms-list">
+            <li className="room-item room-item--rules">
+              <Link to="/rules">#rules</Link>
+            </li>
           {rooms.map((room, index) => (
             <li key={index} className="room-item">
               <Link to={`/${encodeURIComponent(room)}`}>
