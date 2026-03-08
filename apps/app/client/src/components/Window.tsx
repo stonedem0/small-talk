@@ -321,7 +321,7 @@ const Window = ({
                   title="Leave room"
                   aria-label="Leave room"
                   data-tooltip="Leave room"
-                  onClick={handleClose}
+                  onClick={() => navigate("/")}
                 ></button>
               )}
               <div className="profile-menu-wrapper">

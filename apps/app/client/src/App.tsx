@@ -11,6 +11,7 @@ const App = () => {
   const [username, setUsername] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [tab, setTab] = useState("Chat");
+  const [windowClosed, setWindowClosed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -85,11 +86,12 @@ const App = () => {
         </Window>
       )}
 
-      {token && (
+      {token && !windowClosed && (
         <Window
           title="Fella connect"
           width={710}
           username={username}
+          onClose={() => setWindowClosed(true)}
           onSignOut={handleSignOut}
           tabs={["File", "Chat", "Appearance", "Settings"]}
           activeTab={tab}
