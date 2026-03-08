@@ -38,11 +38,10 @@
 }
 
 .rooms-scroll-container {
-  /* flex: 1 1 0; */
   min-height: 0;
   max-height: 250px;
-  min-width: 180px;
-  overflow: scroll;
+  width: 180px;
+  overflow: auto;
   border: 1px solid #cecccc;
 }
 
@@ -64,6 +63,7 @@
   text-decoration: none;
   transition: color 0.2s;
   color: var(--deep-purple);
+  white-space: nowrap;
 }
 
 .room-item a:hover {
