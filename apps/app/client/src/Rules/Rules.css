@@ -1,0 +1,30 @@
+#rules-container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--deep-purple);
+  height: 100%;
+  min-height: 0;
+}
+
+.rules-body {
+  background: linear-gradient(to bottom, #f6f6f6 0%, #ffffff 100%);
+  padding: 20px;
+  margin: 0 5px 5px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.rules-body h2 {
+  color: var(--deep-purple);
+  margin-top: 0;
+}
+
+.rules-list {
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: 14px;
+  color: #333;
+}

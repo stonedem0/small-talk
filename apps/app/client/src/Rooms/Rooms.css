@@ -38,11 +38,10 @@
 }
 
 .rooms-scroll-container {
-  /* flex: 1 1 0; */
   min-height: 0;
   max-height: 250px;
-  min-width: 180px;
-  overflow: scroll;
+  width: 180px;
+  overflow: auto;
   border: 1px solid #cecccc;
 }
 
@@ -63,16 +62,21 @@
   font-size: 14px;
   text-decoration: none;
   transition: color 0.2s;
-  color: var(--deep-purple);
+  color: #ff47a3;
+  white-space: nowrap;
 }
 
 .room-item a:hover {
-  color: var(--deep-purple);
+  color: #ff47a3;
   text-decoration: underline;
 }
 
 .room-item a:visited {
-  color: var(--deep-purple);
+  color: #ff47a3;
+}
+
+.room-item--rules a {
+  font-weight: bold;
 }
 
 .create-room-button {
