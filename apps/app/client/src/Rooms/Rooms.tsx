@@ -9,18 +9,10 @@ const Rooms = () => {
   const [collapsed, setCollapsed] = useState<{ [category: string]: boolean }>({});
   const [userCounts, setUserCounts] = useState<{ [room: string]: number }>({});
   const [username, setUsername] = useState<string | null>(null);
-
   const toggleCategory = (cat: string) =>
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
-  useEffect(() => {
-    const username = localStorage.getItem("username");
-    if (username) {
-      setUsername(username);
-    }
-  }, []);
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+
+  const fetchRooms = () => {
     authFetch(`${API_URL}/rooms-with-categories`)
       .then((response) => response.json())
       .then((data: { [cat: string]: string[] }) => {
@@ -33,9 +25,19 @@ const Rooms = () => {
         setGrouped(sorted);
         setCollapsed(initialCollapsed);
       })
-      .catch((error) => {
-        console.error("rooms list fetch error", error);
-      });
+      .catch((error) => console.error("rooms list fetch error", error));
+  };
+
+  useEffect(() => {
+    const username = localStorage.getItem("username");
+    if (username) {
+      setUsername(username);
+    }
+  }, []);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetchRooms();
 
     // Fetch online user counts
     authFetch(`${API_URL}/online-users`)
@@ -59,31 +61,33 @@ const Rooms = () => {
           <p>pick a room and say hi - check <strong>#rules</strong> first. break them and i will ban your ip, no warnings.</p>
           <p>love, stonedemo 💜</p>
         </div>
-        <div className="rooms-scroll-container">
-          <ul className="rooms-list">
-            <li className="room-item room-item--rules">
-              <Link to="/rules">#rules</Link>
-            </li>
-          {Object.entries(grouped).map(([category, rooms]) => (
-            <li key={category} className="room-category">
-              <button className="room-category-label" onClick={() => toggleCategory(category)}>
-                <span className={`room-category-arrow ${collapsed[category] ? "room-category-arrow--closed" : ""}`} />
-                {category.toLowerCase()}
-              </button>
-              {!collapsed[category] && (
-                <ul className="room-category-list">
-                  {rooms.map((room) => (
-                    <li key={room} className="room-item">
-                      <Link to={`/${encodeURIComponent(room)}`}>
-                        {room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-          </ul>
+        <div className="rooms-sidebar">
+          <div className="rooms-scroll-container">
+            <ul className="rooms-list">
+              <li className="room-item room-item--rules">
+                <Link to="/rules">#rules</Link>
+              </li>
+              {Object.entries(grouped).map(([category, rooms]) => (
+                <li key={category} className="room-category">
+                  <button className="room-category-label" onClick={() => toggleCategory(category)}>
+                    <span className={`room-category-arrow ${collapsed[category] ? "room-category-arrow--closed" : ""}`} />
+                    {category.toLowerCase()}
+                  </button>
+                  {!collapsed[category] && (
+                    <ul className="room-category-list">
+                      {rooms.map((room) => (
+                        <li key={room} className="room-item">
+                          <Link to={`/${encodeURIComponent(room)}`}>
+                            {room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </div>

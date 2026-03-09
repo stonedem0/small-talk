@@ -40,7 +40,6 @@
 .rooms-scroll-container {
   min-height: 0;
   max-height: 250px;
-  width: 180px;
   overflow: auto;
   border: 1px solid #cecccc;
 }
@@ -121,10 +120,71 @@
 
 .room-category-list {
   list-style: none;
-  padding: 0;
+  padding: 0 0 0 36px;
   margin: 0;
 }
 
-.create-room-button {
- margin: 7px;
+.rooms-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.create-room-toggle {
+  font-family: inherit;
+  font-size: 12px;
+  color: #ff47a3;
+  background: none;
+  border: 1px dashed #ff47a3;
+  cursor: pointer;
+  padding: 3px 6px;
+  text-align: left;
+  width: 100%;
+}
+
+.create-room-toggle:hover {
+  background: #fff0f8;
+}
+
+.create-room-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.create-room-input,
+.create-room-select {
+  font-family: inherit;
+  font-size: 12px;
+  border: 1px solid #cecccc;
+  padding: 3px 5px;
+  width: 100%;
+  box-sizing: border-box;
+  color: #333;
+}
+
+.create-room-select {
+  background: white;
+}
+
+.create-room-submit {
+  font-family: inherit;
+  font-size: 12px;
+  background: #ff47a3;
+  color: white;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.create-room-submit:hover {
+  background: #e03d91;
+}
+
+.create-room-error {
+  font-size: 11px;
+  color: #cc0000;
 }

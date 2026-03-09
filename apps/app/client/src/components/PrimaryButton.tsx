@@ -5,7 +5,7 @@ interface PrimaryButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   children: React.ReactNode;
 }
 
-const PrimaryButton: React.FC<PrimaryButtonProps> = ({ children, ...props }) => {
+const PrimaryButton = ({ children, ...props }: PrimaryButtonProps) => {
   return (
     <button className="primary-xp-btn" {...props}>
       {children}

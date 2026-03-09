@@ -307,42 +307,79 @@ align-self: center;
   border-color: var(--deep-purple);
 }
 
+.custom-select-wrapper {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.custom-select-trigger {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #ddd;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.custom-select-trigger:focus {
+  outline: none;
+  border-color: var(--deep-purple);
+}
+
+.custom-select-arrow {
+  color: #999;
+  font-size: 12px;
+}
+
+.custom-select-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid var(--deep-purple);
+  border-top: none;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  z-index: 10;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.custom-select-list li {
+  padding: 8px 10px 8px 28px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  position: relative;
+}
+
+.custom-select-list li:hover {
+  background: #f5f0ff;
+}
+
+.custom-select-check {
+  position: absolute;
+  left: 8px;
+  color: var(--deep-purple);
+}
+
 .form-buttons {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
 }
 
-.form-buttons button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.form-buttons button[type="submit"] {
-  background-color: var(--deep-purple);
-  color: white;
-}
-
-.form-buttons button[type="submit"]:hover:not(:disabled) {
-  background-color: #4a4a8a;
-}
-
-.form-buttons button[type="submit"]:disabled {
-  background-color: #ccc;
+.form-buttons button:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
-}
-
-.form-buttons button[type="button"] {
-  background-color: #f0f0f0;
-  color: #333;
-}
-
-.form-buttons button[type="button"]:hover {
-  background-color: #e0e0e0;
 }
 
 .window-content {

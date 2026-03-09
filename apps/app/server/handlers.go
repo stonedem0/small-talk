@@ -111,7 +111,7 @@ func (h *Handler) GetRoomsWithCategoriesHandler(w http.ResponseWriter, r *http.R
 	for _, room := range rooms {
 		cat, ok := categoryMap[room]
 		if !ok || cat == "" {
-			cat = "General"
+			cat = "general"
 		}
 		grouped[cat] = append(grouped[cat], room)
 	}
@@ -349,7 +349,8 @@ func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Room string `json:"room"`
+		Room     string `json:"room"`
+		Category string `json:"category"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -377,6 +378,10 @@ func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to save room"})
 		return
+	}
+	category := strings.TrimSpace(req.Category)
+	if category != "" {
+		_ = h.RDB.HSet(h.Ctx, "room:categories", room, category)
 	}
 	// no in-memory map to init here; rooms are created lazily when a client joins
 	w.WriteHeader(http.StatusCreated)

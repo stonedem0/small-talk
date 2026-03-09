@@ -145,8 +145,8 @@ func TestGetRoomsWithCategoriesHandler_UncategorizedFallsToGeneral(t *testing.T)
 	var result map[string][]string
 	_ = json.NewDecoder(w.Body).Decode(&result)
 
-	if len(result["General"]) != 1 || result["General"][0] != "randomroom" {
-		t.Fatalf("expected uncategorized room in General, got %v", result)
+	if len(result["general"]) != 1 || result["general"][0] != "randomroom" {
+		t.Fatalf("expected uncategorized room in general, got %v", result)
 	}
 }
 
