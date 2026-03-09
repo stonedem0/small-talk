@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import PrimaryButton from "./PrimaryButton";
 import CancelButton from "./CancelButton";
+import ModalWindow from "./ModalWindow";
 import WindowControls from "./WindowControls";
 import "./Window.css";
 import { API_URL } from "../config";
@@ -394,109 +395,100 @@ const Window = ({
 
       <div className="window-content">
         {showUsernameForm && (
-          <div className="username-form-overlay">
-            <div className="username-form">
-              <h3>Change Username</h3>
-              <form onSubmit={handleUsernameChange}>
-                <input
-                  type="text"
-                  placeholder="Enter new username"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  autoFocus
-                />
-                <div className="form-buttons">
-                  <PrimaryButton type="submit" disabled={!newUsername.trim() || isUpdating}>
-                    {isUpdating ? "updating..." : "change"}
-                  </PrimaryButton>
-                  <CancelButton type="button" onClick={handleCancelUsernameChange} disabled={isUpdating}>
-                    cancel
-                  </CancelButton>
-                </div>
-              </form>
-            </div>
-          </div>
+          <ModalWindow title="change username" onClose={handleCancelUsernameChange}>
+            <form onSubmit={handleUsernameChange}>
+              <input
+                type="text"
+                placeholder="new username"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                autoFocus
+              />
+              <div className="form-buttons">
+                <PrimaryButton size="sm" type="submit" disabled={!newUsername.trim() || isUpdating}>
+                  {isUpdating ? "updating..." : "change"}
+                </PrimaryButton>
+                <CancelButton size="sm" type="button" onClick={handleCancelUsernameChange} disabled={isUpdating}>
+                  cancel
+                </CancelButton>
+              </div>
+            </form>
+          </ModalWindow>
         )}
-        
+
         {showCreateRoomForm && (
-          <div className="username-form-overlay">
-            <div className="username-form">
-              <h3>Create room</h3>
-              <form onSubmit={handleCreateRoom}>
-                <input
-                  type="text"
-                  placeholder="room name"
-                  value={newRoom}
-                  onChange={(e) => setNewRoom(e.target.value)}
-                  autoFocus
-                />
-                <div className="custom-select-wrapper">
-                  <button
-                    type="button"
-                    className="custom-select-trigger"
-                    onClick={() => setShowCategoryDropdown((v) => !v)}
-                  >
-                    {newCategory || "no category"}
-                    <span className="custom-select-arrow">▾</span>
-                  </button>
-                  {showCategoryDropdown && (
-                    <ul className="custom-select-list">
-                      <li onClick={() => { setNewCategory(""); setShowCategoryDropdown(false); }}>
-                        {!newCategory && <span className="custom-select-check">✓</span>}no category
+          <ModalWindow title="create room" onClose={() => setShowCreateRoomForm(false)}>
+            <form onSubmit={handleCreateRoom}>
+              <input
+                type="text"
+                placeholder="room name"
+                value={newRoom}
+                onChange={(e) => setNewRoom(e.target.value)}
+                autoFocus
+              />
+              <div className="custom-select-wrapper">
+                <button
+                  type="button"
+                  className="custom-select-trigger"
+                  onClick={() => setShowCategoryDropdown((v) => !v)}
+                >
+                  {newCategory || "no category"}
+                  <span className="custom-select-arrow">▾</span>
+                </button>
+                {showCategoryDropdown && (
+                  <ul className="custom-select-list">
+                    <li onClick={() => { setNewCategory(""); setShowCategoryDropdown(false); }}>
+                      {!newCategory && <span className="custom-select-check">✓</span>}no category
+                    </li>
+                    {categories.map((cat) => (
+                      <li key={cat} onClick={() => { setNewCategory(cat); setShowCategoryDropdown(false); }}>
+                        {newCategory === cat && <span className="custom-select-check">✓</span>}{cat}
                       </li>
-                      {categories.map((cat) => (
-                        <li key={cat} onClick={() => { setNewCategory(cat); setShowCategoryDropdown(false); }}>
-                          {newCategory === cat && <span className="custom-select-check">✓</span>}{cat}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                {createRoomError && <span style={{ fontSize: "12px", color: "#cc0000" }}>{createRoomError}</span>}
-                <div className="form-buttons">
-                  <PrimaryButton type="submit" disabled={!newRoom.trim()}>create</PrimaryButton>
-                  <CancelButton type="button" onClick={() => setShowCreateRoomForm(false)}>cancel</CancelButton>
-                </div>
-              </form>
-            </div>
-          </div>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {createRoomError && <span style={{ fontSize: "12px", color: "#cc0000" }}>{createRoomError}</span>}
+              <div className="form-buttons">
+                <PrimaryButton size="sm" type="submit" disabled={!newRoom.trim()}>create</PrimaryButton>
+                <CancelButton size="sm" type="button" onClick={() => setShowCreateRoomForm(false)}>cancel</CancelButton>
+              </div>
+            </form>
+          </ModalWindow>
         )}
 
         {showPasswordForm && (
-          <div className="username-form-overlay">
-            <div className="username-form">
-              <h3>Change Password</h3>
-              <form onSubmit={handlePasswordChange}>
-                <input
-                  type="password"
-                  placeholder="Enter your current password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  autoFocus
-                />
-                <input
-                  type="password"
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-                <input
-                  type="password"
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-                <div className="form-buttons">
-                  <PrimaryButton type="submit" disabled={!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim() || isUpdating}>
-                    {isUpdating ? "updating..." : "change"}
-                  </PrimaryButton>
-                  <CancelButton type="button" onClick={handleCancelPasswordChange} disabled={isUpdating}>
-                    cancel
-                  </CancelButton>
-                </div>
-              </form>
-            </div>
-          </div>
+          <ModalWindow title="change password" onClose={handleCancelPasswordChange}>
+            <form onSubmit={handlePasswordChange}>
+              <input
+                type="password"
+                placeholder="current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoFocus
+              />
+              <input
+                type="password"
+                placeholder="new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+              <div className="form-buttons">
+                <PrimaryButton size="sm" type="submit" disabled={!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim() || isUpdating}>
+                  {isUpdating ? "updating..." : "change"}
+                </PrimaryButton>
+                <CancelButton size="sm" type="button" onClick={handleCancelPasswordChange} disabled={isUpdating}>
+                  cancel
+                </CancelButton>
+              </div>
+            </form>
+          </ModalWindow>
         )}
         
         {children}

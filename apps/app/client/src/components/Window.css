@@ -264,48 +264,6 @@ align-self: center;
   font-weight: bold;
 }
 
-.username-form-overlay {
-  position: fixed;
-  height: 500px;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.username-form {
-  background-color: white;
-  padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  min-width: 300px;
-  max-width: 400px;
-}
-
-.username-form h3 {
-  margin: 0 0 16px 0;
-  color: var(--deep-purple);
-  font-size: 18px;
-  text-align: center;
-}
-
-.username-form input {
-  width: 100%;
-  padding: 10px;
-  border: 2px solid #ddd;
-  font-size: 14px;
-  margin-bottom: 16px;
-  box-sizing: border-box;
-}
-
-.username-form input:focus {
-  outline: none;
-  border-color: var(--deep-purple);
-}
 
 .custom-select-wrapper {
   position: relative;
@@ -375,6 +333,7 @@ align-self: center;
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+  margin-top: 4px;
 }
 
 .form-buttons button:disabled {
