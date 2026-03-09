@@ -78,7 +78,7 @@ const Rooms = () => {
                       {rooms.map((room) => (
                         <li key={room} className="room-item">
                           <Link to={`/${encodeURIComponent(room)}`}>
-                            {room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
+                            #{room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
                           </Link>
                         </li>
                       ))}
