@@ -86,6 +86,88 @@ func TestGetChatHistoryHandler_ReturnsOldestFirst(t *testing.T) {
 	}
 }
 
+// --- GetRoomsWithCategoriesHandler ---
+
+func TestGetRoomsWithCategoriesHandler_Empty(t *testing.T) {
+	setupHandlerRedis(t)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/rooms-with-categories", nil)
+	newHandler().GetRoomsWithCategoriesHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var result map[string][]string
+	_ = json.NewDecoder(w.Body).Decode(&result)
+	if len(result) != 0 {
+		t.Fatalf("expected empty result, got %v", result)
+	}
+}
+
+func TestGetRoomsWithCategoriesHandler_Grouped(t *testing.T) {
+	setupHandlerRedis(t)
+
+	RDB.SAdd(ctx, "rooms", "gaming", "music", "anime")
+	RDB.HSet(ctx, "room:categories", "gaming", "gaming", "music", "music", "anime", "anime & arts")
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/rooms-with-categories", nil)
+	newHandler().GetRoomsWithCategoriesHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var result map[string][]string
+	_ = json.NewDecoder(w.Body).Decode(&result)
+
+	if len(result["gaming"]) != 1 || result["gaming"][0] != "gaming" {
+		t.Fatalf("expected gaming category to have [gaming], got %v", result["gaming"])
+	}
+	if len(result["music"]) != 1 || result["music"][0] != "music" {
+		t.Fatalf("expected music category to have [music], got %v", result["music"])
+	}
+	if len(result["anime & arts"]) != 1 || result["anime & arts"][0] != "anime" {
+		t.Fatalf("expected anime & arts category to have [anime], got %v", result["anime & arts"])
+	}
+}
+
+func TestGetRoomsWithCategoriesHandler_UncategorizedFallsToGeneral(t *testing.T) {
+	setupHandlerRedis(t)
+
+	RDB.SAdd(ctx, "rooms", "randomroom")
+	// no category set for randomroom
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/rooms-with-categories", nil)
+	newHandler().GetRoomsWithCategoriesHandler(w, r)
+
+	var result map[string][]string
+	_ = json.NewDecoder(w.Body).Decode(&result)
+
+	if len(result["General"]) != 1 || result["General"][0] != "randomroom" {
+		t.Fatalf("expected uncategorized room in General, got %v", result)
+	}
+}
+
+func TestGetRoomsWithCategoriesHandler_MultipleRoomsPerCategory(t *testing.T) {
+	setupHandlerRedis(t)
+
+	RDB.SAdd(ctx, "rooms", "gaming", "nerd_herd")
+	RDB.HSet(ctx, "room:categories", "gaming", "gaming", "nerd_herd", "gaming")
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/rooms-with-categories", nil)
+	newHandler().GetRoomsWithCategoriesHandler(w, r)
+
+	var result map[string][]string
+	_ = json.NewDecoder(w.Body).Decode(&result)
+
+	if len(result["gaming"]) != 2 {
+		t.Fatalf("expected 2 rooms in gaming category, got %v", result["gaming"])
+	}
+}
+
 // --- GetOnlineUsersHandler ---
 
 func TestGetOnlineUsersHandler_SpecificRoom(t *testing.T) {

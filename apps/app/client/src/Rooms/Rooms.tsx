@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "./Rooms.css";
 import { API_URL } from "../config";
+import { authFetch } from "../utils/authFetch";
 
 const Rooms = () => {
   const [grouped, setGrouped] = useState<{ [category: string]: string[] }>({});
@@ -20,11 +21,7 @@ const Rooms = () => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetch(`${API_URL}/rooms-with-categories`, {
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("token")}`
-      }
-    })
+    authFetch(`${API_URL}/rooms-with-categories`)
       .then((response) => response.json())
       .then((data: { [cat: string]: string[] }) => {
         const sorted: { [cat: string]: string[] } = {};
@@ -41,11 +38,7 @@ const Rooms = () => {
       });
 
     // Fetch online user counts
-    fetch(`${API_URL}/online-users`, {
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("token")}`
-      }
-    })
+    authFetch(`${API_URL}/online-users`)
       .then((response) => response.json())
       .then((data) => setUserCounts(data))
       .catch((error) => {

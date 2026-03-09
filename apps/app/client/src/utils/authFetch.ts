@@ -20,7 +20,10 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
 
     // Try refresh (cookie-based). This always uses credentials: 'include'.
     const refresh = await fetch(`${API_URL}/refresh`, { method: "POST", credentials: "include" });
-    if (!refresh.ok) return res;
+    if (!refresh.ok) {
+        window.dispatchEvent(new CustomEvent("auth:expired"));
+        return res;
+    }
 
     const data = await refresh.json().catch(() => ({} as any));
     if (data?.token) {
