@@ -56,6 +56,7 @@ const sanitizeHtml = (dirty: string): string => {
 
 interface ChatProps {
   username: string;
+  roomNameOverride?: string;
 }
 
 interface Message {
@@ -65,8 +66,9 @@ interface Message {
   timestamp: string;
 }
 
-const Chat = ({ username }: ChatProps) => {
-  const { roomName } = useParams<{ roomName: string }>();
+const Chat = ({ username, roomNameOverride }: ChatProps) => {
+  const params = useParams<{ roomName: string }>();
+  const roomName = roomNameOverride ?? params.roomName;
   const navigate = useNavigate();
 
   const [isValidRoom, setIsValidRoom] = useState(false);
@@ -92,6 +94,15 @@ const Chat = ({ username }: ChatProps) => {
 
   useEffect(() => {
     const fetchRooms = async () => {
+      if (roomName?.startsWith("dm:") && !roomNameOverride) {
+        // DM rooms must be accessed via /dm/:username, not directly
+        navigate("/");
+        return;
+      }
+      if (roomNameOverride?.startsWith("dm:")) {
+        setIsValidRoom(true);
+        return;
+      }
       try {
         const response = await authFetch(`${API_URL}/rooms`, {
           headers: {
@@ -123,10 +134,11 @@ const Chat = ({ username }: ChatProps) => {
             "Authorization": `Bearer ${localStorage.getItem("token")}`
           }
         });
+        if (response.status === 403 || response.status === 404) { navigate("/"); return; }
         if (!response.ok) throw new Error("Failed to fetch history");
         const data: Message[] = await response.json();
         if ( data && data.length > 0) {
-          setMessages(data.reverse());
+          setMessages(data);
         } else {
           setMessages([]);
         }
@@ -213,6 +225,10 @@ const Chat = ({ username }: ChatProps) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const openDM = (target: string) => {
+    navigate(`/dm/${target}`);
+  };
 
   const sendTyping = () => {
     if (!ws.current || ws.current.readyState !== WebSocket.OPEN) return;
@@ -532,15 +548,19 @@ const Chat = ({ username }: ChatProps) => {
                 .slice()
                 .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
                 .map((user) => (
-                <li 
-                  key={user} 
-                  style={{ 
-                    color: getUserColor(user),
-                    fontWeight: "bold",
-                    marginBottom: "4px"
-                  }}
-                >
-                  ● {user}
+                <li key={user} className="online-user-item">
+                  <span style={{ color: getUserColor(user), fontWeight: "bold" }}>
+                    ● {user}
+                  </span>
+                  {user !== username && (
+                    <button
+                      className="dm-btn"
+                      title={`Message ${user}`}
+                      onClick={() => openDM(user)}
+                    >
+                      ✉
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

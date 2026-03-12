@@ -3,6 +3,7 @@ import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Popup from "./Login/Login";
 import Rooms from "./Rooms/Rooms";
 import Chat from "./Chat/Chat";
+import DMChat from "./Chat/DMChat";
 import Rules from "./Rules/Rules";
 import Window from "./components/Window";
 import "./App.css";
@@ -121,6 +122,7 @@ const App = () => {
               <Route path="/" element={<Rooms />} />
               <Route path="/home" element={<Rooms />} />
               <Route path="/rules" element={<Rules />} />
+              <Route path="dm/:targetUsername" element={username ? <DMChat username={username} /> : <div>Loading...</div>} />
               <Route path=":roomName" element={username ? <Chat username={username} /> : <div>Loading...</div>} />
             </Routes>
           )}

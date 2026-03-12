@@ -277,6 +277,29 @@
   color: palevioletred;
 }
 
+.online-user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  gap: 4px;
+}
+
+.dm-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-sm);
+  opacity: 0.4;
+  padding: 0 2px;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+
+.dm-btn:hover {
+  opacity: 1;
+}
+
 @keyframes pulse {
   0% {
     background-position: -200% 0;
