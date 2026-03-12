@@ -37,6 +37,11 @@
     0 0 0 1.5px #d9c4ff inset;
 }
 
+.primary-xp-btn--xs { padding: 5px 20px; font-size: 0.85rem; }
+.primary-xp-btn--sm { padding: 6px 14px; font-size: 0.9rem; }
+.primary-xp-btn--md { padding: 7px 32px; font-size: 1rem; }
+.primary-xp-btn--lg { padding: 10px 48px; font-size: 1.1rem; }
+
 .primary-xp-btn:active {
   background: linear-gradient(to bottom, #d9c4ff 0%, #e9d5ff 100%);
   box-shadow:

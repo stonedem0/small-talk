@@ -40,7 +40,6 @@
 .rooms-scroll-container {
   min-height: 0;
   max-height: 250px;
-  width: 180px;
   overflow: auto;
   border: 1px solid #cecccc;
 }
@@ -53,7 +52,7 @@
 }
 
 .room-item {
-  margin: 1px 0;
+  margin: 0;
 }
 
 .room-item a {
@@ -62,23 +61,78 @@
   font-size: 14px;
   text-decoration: none;
   transition: color 0.2s;
-  color: #ff47a3;
+  color: var(--deep-purple);
   white-space: nowrap;
 }
 
 .room-item a:hover {
-  color: #ff47a3;
+  color: var(--deep-purple);
   text-decoration: underline;
 }
 
 .room-item a:visited {
-  color: #ff47a3;
+  color: var(--deep-purple);
 }
 
 .room-item--rules a {
   font-weight: bold;
 }
 
-.create-room-button {
- margin: 7px;
+.room-category {
+  list-style: none;
+  margin-top: 2px;
 }
+
+.room-category-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ff47a3;
+  font-family: inherit;
+  text-transform: none;
+  padding: 1px 8px;
+  margin-bottom: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.room-category-label:hover {
+  color: #ff47a3;
+  opacity: 0.8;
+}
+
+.room-category-arrow {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-image: url("../assets/icons/folder-01.png");
+  background-size: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.room-category-arrow--closed {
+  background-image: url("../assets/icons/folder-04.png");
+}
+
+.room-category-list {
+  list-style: none;
+  padding: 0 0 0 36px;
+  margin: 0;
+}
+
+.rooms-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 180px;
+  flex-shrink: 0;
+}
+

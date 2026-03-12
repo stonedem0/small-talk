@@ -96,6 +96,28 @@ func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(rooms)
 }
 
+func (h *Handler) GetRoomsWithCategoriesHandler(w http.ResponseWriter, r *http.Request) {
+	rooms, err := h.RDB.SMembers(h.Ctx, "rooms").Result()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
+	}
+	categoryMap, err := h.RDB.HGetAll(h.Ctx, "room:categories").Result()
+	if err != nil {
+		categoryMap = map[string]string{}
+	}
+	grouped := map[string][]string{}
+	for _, room := range rooms {
+		cat, ok := categoryMap[room]
+		if !ok || cat == "" {
+			cat = "general"
+		}
+		grouped[cat] = append(grouped[cat], room)
+	}
+	_ = json.NewEncoder(w).Encode(grouped)
+}
+
 // No longer checks in-memory clients map. Source of truth is Redis set "rooms".
 func (h *Handler) SubscribeToRoomHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
@@ -327,7 +349,8 @@ func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Room string `json:"room"`
+		Room     string `json:"room"`
+		Category string `json:"category"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -355,6 +378,10 @@ func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to save room"})
 		return
+	}
+	category := strings.TrimSpace(req.Category)
+	if category != "" {
+		_ = h.RDB.HSet(h.Ctx, "room:categories", room, category)
 	}
 	// no in-memory map to init here; rooms are created lazily when a client joins
 	w.WriteHeader(http.StatusCreated)

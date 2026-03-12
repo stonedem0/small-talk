@@ -499,8 +499,49 @@ func main() {
 		shutting: atomic.Bool{},
 		cancel:   cancel,
 	}
-	for _, room := range []string{"gaming", "music", "anime", "programming", "chilling", "nerd_herd", "pets", "emo"} {
+	for _, room := range []string{
+		"gaming", "music", "anime", "programming", "chilling", "nerd_herd", "pets", "emo",
+		"movies", "books", "sports", "cooking", "travel", "art", "photography",
+		"fitness", "finance", "science", "history", "languages",
+		"memes", "fashion", "diy", "crypto", "food", "cars",
+		"astrology", "mental_health", "dating", "random",
+	} {
 		RDB.SAdd(ctx, "rooms", room)
+	}
+	defaultCategories := map[string]string{
+		"gaming":        "gaming",
+		"nerd_herd":     "gaming",
+		"memes":         "gaming",
+		"music":         "music",
+		"emo":           "music",
+		"anime":         "anime & arts",
+		"art":           "anime & arts",
+		"photography":   "anime & arts",
+		"programming":   "tech",
+		"science":       "tech",
+		"finance":       "tech",
+		"crypto":        "tech",
+		"chilling":      "chill",
+		"pets":          "chill",
+		"cooking":       "chill",
+		"food":          "chill",
+		"movies":        "movies & books",
+		"books":         "movies & books",
+		"history":       "movies & books",
+		"sports":        "sports & fitness",
+		"fitness":       "sports & fitness",
+		"travel":        "lifestyle",
+		"languages":     "lifestyle",
+		"fashion":       "lifestyle",
+		"diy":           "lifestyle",
+		"cars":          "lifestyle",
+		"astrology":     "vibes & wellness",
+		"mental_health": "vibes & wellness",
+		"dating":        "vibes & wellness",
+		"random":        "random",
+	}
+	for room, cat := range defaultCategories {
+		RDB.HSet(ctx, "room:categories", room, cat)
 	}
 
 	h := NewHandler(RDB, jwtSecret, refreshSecret)
@@ -512,6 +553,7 @@ func main() {
 	http.HandleFunc("/refresh", WithCORS(h.RefreshHandler))
 	http.HandleFunc("/history", WithCORS(h.WithAuth(h.GetChatHistoryHandler)))
 	http.HandleFunc("/rooms", WithCORS(h.WithAuth(h.GetRoomsHandler)))
+	http.HandleFunc("/rooms-with-categories", WithCORS(h.WithAuth(h.GetRoomsWithCategoriesHandler)))
 	http.HandleFunc("/subscribe", WithCORS(h.WithAuth(h.SubscribeToRoomHandler)))
 	http.HandleFunc("/online-users", WithCORS(h.WithAuth(h.GetOnlineUsersHandler)))
 	http.HandleFunc("/room-usernames", WithCORS(h.GetRoomUsernamesHandler))

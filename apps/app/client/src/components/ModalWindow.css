@@ -1,0 +1,113 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-window {
+  background-color: var(--deep-purple);
+  border-radius: 5px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(74,0,247,0.3);
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.modal-window-title {
+  margin: 0;
+  color: white;
+  font-size: 15px;
+  font-weight: bold;
+  padding: 8px 14px;
+  border-radius: 5px 5px 0 0;
+  position: relative;
+  overflow: hidden;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-window-close {
+  width: 23px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 3px;
+  border: 0.4px solid white;
+  background: linear-gradient(to bottom, rgba(199,1,149,1) 0%, rgba(247,37,133,1) 35%, rgba(247,88,88,1) 100%);
+  box-shadow: inset 0 3px 5px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.modal-window-close::before {
+  content: "";
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40px' height='40px' viewBox='0 0 40 40'%3E%3Cdefs%3E%3Cfilter id='shadow' x='-50%25' y='-50%25' width='200%25' height='200%25'%3E%3CfeDropShadow dx='2' dy='2' stdDeviation='2' flood-color='black' flood-opacity='0.3' /%3E%3C/filter%3E%3C/defs%3E%3Cpath d='M 10,10 L 30,30 M 30,10 L 10,30' stroke='white' stroke-width='5' stroke-linecap='butt' filter='url(%23shadow)' /%3E%3C/svg%3E");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.modal-window-close:active {
+  box-shadow: inset 0 3px 6px rgba(0,0,0,0.4);
+}
+
+.modal-window-close:focus {
+  outline: none;
+}
+
+.modal-window-title::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.05) 100%);
+  border-radius: 5px 5px 0 0;
+  pointer-events: none;
+}
+
+.modal-window-title::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.03) 100%);
+  pointer-events: none;
+}
+
+.modal-window-body {
+  background: linear-gradient(to bottom, #f6f6f6 0%, #ffffff 100%);
+  padding: 16px;
+  margin: 0 4px 4px;
+  border-radius: 0 0 3px 3px;
+}
+
+.modal-window-body input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid #ddd;
+  font-size: 14px;
+  font-family: inherit;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.modal-window-body input:focus {
+  outline: none;
+  border-color: var(--deep-purple);
+}

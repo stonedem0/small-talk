@@ -65,6 +65,11 @@ const App = () => {
   };
 
   useEffect(() => {
+    window.addEventListener("auth:expired", handleSignOut);
+    return () => window.removeEventListener("auth:expired", handleSignOut);
+  }, []);
+
+  useEffect(() => {
     if (location.pathname === "/" || location.pathname === "/") {
       setTab("Chat");
     } else if (location.pathname.includes("/")) {
