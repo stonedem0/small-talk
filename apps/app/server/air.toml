@@ -5,7 +5,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/main ./main.go"
+  cmd = "go build -o ./tmp/main ."
   bin = "tmp/main"
   include_ext = ["go"]
   exclude_dir = ["tmp"]
