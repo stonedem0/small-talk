@@ -565,7 +565,7 @@ func main() {
 	log.Println("Server starting on", addr)
 
 	go func() {
-		if err := a.server.ListenAndServe(); err != nil {
+		if err := a.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatal("ListenAndServe:", err)
 		}
 	}()
