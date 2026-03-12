@@ -767,3 +767,82 @@ func (h *Handler) VerifyToken(r *http.Request) (string, error) {
 	}
 	return username, nil
 }
+
+// pushNotification sends a notification event to all SSE connections for a user.
+func pushNotification(username, payload string) {
+	sseClientsMu.Lock()
+	defer sseClientsMu.Unlock()
+	for _, ch := range sseClients[username] {
+		select {
+		case ch <- payload:
+		default: // drop if channel full
+		}
+	}
+}
+
+// SSEHandler handles Server-Sent Events for real-time notifications.
+// Auth via ?token= query param since EventSource doesn't support headers.
+func (h *Handler) SSEHandler(w http.ResponseWriter, r *http.Request) {
+	tokenStr := r.URL.Query().Get("token")
+	if tokenStr == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method")
+		}
+		return h.JWTSecret, nil
+	})
+	if err != nil || !token.Valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	username, _ := claims["username"].(string)
+	if username == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	ch := make(chan string, 8)
+	sseClientsMu.Lock()
+	sseClients[username] = append(sseClients[username], ch)
+	sseClientsMu.Unlock()
+
+	defer func() {
+		sseClientsMu.Lock()
+		chans := sseClients[username]
+		for i, c := range chans {
+			if c == ch {
+				sseClients[username] = append(chans[:i], chans[i+1:]...)
+				break
+			}
+		}
+		sseClientsMu.Unlock()
+	}()
+
+	for {
+		select {
+		case payload := <-ch:
+			fmt.Fprintf(w, "data: %s\n\n", payload)
+			flusher.Flush()
+		case <-r.Context().Done():
+			return
+		}
+	}
+}

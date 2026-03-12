@@ -4,7 +4,12 @@ import "./Rooms.css";
 import { API_URL } from "../config";
 import { authFetch } from "../utils/authFetch";
 
-const Rooms = () => {
+interface RoomsProps {
+  unreadDMs?: { [from: string]: number };
+  onDMOpen?: (from: string) => void;
+}
+
+const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const [grouped, setGrouped] = useState<{ [category: string]: string[] }>({});
   const [collapsed, setCollapsed] = useState<{ [category: string]: boolean }>({});
   const [userCounts, setUserCounts] = useState<{ [room: string]: number }>({});
@@ -101,7 +106,9 @@ const Rooms = () => {
                 <ul className="room-category-list">
                   {dmMessages.sort().map((partner) => (
                     <li key={partner} className="room-item">
-                      <Link to={`/dm/${partner}`}>● {partner}</Link>
+                      <Link to={`/dm/${partner}`} onClick={() => onDMOpen?.(partner)}>
+                        ● {partner}{unreadDMs[partner] ? ` (${unreadDMs[partner]})` : ""}
+                      </Link>
                     </li>
                   ))}
                 </ul>

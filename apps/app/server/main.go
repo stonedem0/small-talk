@@ -41,6 +41,9 @@ var (
 
 	roomSubs   = make(map[string]*redis.PubSub)
 	roomSubsMu sync.Mutex
+
+	sseClients   = make(map[string][]chan string)
+	sseClientsMu sync.Mutex
 )
 
 func init() {
@@ -385,6 +388,26 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
+func notifyDMRecipient(room, sender string) {
+	if !isDMRoom(room) {
+		return
+	}
+	parts := strings.SplitN(strings.TrimPrefix(room, "dm:"), ":", 2)
+	if len(parts) != 2 {
+		return
+	}
+	recipient := parts[0]
+	if recipient == sender {
+		recipient = parts[1]
+	}
+	notif, _ := json.Marshal(map[string]string{
+		"type": "dm",
+		"from": sender,
+		"room": room,
+	})
+	pushNotification(recipient, string(notif))
+}
+
 func subscribeToRoom(ctx context.Context, room string) {
 	ps := RDB.Subscribe(ctx, "room:"+room)
 
@@ -430,6 +453,10 @@ func subscribeToRoom(ctx context.Context, room string) {
 					log.Printf("redis LPush error in %s: %v", room, err)
 				}
 				_ = RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
+
+				if received.Type != "system" {
+					notifyDMRecipient(room, received.Username)
+				}
 			}
 
 			enqueueToRoom(room, b)
@@ -494,19 +521,7 @@ func (a *app) gracefulShutdown(ctx context.Context) {
 	}
 }
 
-func main() {
-	flag.Parse()
-	InitRedis()
-
-	root, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	startHeartbeat(root)
-	a := &app{
-		server:   &http.Server{Addr: ":" + port},
-		wg:       sync.WaitGroup{},
-		shutting: atomic.Bool{},
-		cancel:   cancel,
-	}
+func seedRooms() {
 	for _, room := range []string{
 		"gaming", "music", "anime", "programming", "chilling", "nerd_herd", "pets", "emo",
 		"movies", "books", "sports", "cooking", "travel", "art", "photography",
@@ -516,7 +531,7 @@ func main() {
 	} {
 		RDB.SAdd(ctx, "rooms", room)
 	}
-	defaultCategories := map[string]string{
+	for room, cat := range map[string]string{
 		"gaming":        "gaming",
 		"nerd_herd":     "gaming",
 		"memes":         "gaming",
@@ -547,13 +562,12 @@ func main() {
 		"mental_health": "vibes & wellness",
 		"dating":        "vibes & wellness",
 		"random":        "random",
-	}
-	for room, cat := range defaultCategories {
+	} {
 		RDB.HSet(ctx, "room:categories", room, cat)
 	}
+}
 
-	h := NewHandler(RDB, jwtSecret, refreshSecret)
-
+func registerRoutes(a *app, h *Handler) {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { handleConnections(a, w, r) })
 	http.HandleFunc("/login", WithCORS(h.LoginHandler))
 	http.HandleFunc("/register", WithCORS(h.RegisterHandler))
@@ -570,6 +584,27 @@ func main() {
 	http.HandleFunc("/update-password", WithCORS(h.WithAuth(h.UpdatePasswordHandler)))
 	http.HandleFunc("/dm/start", WithCORS(h.StartDMHandler))
 	http.HandleFunc("/dms", WithCORS(h.GetDMListHandler))
+	http.HandleFunc("/events", WithCORS(h.SSEHandler))
+}
+
+func main() {
+	flag.Parse()
+	InitRedis()
+
+	root, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	startHeartbeat(root)
+	a := &app{
+		server:   &http.Server{Addr: ":" + port},
+		wg:       sync.WaitGroup{},
+		shutting: atomic.Bool{},
+		cancel:   cancel,
+	}
+
+	seedRooms()
+
+	h := NewHandler(RDB, jwtSecret, refreshSecret)
+	registerRoutes(a, h)
 
 	addr := ":" + port
 	log.Println("Server starting on", addr)
