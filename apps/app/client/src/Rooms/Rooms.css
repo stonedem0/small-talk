@@ -128,6 +128,22 @@
   margin: 0;
 }
 
+.dm-section {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e0d4ff;
+}
+
+.dm-section-label {
+  font-size: var(--font-sm);
+  font-weight: bold;
+  color: var(--deep-purple);
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0 0 4px 4px;
+}
+
 .rooms-sidebar {
   display: flex;
   flex-direction: column;

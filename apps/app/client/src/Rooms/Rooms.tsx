@@ -9,6 +9,7 @@ const Rooms = () => {
   const [collapsed, setCollapsed] = useState<{ [category: string]: boolean }>({});
   const [userCounts, setUserCounts] = useState<{ [room: string]: number }>({});
   const [username, setUsername] = useState<string | null>(null);
+  const [dmMessages, setDmMessages] = useState<string[]>([]);
   const toggleCategory = (cat: string) =>
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
 
@@ -44,13 +45,15 @@ const Rooms = () => {
     if (!token) return;
     fetchRooms();
 
-    // Fetch online user counts
     authFetch(`${API_URL}/online-users`)
       .then((response) => response.json())
       .then((data) => setUserCounts(data))
-      .catch((error) => {
-        console.error("online-users fetch error", error);
-      });
+      .catch((error) => console.error("online-users fetch error", error));
+
+    authFetch(`${API_URL}/dms`)
+      .then((response) => response.json())
+      .then((data: string[]) => setDmMessages(data || []))
+      .catch((error) => console.error("dms fetch error", error));
   }, []);
 
   return (
@@ -92,6 +95,18 @@ const Rooms = () => {
                 </li>
               ))}
             </ul>
+            {dmMessages.length > 0 && (
+              <div className="dm-section">
+                <div className="dm-section-label">messages</div>
+                <ul className="room-category-list">
+                  {dmMessages.sort().map((partner) => (
+                    <li key={partner} className="room-item">
+                      <Link to={`/dm/${partner}`}>● {partner}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </div>
