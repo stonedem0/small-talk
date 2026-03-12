@@ -13,6 +13,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// isDMRoom reports whether the room is a DM room.
+func isDMRoom(room string) bool {
+	return strings.HasPrefix(room, "dm:")
+}
+
+// isDMParticipant reports whether username is one of the two participants in a DM room.
+func isDMParticipant(room, username string) bool {
+	parts := strings.SplitN(strings.TrimPrefix(room, "dm:"), ":", 2)
+	return len(parts) == 2 && (username == parts[0] || username == parts[1])
+}
+
 type contextKey string
 
 const (
@@ -155,6 +166,19 @@ func (h *Handler) GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) 
 	if room == "" {
 		http.Error(w, "Room parameter is required", http.StatusBadRequest)
 		return
+	}
+	if isDMRoom(room) {
+		username, err := h.VerifyToken(r)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+			return
+		}
+		if !isDMParticipant(room, username) {
+			w.WriteHeader(http.StatusForbidden)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Forbidden"})
+			return
+		}
 	}
 	messages, err := RDB.LRange(ctx, "chat_history:"+room, 0, 99).Result()
 	if err != nil {
@@ -628,6 +652,85 @@ func (h *Handler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"token": signed})
 }
 
+// StartDMHandler registers a DM between the caller and a target user.
+// POST /dm/start  { "target": "bob" }
+// Returns { "room": "dm:alice:bob" }
+func (h *Handler) StartDMHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	var req struct {
+		Target string `json:"target"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Target) == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "target is required"})
+		return
+	}
+	target := strings.TrimSpace(req.Target)
+	if target == username {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "cannot DM yourself"})
+		return
+	}
+	exists, err := h.RDB.HExists(h.Ctx, "users", target).Result()
+	if err != nil || !exists {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "user not found"})
+		return
+	}
+	a, b := username, target
+	if a > b {
+		a, b = b, a
+	}
+	room := "dm:" + a + ":" + b
+	pipe := h.RDB.Pipeline()
+	pipe.SAdd(h.Ctx, "dms:"+username, target)
+	pipe.SAdd(h.Ctx, "dms:"+target, username)
+	if _, err := pipe.Exec(h.Ctx); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]string{"room": room})
+}
+
+// GetDMListHandler returns the list of DM partners for the current user.
+// GET /dms
+func (h *Handler) GetDMListHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	partners, err := h.RDB.SMembers(h.Ctx, "dms:"+username).Result()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
+	}
+	if partners == nil {
+		partners = []string{}
+	}
+	_ = json.NewEncoder(w).Encode(partners)
+}
+
 func (h *Handler) VerifyToken(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
@@ -663,4 +766,83 @@ func (h *Handler) VerifyToken(r *http.Request) (string, error) {
 		return "", fmt.Errorf("username missing from token")
 	}
 	return username, nil
+}
+
+// pushNotification sends a notification event to all SSE connections for a user.
+func pushNotification(username, payload string) {
+	sseClientsMu.Lock()
+	defer sseClientsMu.Unlock()
+	for _, ch := range sseClients[username] {
+		select {
+		case ch <- payload:
+		default: // drop if channel full
+		}
+	}
+}
+
+// SSEHandler handles Server-Sent Events for real-time notifications.
+// Auth via ?token= query param since EventSource doesn't support headers.
+func (h *Handler) SSEHandler(w http.ResponseWriter, r *http.Request) {
+	tokenStr := r.URL.Query().Get("token")
+	if tokenStr == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method")
+		}
+		return h.JWTSecret, nil
+	})
+	if err != nil || !token.Valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	username, _ := claims["username"].(string)
+	if username == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	ch := make(chan string, 8)
+	sseClientsMu.Lock()
+	sseClients[username] = append(sseClients[username], ch)
+	sseClientsMu.Unlock()
+
+	defer func() {
+		sseClientsMu.Lock()
+		chans := sseClients[username]
+		for i, c := range chans {
+			if c == ch {
+				sseClients[username] = append(chans[:i], chans[i+1:]...)
+				break
+			}
+		}
+		sseClientsMu.Unlock()
+	}()
+
+	for {
+		select {
+		case payload := <-ch:
+			fmt.Fprintf(w, "data: %s\n\n", payload)
+			flusher.Flush()
+		case <-r.Context().Done():
+			return
+		}
+	}
 }

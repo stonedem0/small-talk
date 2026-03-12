@@ -3,9 +3,14 @@ import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Popup from "./Login/Login";
 import Rooms from "./Rooms/Rooms";
 import Chat from "./Chat/Chat";
+import DMChat from "./Chat/DMChat";
 import Rules from "./Rules/Rules";
 import Window from "./components/Window";
+import { API_URL } from "./config";
+import coinSound from "./assets/sounds/pickupCoin.wav";
 import "./App.css";
+
+const notifAudio = new Audio(coinSound);
 
 const App = () => {
   
@@ -13,6 +18,9 @@ const App = () => {
   const [token, setToken] = useState<string | null>(null);
   const [tab, setTab] = useState("Chat");
   const [windowClosed, setWindowClosed] = useState(false);
+  const [notifications, setNotifications] = useState<{ [from: string]: { room: string; count: number } }>(() => {
+    try { return JSON.parse(localStorage.getItem("dm_notifications") ?? "{}"); } catch { return {}; }
+  });
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -56,11 +64,21 @@ const App = () => {
   }, []);
 
 
+  useEffect(() => {
+    localStorage.setItem("dm_notifications", JSON.stringify(notifications));
+  }, [notifications]);
+
+  const unreadDMs = Object.fromEntries(Object.entries(notifications).map(([k, v]) => [k, v.count]));
+  const clearDMNotif = (from: string) =>
+    setNotifications((prev) => { const next = { ...prev }; delete next[from]; return next; });
+
   const handleSignOut = () => {
     localStorage.removeItem("username");
     localStorage.removeItem("token");
+    localStorage.removeItem("dm_notifications");
     setUsername(null);
     setToken(null);
+    setNotifications({});
     navigate("/");
   };
 
@@ -68,6 +86,29 @@ const App = () => {
     window.addEventListener("auth:expired", handleSignOut);
     return () => window.removeEventListener("auth:expired", handleSignOut);
   }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    const es = new EventSource(`${API_URL}/events?token=${token}`);
+    es.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === "dm") {
+          const from: string = msg.from;
+          const room: string = msg.room;
+          setNotifications((prev) => ({
+            ...prev,
+            [from]: { room, count: (prev[from]?.count ?? 0) + 1 },
+          }));
+          notifAudio.currentTime = 0;
+          notifAudio.play().catch(() => {});
+        }
+      } catch {
+        // ignore malformed events
+      }
+    };
+    return () => es.close();
+  }, [token]);
 
   useEffect(() => {
     if (location.pathname === "/" || location.pathname === "/") {
@@ -118,9 +159,10 @@ const App = () => {
           )}
           {tab === "Chat" && (
             <Routes>
-              <Route path="/" element={<Rooms />} />
-              <Route path="/home" element={<Rooms />} />
+              <Route path="/" element={<Rooms unreadDMs={unreadDMs} onDMOpen={clearDMNotif} />} />
+              <Route path="/home" element={<Rooms unreadDMs={unreadDMs} onDMOpen={clearDMNotif} />} />
               <Route path="/rules" element={<Rules />} />
+              <Route path="dm/:targetUsername" element={username ? <DMChat username={username} /> : <div>Loading...</div>} />
               <Route path=":roomName" element={username ? <Chat username={username} /> : <div>Loading...</div>} />
             </Routes>
           )}
@@ -139,6 +181,19 @@ const App = () => {
             </div>
           )}
         </Window>
+      )}
+
+      {Object.keys(notifications).length > 0 && (
+        <div className="notifications">
+          {Object.entries(notifications).map(([from, { count }]) => (
+            <div key={from} className="notification-toast" onClick={() => {
+              setNotifications((prev) => { const next = { ...prev }; delete next[from]; return next; });
+              navigate(`/dm/${from}`);
+            }}>
+              <strong>{from}</strong> — {count} new {count === 1 ? "message" : "messages"}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -243,5 +245,93 @@ func TestJoinHandler_RoomFull(t *testing.T) {
 
 	if w.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected 429 when room is full, got %d", w.Code)
+	}
+}
+
+// --- DM join ---
+
+var dirTestSecret = []byte("dir-test-secret")
+
+func init() {
+	os.Setenv("JWT_SECRET", string(dirTestSecret))
+}
+
+func makeDirToken(username string) string {
+	claims := jwt.MapClaims{"username": username, "exp": jwt.NewNumericDate(time.Now().Add(time.Hour))}
+	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, _ := tok.SignedString(dirTestSecret)
+	return signed
+}
+
+func dmJoinRequest(with, token string) *http.Request {
+	url := "/join?type=dm&with=" + with
+	r := httptest.NewRequest(http.MethodGet, url, nil)
+	if token != "" {
+		r.Header.Set("Authorization", "Bearer "+token)
+	}
+	return r
+}
+
+func TestJoinHandler_DM_MissingWith(t *testing.T) {
+	setupDirectoryRedis(t)
+	s := NewState()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/join?type=dm", nil)
+	r.Header.Set("Authorization", "Bearer "+makeDirToken("alice"))
+	s.JoinHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for missing with param, got %d", w.Code)
+	}
+}
+
+func TestJoinHandler_DM_MissingToken(t *testing.T) {
+	setupDirectoryRedis(t)
+	s := NewState()
+
+	w := httptest.NewRecorder()
+	s.JoinHandler(w, dmJoinRequest("bob", ""))
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for missing token, got %d", w.Code)
+	}
+}
+
+func TestJoinHandler_DM_CannotDMSelf(t *testing.T) {
+	setupDirectoryRedis(t)
+	s := NewState()
+
+	w := httptest.NewRecorder()
+	s.JoinHandler(w, dmJoinRequest("alice", makeDirToken("alice")))
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for self-DM, got %d", w.Code)
+	}
+}
+
+func TestJoinHandler_DM_DerivesRoomAndRoutes(t *testing.T) {
+	setupDirectoryRedis(t)
+	s := NewState()
+
+	s.mu.Lock()
+	s.apps["app-1"] = healthyApp("app-1", "ws://app-1:8080/ws")
+	s.mu.Unlock()
+
+	tok := makeDirToken("zara")
+	w := httptest.NewRecorder()
+	s.JoinHandler(w, dmJoinRequest("alice", tok))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]string
+	_ = json.NewDecoder(w.Body).Decode(&resp)
+	// sorted: alice < zara
+	if resp["room"] != "dm:alice:zara" {
+		t.Fatalf("expected room dm:alice:zara, got %q", resp["room"])
+	}
+	if resp["wss_url"] == "" {
+		t.Fatal("expected wss_url in response")
 	}
 }
