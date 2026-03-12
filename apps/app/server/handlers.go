@@ -270,18 +270,16 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	exists, err := RDB.HExists(ctx, "users", username).Result()
+	_, err = DB.ExecContext(r.Context(),
+		`INSERT INTO users (username, password_hash) VALUES ($1, $2)`,
+		username, string(hash),
+	)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	if exists {
-		http.Error(w, "Username already taken", http.StatusConflict)
-		return
-	}
-	userJSON, _ := json.Marshal(map[string]string{"username": username, "password": string(hash)})
-	if err := RDB.HSet(ctx, "users", username, userJSON).Err(); err != nil {
-		http.Error(w, "Failed to save user", http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+			http.Error(w, "Username already taken", http.StatusConflict)
+		} else {
+			http.Error(w, "Failed to save user", http.StatusInternalServerError)
+		}
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -311,25 +309,16 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Username and password are required"})
 		return
 	}
-	userJSON, err := RDB.HGet(ctx, "users", username).Result()
-	if err != nil {
-		if strings.Contains(err.Error(), "redis: nil") {
-			// Normalize to avoid user enumeration
-			w.WriteHeader(http.StatusUnauthorized)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
-		}
+	var storedHash string
+	if err := DB.QueryRowContext(r.Context(),
+		`SELECT password_hash FROM users WHERE username = $1`, username,
+	).Scan(&storedHash); err != nil {
+		// normalize to avoid user enumeration
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
 	}
-	var stored Credentials
-	if err := json.Unmarshal([]byte(userJSON), &stored); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid user data"})
-		return
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(stored.Password), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password)); err != nil {
 		// Normalize to avoid user enumeration
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
@@ -445,38 +434,26 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Old username, new username, and room are required"})
 		return
 	}
-	userJSON, err := RDB.HGet(ctx, "users", req.OldUsername).Result()
-	fmt.Println("userJSON>>>", userJSON, "err>>>", err, "req.OldUsername>>>", req.OldUsername)
+	var storedHash string
+	err = DB.QueryRowContext(r.Context(),
+		`SELECT password_hash FROM users WHERE username = $1`, req.OldUsername,
+	).Scan(&storedHash)
 	if err != nil {
-		fmt.Println("error>>>", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "User not found"})
 		return
 	}
-	var stored Credentials
-	if err := json.Unmarshal([]byte(userJSON), &stored); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid user data"})
-		return
-	}
-	exists, err := RDB.HExists(ctx, "users", req.NewUsername).Result()
+	_, err = DB.ExecContext(r.Context(),
+		`UPDATE users SET username = $1 WHERE username = $2`, req.NewUsername, req.OldUsername,
+	)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
-		return
-	}
-	if exists {
-		w.WriteHeader(http.StatusConflict)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "New username already taken"})
-		return
-	}
-	newUserJSON, _ := json.Marshal(map[string]string{"username": req.NewUsername, "password": stored.Password})
-	pipe := RDB.Pipeline()
-	pipe.HDel(ctx, "users", req.OldUsername)
-	pipe.HSet(ctx, "users", req.NewUsername, newUserJSON)
-	if _, err := pipe.Exec(ctx); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to update user"})
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+			w.WriteHeader(http.StatusConflict)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "New username already taken"})
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to update user"})
+		}
 		return
 	}
 	claims := jwt.MapClaims{"username": req.NewUsername, "exp": jwt.NewNumericDate(time.Now().Add(24 * time.Hour))}
@@ -546,21 +523,16 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Username, current password, and new password are required"})
 		return
 	}
-	userJSON, err := RDB.HGet(ctx, "users", req.Username).Result()
+	var storedHash string
+	err = DB.QueryRowContext(r.Context(),
+		`SELECT password_hash FROM users WHERE username = $1`, req.Username,
+	).Scan(&storedHash)
 	if err != nil {
-		// Normalize to avoid user enumeration
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
 	}
-	var stored Credentials
-	if err := json.Unmarshal([]byte(userJSON), &stored); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid user data"})
-		return
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(stored.Password), []byte(req.CurrentPassword)); err != nil {
-		// Normalize to avoid user enumeration
+	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(req.CurrentPassword)); err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
@@ -571,8 +543,9 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
 		return
 	}
-	newUserJSON, _ := json.Marshal(map[string]string{"username": req.Username, "password": string(newHash)})
-	if err := RDB.HSet(ctx, "users", req.Username, newUserJSON).Err(); err != nil {
+	if _, err := DB.ExecContext(r.Context(),
+		`UPDATE users SET password_hash = $1 WHERE username = $2`, string(newHash), req.Username,
+	); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to update user"})
 		return
@@ -684,8 +657,11 @@ func (h *Handler) StartDMHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "cannot DM yourself"})
 		return
 	}
-	exists, err := h.RDB.HExists(h.Ctx, "users", target).Result()
-	if err != nil || !exists {
+	var targetExists bool
+	err = DB.QueryRowContext(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)`, target,
+	).Scan(&targetExists)
+	if err != nil || !targetExists {
 		w.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "user not found"})
 		return
@@ -845,4 +821,273 @@ func (h *Handler) SSEHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+}
+
+// SendFriendRequestHandler sends a friend request from the caller to target.
+// POST /friends/request  { "target": "bob" }
+func (h *Handler) SendFriendRequestHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	var req struct {
+		Target string `json:"target"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Target) == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "target is required"})
+		return
+	}
+	target := strings.TrimSpace(req.Target)
+	if target == username {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "cannot friend yourself"})
+		return
+	}
+	var targetExists bool
+	if err := DB.QueryRowContext(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)`, target,
+	).Scan(&targetExists); err != nil || !targetExists {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "user not found"})
+		return
+	}
+	// already friends?
+	var isFriend bool
+	_ = DB.QueryRowContext(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM friends WHERE (user_a=$1 AND user_b=$2) OR (user_a=$2 AND user_b=$1))`,
+		username, target,
+	).Scan(&isFriend)
+	if isFriend {
+		w.WriteHeader(http.StatusConflict)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "already friends"})
+		return
+	}
+	_, err = DB.ExecContext(r.Context(),
+		`INSERT INTO friend_requests (from_username, to_username) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+		username, target,
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+		return
+	}
+	payload, _ := json.Marshal(map[string]string{"type": "friend_request", "from": username})
+	pushNotification(target, string(payload))
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "request sent"})
+}
+
+// AcceptFriendRequestHandler accepts a pending friend request from sender.
+// POST /friends/accept  { "from": "alice" }
+func (h *Handler) AcceptFriendRequestHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	var req struct {
+		From string `json:"from"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.From) == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "from is required"})
+		return
+	}
+	from := strings.TrimSpace(req.From)
+	tx, err := DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+		return
+	}
+	defer tx.Rollback()
+	res, err := tx.ExecContext(r.Context(),
+		`DELETE FROM friend_requests WHERE from_username = $1 AND to_username = $2`, from, username,
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "no pending request from that user"})
+		return
+	}
+	a, b := username, from
+	if a > b {
+		a, b = b, a
+	}
+	if _, err := tx.ExecContext(r.Context(),
+		`INSERT INTO friends (user_a, user_b) VALUES ($1, $2) ON CONFLICT DO NOTHING`, a, b,
+	); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+		return
+	}
+	payload, _ := json.Marshal(map[string]string{"type": "friend_accepted", "from": username})
+	pushNotification(from, string(payload))
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "friend added"})
+}
+
+// DeclineFriendRequestHandler declines a pending friend request.
+// POST /friends/decline  { "from": "alice" }
+func (h *Handler) DeclineFriendRequestHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	var req struct {
+		From string `json:"from"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.From) == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "from is required"})
+		return
+	}
+	if _, err := DB.ExecContext(r.Context(),
+		`DELETE FROM friend_requests WHERE from_username = $1 AND to_username = $2`,
+		strings.TrimSpace(req.From), username,
+	); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "request declined"})
+}
+
+// RemoveFriendHandler removes a mutual friendship.
+// DELETE /friends/remove  { "target": "bob" }
+func (h *Handler) RemoveFriendHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != http.MethodDelete {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	var req struct {
+		Target string `json:"target"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Target) == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "target is required"})
+		return
+	}
+	target := strings.TrimSpace(req.Target)
+	if _, err := DB.ExecContext(r.Context(),
+		`DELETE FROM friends WHERE (user_a=$1 AND user_b=$2) OR (user_a=$2 AND user_b=$1)`,
+		username, target,
+	); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "friend removed"})
+}
+
+// GetFriendsHandler returns the caller's friends list.
+// GET /friends
+func (h *Handler) GetFriendsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	rows, err := DB.QueryContext(r.Context(),
+		`SELECT CASE WHEN user_a=$1 THEN user_b ELSE user_a END
+		 FROM friends WHERE user_a=$1 OR user_b=$1`, username,
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+		return
+	}
+	defer rows.Close()
+	friends := []string{}
+	for rows.Next() {
+		var f string
+		if err := rows.Scan(&f); err == nil {
+			friends = append(friends, f)
+		}
+	}
+	_ = json.NewEncoder(w).Encode(friends)
+}
+
+// GetFriendRequestsHandler returns the caller's pending incoming friend requests.
+// GET /friends/requests
+func (h *Handler) GetFriendRequestsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	rows, err := DB.QueryContext(r.Context(),
+		`SELECT from_username FROM friend_requests WHERE to_username = $1`, username,
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+		return
+	}
+	defer rows.Close()
+	requests := []string{}
+	for rows.Next() {
+		var f string
+		if err := rows.Scan(&f); err == nil {
+			requests = append(requests, f)
+		}
+	}
+	_ = json.NewEncoder(w).Encode(requests)
 }

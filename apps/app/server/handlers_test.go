@@ -1,14 +1,18 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -59,9 +63,9 @@ func TestGetChatHistoryHandler_ReturnsOldestFirst(t *testing.T) {
 	// LPUSH stores newest-first (index 0 = newest), so push in order: msg1, msg2, msg3
 	// After LPush: [msg3, msg2, msg1] — handler should reverse to [msg1, msg2, msg3]
 	msgs := []Message{
-		{Username: "alice", Message: "first", Room: "gaming"},
-		{Username: "bob", Message: "second", Room: "gaming"},
-		{Username: "carol", Message: "third", Room: "gaming"},
+		{Username: "rei", Message: "first", Room: "gaming"},
+		{Username: "shinji", Message: "second", Room: "gaming"},
+		{Username: "asuka", Message: "third", Room: "gaming"},
 	}
 	for _, m := range msgs {
 		b, _ := json.Marshal(m)
@@ -176,7 +180,7 @@ func TestGetOnlineUsersHandler_SpecificRoom(t *testing.T) {
 	setupHandlerRedis(t)
 
 	onlineUsersLock.Lock()
-	onlineUsers["gaming"] = map[string]bool{"alice": true, "bob": true}
+	onlineUsers["gaming"] = map[string]bool{"rei": true, "shinji": true}
 	onlineUsersLock.Unlock()
 	t.Cleanup(func() {
 		onlineUsersLock.Lock()
@@ -216,8 +220,8 @@ func TestGetOnlineUsersHandler_AllRooms(t *testing.T) {
 	setupHandlerRedis(t)
 
 	onlineUsersLock.Lock()
-	onlineUsers["gaming"] = map[string]bool{"alice": true}
-	onlineUsers["music"] = map[string]bool{"bob": true, "carol": true}
+	onlineUsers["gaming"] = map[string]bool{"rei": true}
+	onlineUsers["music"] = map[string]bool{"shinji": true, "asuka": true}
 	onlineUsersLock.Unlock()
 	t.Cleanup(func() {
 		onlineUsersLock.Lock()
@@ -243,8 +247,8 @@ func TestGetOnlineUsersHandler_AllRooms(t *testing.T) {
 // --- isDMRoom / isDMParticipant ---
 
 func TestIsDMRoom(t *testing.T) {
-	if !isDMRoom("dm:alice:bob") {
-		t.Fatal("expected dm:alice:bob to be a DM room")
+	if !isDMRoom("dm:rei:shinji") {
+		t.Fatal("expected dm:rei:shinji to be a DM room")
 	}
 	if isDMRoom("gaming") {
 		t.Fatal("expected gaming to not be a DM room")
@@ -252,14 +256,14 @@ func TestIsDMRoom(t *testing.T) {
 }
 
 func TestIsDMParticipant(t *testing.T) {
-	if !isDMParticipant("dm:alice:bob", "alice") {
-		t.Fatal("alice should be a participant")
+	if !isDMParticipant("dm:rei:shinji", "rei") {
+		t.Fatal("rei should be a participant")
 	}
-	if !isDMParticipant("dm:alice:bob", "bob") {
-		t.Fatal("bob should be a participant")
+	if !isDMParticipant("dm:rei:shinji", "shinji") {
+		t.Fatal("shinji should be a participant")
 	}
-	if isDMParticipant("dm:alice:bob", "carol") {
-		t.Fatal("carol should not be a participant")
+	if isDMParticipant("dm:rei:shinji", "asuka") {
+		t.Fatal("asuka should not be a participant")
 	}
 }
 
@@ -267,11 +271,12 @@ func TestIsDMParticipant(t *testing.T) {
 
 func TestStartDMHandler_OK(t *testing.T) {
 	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	insertUser(t, "shinji", "$2a$10$x")
 
-	RDB.HSet(ctx, "users", "bob", `{"username":"bob","password":"x"}`)
-
-	tok := makeToken("alice", time.Now().Add(time.Hour))
-	body := `{"target":"bob"}`
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	body := `{"target":"shinji"}`
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/dm/start", strings.NewReader(body))
 	r.Header.Set("Authorization", "Bearer "+tok)
@@ -282,29 +287,30 @@ func TestStartDMHandler_OK(t *testing.T) {
 	}
 	var resp map[string]string
 	_ = json.NewDecoder(w.Body).Decode(&resp)
-	if resp["room"] != "dm:alice:bob" {
-		t.Fatalf("expected room dm:alice:bob, got %q", resp["room"])
+	if resp["room"] != "dm:rei:shinji" {
+		t.Fatalf("expected room dm:rei:shinji, got %q", resp["room"])
 	}
 
 	// both DM sets should be registered
-	aliceDMs, _ := RDB.SMembers(ctx, "dms:alice").Result()
-	bobDMs, _ := RDB.SMembers(ctx, "dms:bob").Result()
-	if len(aliceDMs) != 1 || aliceDMs[0] != "bob" {
-		t.Fatalf("expected dms:alice = [bob], got %v", aliceDMs)
+	reiDMs, _ := RDB.SMembers(ctx, "dms:rei").Result()
+	shinjiDMs, _ := RDB.SMembers(ctx, "dms:shinji").Result()
+	if len(reiDMs) != 1 || reiDMs[0] != "shinji" {
+		t.Fatalf("expected dms:rei = [shinji], got %v", reiDMs)
 	}
-	if len(bobDMs) != 1 || bobDMs[0] != "alice" {
-		t.Fatalf("expected dms:bob = [alice], got %v", bobDMs)
+	if len(shinjiDMs) != 1 || shinjiDMs[0] != "rei" {
+		t.Fatalf("expected dms:shinji = [rei], got %v", shinjiDMs)
 	}
 }
 
 func TestStartDMHandler_RoomNameSorted(t *testing.T) {
 	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	insertUser(t, "misato", "$2a$10$x")
 
-	RDB.HSet(ctx, "users", "alice", `{"username":"alice","password":"x"}`)
-
-	// zara DMs alice — sorted: alice < zara → dm:alice:zara
-	tok := makeToken("zara", time.Now().Add(time.Hour))
-	body := `{"target":"alice"}`
+	// zara DMs alice — sorted: misato > rei, sorted: rei < misato → dm:misato:rei
+	tok := makeToken("misato", time.Now().Add(time.Hour))
+	body := `{"target":"rei"}`
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/dm/start", strings.NewReader(body))
 	r.Header.Set("Authorization", "Bearer "+tok)
@@ -312,16 +318,17 @@ func TestStartDMHandler_RoomNameSorted(t *testing.T) {
 
 	var resp map[string]string
 	_ = json.NewDecoder(w.Body).Decode(&resp)
-	if resp["room"] != "dm:alice:zara" {
-		t.Fatalf("expected dm:alice:zara, got %q", resp["room"])
+	if resp["room"] != "dm:misato:rei" {
+		t.Fatalf("expected dm:misato:rei, got %q", resp["room"])
 	}
 }
 
 func TestStartDMHandler_CannotDMSelf(t *testing.T) {
 	setupHandlerRedis(t)
+	setupTestDB(t)
 
-	tok := makeToken("alice", time.Now().Add(time.Hour))
-	body := `{"target":"alice"}`
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	body := `{"target":"rei"}`
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/dm/start", strings.NewReader(body))
 	r.Header.Set("Authorization", "Bearer "+tok)
@@ -334,9 +341,10 @@ func TestStartDMHandler_CannotDMSelf(t *testing.T) {
 
 func TestStartDMHandler_TargetNotFound(t *testing.T) {
 	setupHandlerRedis(t)
+	setupTestDB(t)
 
-	tok := makeToken("alice", time.Now().Add(time.Hour))
-	body := `{"target":"ghost"}`
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	body := `{"target":"kaworu"}`
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/dm/start", strings.NewReader(body))
 	r.Header.Set("Authorization", "Bearer "+tok)
@@ -352,9 +360,9 @@ func TestStartDMHandler_TargetNotFound(t *testing.T) {
 func TestGetDMListHandler_ReturnsList(t *testing.T) {
 	setupHandlerRedis(t)
 
-	RDB.SAdd(ctx, "dms:alice", "bob", "carol")
+	RDB.SAdd(ctx, "dms:rei", "shinji", "asuka")
 
-	tok := makeToken("alice", time.Now().Add(time.Hour))
+	tok := makeToken("rei", time.Now().Add(time.Hour))
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/dms", nil)
 	r.Header.Set("Authorization", "Bearer "+tok)
@@ -373,7 +381,7 @@ func TestGetDMListHandler_ReturnsList(t *testing.T) {
 func TestGetDMListHandler_Empty(t *testing.T) {
 	setupHandlerRedis(t)
 
-	tok := makeToken("alice", time.Now().Add(time.Hour))
+	tok := makeToken("rei", time.Now().Add(time.Hour))
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/dms", nil)
 	r.Header.Set("Authorization", "Bearer "+tok)
@@ -394,9 +402,9 @@ func TestGetDMListHandler_Empty(t *testing.T) {
 func TestGetChatHistoryHandler_DMForbidsNonParticipant(t *testing.T) {
 	setupHandlerRedis(t)
 
-	tok := makeToken("carol", time.Now().Add(time.Hour))
+	tok := makeToken("asuka", time.Now().Add(time.Hour))
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/history?room=dm:alice:bob", nil)
+	r := httptest.NewRequest(http.MethodGet, "/history?room=dm:rei:shinji", nil)
 	r.Header.Set("Authorization", "Bearer "+tok)
 	newHandler().GetChatHistoryHandler(w, r)
 
@@ -408,9 +416,9 @@ func TestGetChatHistoryHandler_DMForbidsNonParticipant(t *testing.T) {
 func TestGetChatHistoryHandler_DMAllowsParticipant(t *testing.T) {
 	setupHandlerRedis(t)
 
-	tok := makeToken("alice", time.Now().Add(time.Hour))
+	tok := makeToken("rei", time.Now().Add(time.Hour))
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/history?room=dm:alice:bob", nil)
+	r := httptest.NewRequest(http.MethodGet, "/history?room=dm:rei:shinji", nil)
 	r.Header.Set("Authorization", "Bearer "+tok)
 	newHandler().GetChatHistoryHandler(w, r)
 
@@ -418,3 +426,258 @@ func TestGetChatHistoryHandler_DMAllowsParticipant(t *testing.T) {
 		t.Fatalf("expected 200 for participant, got %d", w.Code)
 	}
 }
+
+// --- Postgres helpers ---
+
+func setupTestDB(t *testing.T) {
+	t.Helper()
+	dsn := os.Getenv("POSTGRES_URL")
+	if dsn == "" {
+		t.Skip("POSTGRES_URL not set, skipping postgres tests")
+	}
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	DB = db
+	migrateDB()
+	// clean slate for each test
+	db.Exec(`TRUNCATE users, friends, friend_requests RESTART IDENTITY CASCADE`)
+	t.Cleanup(func() {
+		db.Exec(`TRUNCATE users, friends, friend_requests RESTART IDENTITY CASCADE`)
+	})
+}
+
+func insertUser(t *testing.T, username, passwordHash string) {
+	t.Helper()
+	if _, err := DB.Exec(
+		`INSERT INTO users (username, password_hash) VALUES ($1, $2)`, username, passwordHash,
+	); err != nil {
+		t.Fatalf("insertUser %s: %v", username, err)
+	}
+}
+
+// --- Register / Login ---
+
+func TestRegisterHandler_OK(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+
+	body := `{"username":"nerv_user","password":"password123"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(body))
+	newHandler().RegisterHandler(w, r)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRegisterHandler_DuplicateUsername(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "gendo", "$2a$10$placeholder")
+
+	body := `{"username":"gendo","password":"password123"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(body))
+	newHandler().RegisterHandler(w, r)
+
+	if w.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d", w.Code)
+	}
+}
+
+func TestLoginHandler_InvalidCredentials(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+
+	body := `{"username":"kaworu","password":"whatever"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(body))
+	newHandler().LoginHandler(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+// --- Friends ---
+
+func TestSendFriendRequest_OK(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	insertUser(t, "shinji", "$2a$10$x")
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	body := `{"target":"shinji"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/friends/request", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().SendFriendRequestHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var row int
+	DB.QueryRow(`SELECT COUNT(*) FROM friend_requests WHERE from_username='rei' AND to_username='shinji'`).Scan(&row)
+	if row != 1 {
+		t.Fatal("expected friend request row in DB")
+	}
+}
+
+func TestSendFriendRequest_CannotFriendSelf(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	body := `{"target":"rei"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/friends/request", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().SendFriendRequestHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestSendFriendRequest_UserNotFound(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	body := `{"target":"kaworu"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/friends/request", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().SendFriendRequestHandler(w, r)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestAcceptFriendRequest_OK(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	insertUser(t, "shinji", "$2a$10$x")
+	DB.Exec(`INSERT INTO friend_requests (from_username, to_username) VALUES ('rei', 'shinji')`)
+
+	tok := makeToken("shinji", time.Now().Add(time.Hour))
+	body := `{"from":"rei"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/friends/accept", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().AcceptFriendRequestHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var reqCount, friendCount int
+	DB.QueryRow(`SELECT COUNT(*) FROM friend_requests WHERE from_username='rei' AND to_username='shinji'`).Scan(&reqCount)
+	DB.QueryRow(`SELECT COUNT(*) FROM friends WHERE (user_a='rei' AND user_b='shinji') OR (user_a='shinji' AND user_b='rei')`).Scan(&friendCount)
+	if reqCount != 0 {
+		t.Fatal("request should be deleted after accept")
+	}
+	if friendCount != 1 {
+		t.Fatal("friendship row should exist after accept")
+	}
+}
+
+func TestAcceptFriendRequest_NoPendingRequest(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	insertUser(t, "shinji", "$2a$10$x")
+
+	tok := makeToken("shinji", time.Now().Add(time.Hour))
+	body := `{"from":"rei"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/friends/accept", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().AcceptFriendRequestHandler(w, r)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestGetFriends_ReturnsList(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	insertUser(t, "shinji", "$2a$10$x")
+	insertUser(t, "asuka", "$2a$10$x")
+	DB.Exec(`INSERT INTO friends (user_a, user_b) VALUES ('rei', 'shinji'), ('rei', 'asuka')`)
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/friends", nil)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().GetFriendsHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var friends []string
+	json.NewDecoder(w.Body).Decode(&friends)
+	if len(friends) != 2 {
+		t.Fatalf("expected 2 friends, got %d: %v", len(friends), friends)
+	}
+}
+
+func TestDeclineFriendRequest_OK(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	insertUser(t, "shinji", "$2a$10$x")
+	DB.Exec(`INSERT INTO friend_requests (from_username, to_username) VALUES ('rei', 'shinji')`)
+
+	tok := makeToken("shinji", time.Now().Add(time.Hour))
+	body := `{"from":"rei"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/friends/decline", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().DeclineFriendRequestHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var count int
+	DB.QueryRow(`SELECT COUNT(*) FROM friend_requests`).Scan(&count)
+	if count != 0 {
+		t.Fatal("request should be deleted after decline")
+	}
+}
+
+func TestRemoveFriend_OK(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	insertUser(t, "shinji", "$2a$10$x")
+	DB.Exec(`INSERT INTO friends (user_a, user_b) VALUES ('rei', 'shinji')`)
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	body := `{"target":"shinji"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodDelete, "/friends/remove", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().RemoveFriendHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var count int
+	DB.QueryRow(`SELECT COUNT(*) FROM friends`).Scan(&count)
+	if count != 0 {
+		t.Fatal("friendship should be deleted")
+	}
+}
+
+// suppress unused import warning when POSTGRES_URL is not set
+var _ = fmt.Sprintf
