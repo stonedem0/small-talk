@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
@@ -235,5 +237,184 @@ func TestGetOnlineUsersHandler_AllRooms(t *testing.T) {
 	}
 	if resp["music"] != 2 {
 		t.Fatalf("expected music=2, got %d", resp["music"])
+	}
+}
+
+// --- isDMRoom / isDMParticipant ---
+
+func TestIsDMRoom(t *testing.T) {
+	if !isDMRoom("dm:alice:bob") {
+		t.Fatal("expected dm:alice:bob to be a DM room")
+	}
+	if isDMRoom("gaming") {
+		t.Fatal("expected gaming to not be a DM room")
+	}
+}
+
+func TestIsDMParticipant(t *testing.T) {
+	if !isDMParticipant("dm:alice:bob", "alice") {
+		t.Fatal("alice should be a participant")
+	}
+	if !isDMParticipant("dm:alice:bob", "bob") {
+		t.Fatal("bob should be a participant")
+	}
+	if isDMParticipant("dm:alice:bob", "carol") {
+		t.Fatal("carol should not be a participant")
+	}
+}
+
+// --- StartDMHandler ---
+
+func TestStartDMHandler_OK(t *testing.T) {
+	setupHandlerRedis(t)
+
+	RDB.HSet(ctx, "users", "bob", `{"username":"bob","password":"x"}`)
+
+	tok := makeToken("alice", time.Now().Add(time.Hour))
+	body := `{"target":"bob"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/dm/start", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().StartDMHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]string
+	_ = json.NewDecoder(w.Body).Decode(&resp)
+	if resp["room"] != "dm:alice:bob" {
+		t.Fatalf("expected room dm:alice:bob, got %q", resp["room"])
+	}
+
+	// both DM sets should be registered
+	aliceDMs, _ := RDB.SMembers(ctx, "dms:alice").Result()
+	bobDMs, _ := RDB.SMembers(ctx, "dms:bob").Result()
+	if len(aliceDMs) != 1 || aliceDMs[0] != "bob" {
+		t.Fatalf("expected dms:alice = [bob], got %v", aliceDMs)
+	}
+	if len(bobDMs) != 1 || bobDMs[0] != "alice" {
+		t.Fatalf("expected dms:bob = [alice], got %v", bobDMs)
+	}
+}
+
+func TestStartDMHandler_RoomNameSorted(t *testing.T) {
+	setupHandlerRedis(t)
+
+	RDB.HSet(ctx, "users", "alice", `{"username":"alice","password":"x"}`)
+
+	// zara DMs alice — sorted: alice < zara → dm:alice:zara
+	tok := makeToken("zara", time.Now().Add(time.Hour))
+	body := `{"target":"alice"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/dm/start", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().StartDMHandler(w, r)
+
+	var resp map[string]string
+	_ = json.NewDecoder(w.Body).Decode(&resp)
+	if resp["room"] != "dm:alice:zara" {
+		t.Fatalf("expected dm:alice:zara, got %q", resp["room"])
+	}
+}
+
+func TestStartDMHandler_CannotDMSelf(t *testing.T) {
+	setupHandlerRedis(t)
+
+	tok := makeToken("alice", time.Now().Add(time.Hour))
+	body := `{"target":"alice"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/dm/start", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().StartDMHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestStartDMHandler_TargetNotFound(t *testing.T) {
+	setupHandlerRedis(t)
+
+	tok := makeToken("alice", time.Now().Add(time.Hour))
+	body := `{"target":"ghost"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/dm/start", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().StartDMHandler(w, r)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+// --- GetDMListHandler ---
+
+func TestGetDMListHandler_ReturnsList(t *testing.T) {
+	setupHandlerRedis(t)
+
+	RDB.SAdd(ctx, "dms:alice", "bob", "carol")
+
+	tok := makeToken("alice", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/dms", nil)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().GetDMListHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var partners []string
+	_ = json.NewDecoder(w.Body).Decode(&partners)
+	if len(partners) != 2 {
+		t.Fatalf("expected 2 partners, got %v", partners)
+	}
+}
+
+func TestGetDMListHandler_Empty(t *testing.T) {
+	setupHandlerRedis(t)
+
+	tok := makeToken("alice", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/dms", nil)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().GetDMListHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var partners []string
+	_ = json.NewDecoder(w.Body).Decode(&partners)
+	if len(partners) != 0 {
+		t.Fatalf("expected empty list, got %v", partners)
+	}
+}
+
+// --- GetChatHistoryHandler DM guard ---
+
+func TestGetChatHistoryHandler_DMForbidsNonParticipant(t *testing.T) {
+	setupHandlerRedis(t)
+
+	tok := makeToken("carol", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/history?room=dm:alice:bob", nil)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().GetChatHistoryHandler(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-participant, got %d", w.Code)
+	}
+}
+
+func TestGetChatHistoryHandler_DMAllowsParticipant(t *testing.T) {
+	setupHandlerRedis(t)
+
+	tok := makeToken("alice", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/history?room=dm:alice:bob", nil)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().GetChatHistoryHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for participant, got %d", w.Code)
 	}
 }

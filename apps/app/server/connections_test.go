@@ -137,3 +137,27 @@ func TestHandleConnections_TokenViaWebSocketProtocol(t *testing.T) {
 		t.Fatalf("expected to reach WS upgrader, got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+func TestHandleConnections_DMForbidsNonParticipant(t *testing.T) {
+	a := newApp()
+
+	tok := makeToken("carol", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	handleConnections(a, w, wsRequest("dm:alice:bob", tok))
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-participant DM, got %d", w.Code)
+	}
+}
+
+func TestHandleConnections_DMAllowsParticipant(t *testing.T) {
+	a := newApp()
+
+	tok := makeToken("alice", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	handleConnections(a, w, wsRequest("dm:alice:bob", tok))
+
+	if w.Code == http.StatusForbidden {
+		t.Fatalf("expected participant to be allowed into DM room, got 403")
+	}
+}
