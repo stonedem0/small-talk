@@ -7,7 +7,10 @@ import DMChat from "./Chat/DMChat";
 import Rules from "./Rules/Rules";
 import Window from "./components/Window";
 import { API_URL } from "./config";
+import coinSound from "./assets/sounds/pickupCoin.wav";
 import "./App.css";
+
+const notifAudio = new Audio(coinSound);
 
 const App = () => {
   
@@ -15,7 +18,9 @@ const App = () => {
   const [token, setToken] = useState<string | null>(null);
   const [tab, setTab] = useState("Chat");
   const [windowClosed, setWindowClosed] = useState(false);
-  const [notifications, setNotifications] = useState<{ [from: string]: { room: string; count: number } }>({});
+  const [notifications, setNotifications] = useState<{ [from: string]: { room: string; count: number } }>(() => {
+    try { return JSON.parse(localStorage.getItem("dm_notifications") ?? "{}"); } catch { return {}; }
+  });
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -59,6 +64,10 @@ const App = () => {
   }, []);
 
 
+  useEffect(() => {
+    localStorage.setItem("dm_notifications", JSON.stringify(notifications));
+  }, [notifications]);
+
   const unreadDMs = Object.fromEntries(Object.entries(notifications).map(([k, v]) => [k, v.count]));
   const clearDMNotif = (from: string) =>
     setNotifications((prev) => { const next = { ...prev }; delete next[from]; return next; });
@@ -66,8 +75,10 @@ const App = () => {
   const handleSignOut = () => {
     localStorage.removeItem("username");
     localStorage.removeItem("token");
+    localStorage.removeItem("dm_notifications");
     setUsername(null);
     setToken(null);
+    setNotifications({});
     navigate("/");
   };
 
@@ -89,6 +100,8 @@ const App = () => {
             ...prev,
             [from]: { room, count: (prev[from]?.count ?? 0) + 1 },
           }));
+          notifAudio.currentTime = 0;
+          notifAudio.play().catch(() => {});
         }
       } catch {
         // ignore malformed events
