@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -136,5 +137,40 @@ func TestResubscribeAfterCleanup(t *testing.T) {
 
 	if alreadySubscribed {
 		t.Fatal("expected subscriptions[gaming] to be cleared, allowing re-subscription")
+	}
+}
+
+// TestTypingEventsNotSavedToHistory verifies that typing and stop_typing
+// messages are broadcast but never written to chat_history in Redis.
+func TestTypingEventsNotSavedToHistory(t *testing.T) {
+	mr := setupAppRedis(t)
+	cleanSubscriptions(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	subLock.Lock()
+	subscriptions["gaming"] = true
+	subLock.Unlock()
+
+	go subscribeToRoom(ctx, "gaming")
+	time.Sleep(50 * time.Millisecond)
+
+	publish := func(msg Message) {
+		b, _ := json.Marshal(msg)
+		mr.Publish("room:gaming", string(b))
+	}
+
+	publish(Message{Type: "typing", Username: "alice", Message: ""})
+	publish(Message{Type: "stop_typing", Username: "alice", Message: ""})
+	publish(Message{Type: "chat", Username: "alice", Message: "hello"})
+	time.Sleep(100 * time.Millisecond)
+
+	length, err := RDB.LLen(ctx, "chat_history:gaming").Result()
+	if err != nil {
+		t.Fatalf("LLen error: %v", err)
+	}
+	if length != 1 {
+		t.Fatalf("expected 1 message in history (chat only), got %d", length)
 	}
 }
