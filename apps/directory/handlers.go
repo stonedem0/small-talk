@@ -226,10 +226,53 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
+// resolveDMRoom derives and validates the DM room name from the request.
+// Returns the room string on success, or writes an error response and returns "".
+func resolveDMRoom(w http.ResponseWriter, r *http.Request) string {
+	with := strings.TrimSpace(r.URL.Query().Get("with"))
+	if with == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "with parameter is required for dm"})
+		return ""
+	}
+	tok := extractBearer(r)
+	if tok == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "missing token"})
+		return ""
+	}
+	claims, err := requireJWT(tok)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid token"})
+		return ""
+	}
+	username, _ := claims["username"].(string)
+	if username == "" || username == with {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid dm participants"})
+		return ""
+	}
+	a, b := username, with
+	if a > b {
+		a, b = b, a
+	}
+	room := "dm:" + a + ":" + b
+	log.Printf("join: DM room=%s for user=%s", room, username)
+	return room
+}
+
 func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	room := r.URL.Query().Get("room")
+	if r.URL.Query().Get("type") == "dm" {
+		room = resolveDMRoom(w, r)
+		if room == "" {
+			return
+		}
+	}
+
 	if room == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "room parameter is required"})
@@ -245,6 +288,7 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("join: using owner app=%s for room=%s", owner, room)
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"wss_url": a.WSURL + "?room=" + room,
+				"room":    room,
 			})
 			return
 		}
@@ -285,6 +329,7 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("join: assigned app=%s for room=%s", appID, room)
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"wss_url": a.WSURL + "?room=" + room,
+				"room":    room,
 			})
 			return
 		}

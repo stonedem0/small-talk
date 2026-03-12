@@ -313,6 +313,12 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Defense-in-depth: DM rooms may only be joined by their two participants
+	if isDMRoom(room) && !isDMParticipant(room, username) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
 	// Echo back a selected subprotocol if the client sent one (required by browsers when specified)
 	var respHeader http.Header
 	if proto := r.Header.Get("Sec-WebSocket-Protocol"); proto != "" {
@@ -562,6 +568,8 @@ func main() {
 	http.HandleFunc("/create-room", WithCORS(h.WithAuth(h.CreateRoomHandler)))
 	http.HandleFunc("/update-username", WithCORS(h.WithAuth(h.UpdateUsernameHandler)))
 	http.HandleFunc("/update-password", WithCORS(h.WithAuth(h.UpdatePasswordHandler)))
+	http.HandleFunc("/dm/start", WithCORS(h.StartDMHandler))
+	http.HandleFunc("/dms", WithCORS(h.GetDMListHandler))
 
 	addr := ":" + port
 	log.Println("Server starting on", addr)
