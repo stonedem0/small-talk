@@ -78,10 +78,12 @@ const Chat = ({ username }: ChatProps) => {
   const [showLinkForm, setShowLinkForm] = useState(false);
   const [linkUrl, setLinkUrl] = useState<string>("https://");
   const [linkText, setLinkText] = useState<string>("");
+  const [typingUsers, setTypingUsers] = useState<{ [user: string]: ReturnType<typeof setTimeout> }>({});
 
   const ws = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const EMOJIS = [
     "😀","😃","😄","😁","😆","😅","😂","🙂","😉","😊",
     "😍","😘","😜","🤪","😎","🤓","😏","😬","🥳","🤯",
@@ -148,7 +150,27 @@ const Chat = ({ username }: ChatProps) => {
 
         ws.current.onmessage = (event) => {
           const newMessage: Message = JSON.parse(event.data);
-        
+
+          if (newMessage.type === "typing") {
+            if (newMessage.username !== username) {
+              setTypingUsers((prev) => {
+                if (prev[newMessage.username]) clearTimeout(prev[newMessage.username]);
+                const timer = setTimeout(() => {
+                  setTypingUsers((p) => { const n = { ...p }; delete n[newMessage.username]; return n; });
+                }, 3000);
+                return { ...prev, [newMessage.username]: timer };
+              });
+            }
+            return;
+          }
+          if (newMessage.type === "stop_typing") {
+            setTypingUsers((prev) => {
+              if (prev[newMessage.username]) clearTimeout(prev[newMessage.username]);
+              const n = { ...prev }; delete n[newMessage.username]; return n;
+            });
+            return;
+          }
+
           setMessages((prev) => [...prev, newMessage]);
         };
 
@@ -192,9 +214,20 @@ const Chat = ({ username }: ChatProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const sendTyping = () => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) return;
+    ws.current.send(JSON.stringify({ type: "typing", username }));
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      ws.current?.send(JSON.stringify({ type: "stop_typing", username }));
+    }, 2000);
+  };
+
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (ws.current && message.trim()) {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      ws.current.send(JSON.stringify({ type: "stop_typing", username }));
       ws.current.send(JSON.stringify({ username, message }));
       setMessage("");
     }
@@ -369,6 +402,11 @@ const Chat = ({ username }: ChatProps) => {
                 );
               })
             )}
+            {Object.keys(typingUsers).length > 0 && (
+              <p className="typing-indicator">
+                {Object.keys(typingUsers).join(", ")} {Object.keys(typingUsers).length === 1 ? "is" : "are"} typing...
+              </p>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -476,7 +514,7 @@ const Chat = ({ username }: ChatProps) => {
                 type="text"
                 id="message"
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => { setMessage(e.target.value); sendTyping(); }}
                 className="message-input"
               />
               <div className="send-button-container">

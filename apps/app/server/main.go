@@ -419,10 +419,12 @@ func subscribeToRoom(ctx context.Context, room string) {
 				continue
 			}
 			b, _ := json.Marshal(received)
-			if err := RDB.LPush(ctx, "chat_history:"+room, b).Err(); err != nil {
-				log.Printf("redis LPush error in %s: %v", room, err)
+			if received.Type != "typing" && received.Type != "stop_typing" {
+				if err := RDB.LPush(ctx, "chat_history:"+room, b).Err(); err != nil {
+					log.Printf("redis LPush error in %s: %v", room, err)
+				}
+				_ = RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
 			}
-			_ = RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
 
 			enqueueToRoom(room, b)
 		case <-ctx.Done():

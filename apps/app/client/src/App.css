@@ -16,6 +16,10 @@
     0 2px 4px rgba(0, 0, 0, 0.2);
   --button-shadow-active: inset 0 3px 6px rgba(0, 0, 0, 0.4);
   --header-shadow: inset 0 3px 5px rgba(255, 255, 255, 0.6);
+
+  --font-sm: 0.8rem;
+  --font-md: 0.95rem;
+  --font-lg: 1.1rem;
 }
 
 html,
