@@ -17,13 +17,18 @@ const Rooms = () => {
       .then((response) => response.json())
       .then((data: { [cat: string]: string[] }) => {
         const sorted: { [cat: string]: string[] } = {};
-        const initialCollapsed: { [cat: string]: boolean } = {};
         Object.keys(data).sort().forEach(cat => {
           sorted[cat] = data[cat].sort();
-          initialCollapsed[cat] = true;
         });
         setGrouped(sorted);
-        setCollapsed(initialCollapsed);
+        // only set collapsed for new categories; preserve existing state
+        setCollapsed((prev) => {
+          const next: { [cat: string]: boolean } = { ...prev };
+          Object.keys(sorted).forEach(cat => {
+            if (!(cat in next)) next[cat] = true;
+          });
+          return next;
+        });
       })
       .catch((error) => console.error("rooms list fetch error", error));
   };
