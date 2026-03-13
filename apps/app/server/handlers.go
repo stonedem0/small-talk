@@ -776,7 +776,7 @@ func (h *Handler) VerifyToken(r *http.Request) (string, error) {
 func pushNotification(username, payload string) {
 	sseClientsMu.Lock()
 	defer sseClientsMu.Unlock()
-	for _, ch := range sseClients[username] {
+	for ch := range sseClients[username] {
 		select {
 		case ch <- payload:
 		default: // drop if channel full
@@ -825,17 +825,17 @@ func (h *Handler) SSEHandler(w http.ResponseWriter, r *http.Request) {
 
 	ch := make(chan string, 8)
 	sseClientsMu.Lock()
-	sseClients[username] = append(sseClients[username], ch)
+	if sseClients[username] == nil {
+		sseClients[username] = make(map[chan string]struct{})
+	}
+	sseClients[username][ch] = struct{}{}
 	sseClientsMu.Unlock()
 
 	defer func() {
 		sseClientsMu.Lock()
-		chans := sseClients[username]
-		for i, c := range chans {
-			if c == ch {
-				sseClients[username] = append(chans[:i], chans[i+1:]...)
-				break
-			}
+		delete(sseClients[username], ch)
+		if len(sseClients[username]) == 0 {
+			delete(sseClients, username)
 		}
 		sseClientsMu.Unlock()
 	}()

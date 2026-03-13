@@ -42,7 +42,7 @@ var (
 	roomSubs   = make(map[string]*redis.PubSub)
 	roomSubsMu sync.Mutex
 
-	sseClients   = make(map[string][]chan string)
+	sseClients   = make(map[string]map[chan string]struct{})
 	sseClientsMu sync.Mutex
 )
 
