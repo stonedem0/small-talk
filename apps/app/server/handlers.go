@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -343,7 +344,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Value:    rSigned,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   false,
+			Secure:   os.Getenv("ENV") == "production",
 			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(7 * 24 * time.Hour),
 		})
@@ -482,7 +483,7 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 			Value:    rSigned,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   false,
+			Secure:   os.Getenv("ENV") == "production",
 			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(7 * 24 * time.Hour),
 		})
@@ -617,7 +618,7 @@ func (h *Handler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 			Value:    rSigned,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   false,
+			Secure:   os.Getenv("ENV") == "production",
 			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(7 * 24 * time.Hour),
 		})
