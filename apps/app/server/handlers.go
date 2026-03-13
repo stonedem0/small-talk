@@ -30,6 +30,9 @@ type contextKey string
 
 const (
 	usernameKey contextKey = "username"
+
+	maxUsernameLen = 32
+	maxRoomLen     = 64
 )
 
 type Credentials struct {
@@ -263,6 +266,10 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Username and password are required", http.StatusBadRequest)
 		return
 	}
+	if len(username) > maxUsernameLen {
+		http.Error(w, fmt.Sprintf("Username must be %d characters or fewer", maxUsernameLen), http.StatusBadRequest)
+		return
+	}
 	if len(password) < 8 {
 		http.Error(w, "Password must be at least 8 characters", http.StatusBadRequest)
 		return
@@ -377,6 +384,11 @@ func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Room name is required"})
 		return
 	}
+	if len(room) > maxRoomLen {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("Room name must be %d characters or fewer", maxRoomLen)})
+		return
+	}
 	if strings.HasPrefix(room, "dm:") {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Room name cannot start with 'dm:'"})
@@ -438,6 +450,11 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 	if req.OldUsername == "" || req.NewUsername == "" || req.Room == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Old username, new username, and room are required"})
+		return
+	}
+	if len(req.NewUsername) > maxUsernameLen {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("Username must be %d characters or fewer", maxUsernameLen)})
 		return
 	}
 	var storedHash string
