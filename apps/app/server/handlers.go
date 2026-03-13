@@ -546,6 +546,11 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Username, current password, and new password are required"})
 		return
 	}
+	if len(req.NewPassword) < 8 {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Password must be at least 8 characters"})
+		return
+	}
 	var storedHash string
 	err = DB.QueryRowContext(r.Context(),
 		`SELECT password_hash FROM users WHERE username = $1`, req.Username,
