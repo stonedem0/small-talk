@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -276,7 +277,7 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		username, string(hash),
 	)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			http.Error(w, "Username already taken", http.StatusConflict)
 		} else {
 			http.Error(w, "Failed to save user", http.StatusInternalServerError)
@@ -452,7 +453,7 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 		`UPDATE users SET username = $1 WHERE username = $2`, req.NewUsername, req.OldUsername,
 	)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			w.WriteHeader(http.StatusConflict)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "New username already taken"})
 		} else {
