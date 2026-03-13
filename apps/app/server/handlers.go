@@ -185,7 +185,7 @@ func (h *Handler) GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	messages, err := RDB.LRange(ctx, "chat_history:"+room, 0, 99).Result()
+	messages, err := RDB.LRange(r.Context(), "chat_history:"+room, 0, 99).Result()
 	if err != nil {
 		// history error
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -495,7 +495,7 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 	onlineUsersLock.Unlock()
 	change := Message{Room: req.Room, Username: req.OldUsername, Message: fmt.Sprintf("changed username to %s", req.NewUsername), Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 	b, _ := json.Marshal(change)
-	RDB.Publish(ctx, "room:"+req.Room, string(b))
+	RDB.Publish(r.Context(), "room:"+req.Room, string(b))
 	// rotate refresh cookie as well
 	rclaims := jwt.MapClaims{"username": req.NewUsername, "exp": jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour))}
 	rtok := jwt.NewWithClaims(jwt.SigningMethodHS256, rclaims)
