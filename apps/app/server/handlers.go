@@ -376,6 +376,11 @@ func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Room name is required"})
 		return
 	}
+	if strings.HasPrefix(room, "dm:") {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Room name cannot start with 'dm:'"})
+		return
+	}
 	exists, err := h.RDB.SIsMember(h.Ctx, "rooms", room).Result()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
