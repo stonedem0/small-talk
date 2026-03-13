@@ -569,10 +569,10 @@ func seedRooms() {
 
 func registerRoutes(a *app, h *Handler) {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { handleConnections(a, w, r) })
-	http.HandleFunc("/login", WithCORS(h.LoginHandler))
-	http.HandleFunc("/register", WithCORS(h.RegisterHandler))
+	http.HandleFunc("/login", WithCORS(RateLimitAuth(h.LoginHandler)))
+	http.HandleFunc("/register", WithCORS(RateLimitAuth(h.RegisterHandler)))
 	http.HandleFunc("/user-info", WithCORS(h.WithAuth(h.UserInfoHandler)))
-	http.HandleFunc("/refresh", WithCORS(h.RefreshHandler))
+	http.HandleFunc("/refresh", WithCORS(RateLimitAuth(h.RefreshHandler)))
 	http.HandleFunc("/history", WithCORS(h.WithAuth(h.GetChatHistoryHandler)))
 	http.HandleFunc("/rooms", WithCORS(h.WithAuth(h.GetRoomsHandler)))
 	http.HandleFunc("/rooms-with-categories", WithCORS(h.WithAuth(h.GetRoomsWithCategoriesHandler)))
