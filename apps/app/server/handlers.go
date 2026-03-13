@@ -311,16 +311,15 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var storedHash string
-	if err := DB.QueryRowContext(r.Context(),
+	userErr := DB.QueryRowContext(r.Context(),
 		`SELECT password_hash FROM users WHERE username = $1`, username,
-	).Scan(&storedHash); err != nil {
-		// normalize to avoid user enumeration
-		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
-		return
+	).Scan(&storedHash)
+	if userErr != nil {
+		// run bcrypt anyway to prevent timing-based username enumeration
+		storedHash = "$2a$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password)); err != nil {
-		// Normalize to avoid user enumeration
+	hashErr := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password))
+	if userErr != nil || hashErr != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
