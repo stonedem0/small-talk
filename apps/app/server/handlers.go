@@ -996,8 +996,19 @@ func (h *Handler) SendFriendRequestHandler(w http.ResponseWriter, r *http.Reques
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "already friends"})
 		return
 	}
+	// already sent a pending request?
+	var alreadySent bool
+	_ = DB.QueryRowContext(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM friend_requests WHERE from_username=$1 AND to_username=$2)`,
+		username, target,
+	).Scan(&alreadySent)
+	if alreadySent {
+		w.WriteHeader(http.StatusConflict)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "request already sent"})
+		return
+	}
 	_, err = DB.ExecContext(r.Context(),
-		`INSERT INTO friend_requests (from_username, to_username) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+		`INSERT INTO friend_requests (from_username, to_username) VALUES ($1, $2)`,
 		username, target,
 	)
 	if err != nil {
@@ -1213,4 +1224,36 @@ func (h *Handler) GetFriendRequestsHandler(w http.ResponseWriter, r *http.Reques
 		}
 	}
 	_ = json.NewEncoder(w).Encode(requests)
+}
+
+// GetSentFriendRequestsHandler returns the caller's pending outgoing friend requests.
+// GET /friends/sent
+func (h *Handler) GetSentFriendRequestsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	rows, err := DB.QueryContext(r.Context(),
+		`SELECT to_username FROM friend_requests WHERE from_username = $1`, username,
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+		return
+	}
+	defer rows.Close()
+	sent := []string{}
+	for rows.Next() {
+		var f string
+		if err := rows.Scan(&f); err == nil {
+			sent = append(sent, f)
+		}
+	}
+	_ = json.NewEncoder(w).Encode(sent)
 }

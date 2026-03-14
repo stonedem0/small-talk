@@ -21,6 +21,7 @@ const App = () => {
   const [notifications, setNotifications] = useState<{ [from: string]: { room: string; count: number } }>(() => {
     try { return JSON.parse(localStorage.getItem("dm_notifications") ?? "{}"); } catch { return {}; }
   });
+  const [friendRequests, setFriendRequests] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -89,6 +90,16 @@ const App = () => {
 
   useEffect(() => {
     if (!token) return;
+    fetch(`${API_URL}/friends/requests`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then((list: string[]) => setFriendRequests(list))
+      .catch(() => {});
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
     const es = new EventSource(`${API_URL}/events?token=${token}`);
     es.onmessage = (e) => {
       try {
@@ -102,6 +113,8 @@ const App = () => {
           }));
           notifAudio.currentTime = 0;
           notifAudio.play().catch(() => {});
+        } else if (msg.type === "friend_request") {
+          setFriendRequests((prev) => prev.includes(msg.from) ? prev : [...prev, msg.from]);
         }
       } catch {
         // ignore malformed events
@@ -109,6 +122,24 @@ const App = () => {
     };
     return () => es.close();
   }, [token]);
+
+  const acceptFriend = async (from: string) => {
+    await fetch(`${API_URL}/friends/accept`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ target: from }),
+    });
+    setFriendRequests((prev) => prev.filter((r) => r !== from));
+  };
+
+  const declineFriend = async (from: string) => {
+    await fetch(`${API_URL}/friends/decline`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ target: from }),
+    });
+    setFriendRequests((prev) => prev.filter((r) => r !== from));
+  };
 
   useEffect(() => {
     if (location.pathname === "/" || location.pathname === "/") {
@@ -183,8 +214,17 @@ const App = () => {
         </Window>
       )}
 
-      {Object.keys(notifications).length > 0 && (
+      {(Object.keys(notifications).length > 0 || friendRequests.length > 0) && (
         <div className="notifications">
+          {friendRequests.map((from) => (
+            <div key={`fr-${from}`} className="notification-toast friend-request-toast">
+              <strong>{from}</strong> wants to be friends
+              <div className="friend-request-actions">
+                <button className="fr-btn fr-accept" onClick={() => acceptFriend(from)}>✓ accept</button>
+                <button className="fr-btn fr-decline" onClick={() => declineFriend(from)}>✕ decline</button>
+              </div>
+            </div>
+          ))}
           {Object.entries(notifications).map(([from, { count }]) => (
             <div key={from} className="notification-toast" onClick={() => {
               setNotifications((prev) => { const next = { ...prev }; delete next[from]; return next; });
