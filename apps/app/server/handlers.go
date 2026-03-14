@@ -332,7 +332,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
-	username := creds.Username
+	username := strings.TrimSpace(creds.Username)
 	password := creds.Password
 	if username == "" || password == "" {
 		w.WriteHeader(http.StatusBadRequest)
