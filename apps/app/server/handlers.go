@@ -108,6 +108,14 @@ func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: " + err.Error()})
 			return
 		}
+		var exists bool
+		if err := DB.QueryRowContext(r.Context(),
+			`SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)`, username,
+		).Scan(&exists); err != nil || !exists {
+			w.WriteHeader(http.StatusUnauthorized)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: user no longer exists"})
+			return
+		}
 		next(w, r.WithContext(context.WithValue(r.Context(), usernameKey, username)))
 	}
 }
