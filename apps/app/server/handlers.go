@@ -786,9 +786,17 @@ func (h *Handler) GetDMListHandler(w http.ResponseWriter, r *http.Request) {
 	existing := make(map[string]bool, len(partners))
 	for rows.Next() {
 		var u string
-		if err := rows.Scan(&u); err == nil {
-			existing[u] = true
+		if err := rows.Scan(&u); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+			return
 		}
+		existing[u] = true
+	}
+	if err := rows.Err(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
 	}
 
 	live := partners[:0]
