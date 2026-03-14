@@ -35,6 +35,19 @@ const (
 	maxRoomLen     = 64
 )
 
+// dummyHash is a real bcrypt hash used when a login username is not found,
+// so CompareHashAndPassword always runs the full bcrypt work and the response
+// time doesn't reveal whether a username exists.
+var dummyHash []byte
+
+func init() {
+	var err error
+	dummyHash, err = bcrypt.GenerateFromPassword([]byte("dummy-timing-password"), bcrypt.DefaultCost)
+	if err != nil {
+		panic("failed to generate dummy bcrypt hash: " + err.Error())
+	}
+}
+
 type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -318,15 +331,15 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Username and password are required"})
 		return
 	}
-	var storedHash string
+	var storedHash []byte
 	userErr := DB.QueryRowContext(r.Context(),
 		`SELECT password_hash FROM users WHERE username = $1`, username,
 	).Scan(&storedHash)
 	if userErr != nil {
-		// run bcrypt anyway to prevent timing-based username enumeration
-		storedHash = "$2a$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+		// Always run bcrypt to prevent timing-based username enumeration.
+		storedHash = dummyHash
 	}
-	hashErr := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password))
+	hashErr := bcrypt.CompareHashAndPassword(storedHash, []byte(password))
 	if userErr != nil || hashErr != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})

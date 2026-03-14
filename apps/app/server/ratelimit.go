@@ -4,14 +4,15 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/time/rate"
 )
 
 type ipLimiter struct {
-	limiter  *rate.Limiter
-	lastSeen time.Time
+	limiter      *rate.Limiter
+	lastSeenNano int64 // unix nano, accessed via atomic
 }
 
 var (
@@ -27,8 +28,9 @@ func init() {
 func cleanupAuthLimiters() {
 	for {
 		time.Sleep(5 * time.Minute)
+		cutoff := time.Now().Add(-10 * time.Minute).UnixNano()
 		authLimiters.Range(func(k, v any) bool {
-			if time.Since(v.(*ipLimiter).lastSeen) > 10*time.Minute {
+			if atomic.LoadInt64(&v.(*ipLimiter).lastSeenNano) < cutoff {
 				authLimiters.Delete(k)
 			}
 			return true
@@ -37,18 +39,22 @@ func cleanupAuthLimiters() {
 }
 
 func getAuthLimiter(ip string) *rate.Limiter {
-	v, ok := authLimiters.Load(ip)
-	if !ok {
-		// 10 requests burst, refills at 1 request/second
-		l := &ipLimiter{
-			limiter:  rate.NewLimiter(rate.Every(time.Second), 10),
-			lastSeen: time.Now(),
-		}
-		authLimiters.Store(ip, l)
-		return l.limiter
+	// Fast path: already exists.
+	if v, ok := authLimiters.Load(ip); ok {
+		il := v.(*ipLimiter)
+		atomic.StoreInt64(&il.lastSeenNano, time.Now().UnixNano())
+		return il.limiter
 	}
-	il := v.(*ipLimiter)
-	il.lastSeen = time.Now()
+	// Slow path: first request from this IP.
+	// LoadOrStore guarantees only one limiter wins even under concurrent misses.
+	// 10 requests burst, refills at 1 request/second.
+	candidate := &ipLimiter{
+		limiter:      rate.NewLimiter(rate.Every(time.Second), 10),
+		lastSeenNano: time.Now().UnixNano(),
+	}
+	actual, _ := authLimiters.LoadOrStore(ip, candidate)
+	il := actual.(*ipLimiter)
+	atomic.StoreInt64(&il.lastSeenNano, time.Now().UnixNano())
 	return il.limiter
 }
 

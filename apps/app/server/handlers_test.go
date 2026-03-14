@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func setupHandlerRedis(t *testing.T) {
@@ -473,6 +475,24 @@ func TestRegisterHandler_OK(t *testing.T) {
 	}
 }
 
+func TestRegisterHandler_UsernameTooLong(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+
+	long := strings.Repeat("a", maxUsernameLen+1)
+	body := `{"username":"` + long + `","password":"password123"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(body))
+	newHandler().RegisterHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "characters or fewer") {
+		t.Fatalf("unexpected error body: %s", w.Body.String())
+	}
+}
+
 func TestRegisterHandler_DuplicateUsername(t *testing.T) {
 	setupHandlerRedis(t)
 	setupTestDB(t)
@@ -676,6 +696,71 @@ func TestRemoveFriend_OK(t *testing.T) {
 	DB.QueryRow(`SELECT COUNT(*) FROM friends`).Scan(&count)
 	if count != 0 {
 		t.Fatal("friendship should be deleted")
+	}
+}
+
+// --- CreateRoomHandler ---
+
+func TestCreateRoomHandler_RoomNameTooLong(t *testing.T) {
+	setupHandlerRedis(t)
+
+	longName := strings.Repeat("a", maxRoomLen+1)
+	body := strings.NewReader(`{"room":"` + longName + `"}`)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/create-room", body)
+	r = r.WithContext(context.WithValue(r.Context(), usernameKey, "rei"))
+	newHandler().CreateRoomHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestCreateRoomHandler_DMPrefixBlocked(t *testing.T) {
+	setupHandlerRedis(t)
+
+	body := strings.NewReader(`{"room":"dm:rei:shinji"}`)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/create-room", body)
+	r = r.WithContext(context.WithValue(r.Context(), usernameKey, "rei"))
+	newHandler().CreateRoomHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestCreateRoomHandler_OK(t *testing.T) {
+	setupHandlerRedis(t)
+
+	body := strings.NewReader(`{"room":"testroom","category":"chill"}`)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/create-room", body)
+	r = r.WithContext(context.WithValue(r.Context(), usernameKey, "rei"))
+	newHandler().CreateRoomHandler(w, r)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", w.Code)
+	}
+}
+
+// --- UpdatePasswordHandler ---
+
+func TestUpdatePasswordHandler_TooShort(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("validpass"), bcrypt.MinCost)
+	insertUser(t, "rei", string(hash))
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	body := strings.NewReader(`{"username":"rei","currentPassword":"validpass","newPassword":"short"}`)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/update-password", body)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().UpdatePasswordHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
 	}
 }
 
