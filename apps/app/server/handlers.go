@@ -372,7 +372,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Value:    rSigned,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   os.Getenv("ENV") == "production",
+			Secure:   os.Getenv("ENV") != "development",
 			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(7 * 24 * time.Hour),
 		})
@@ -526,7 +526,7 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 			Value:    rSigned,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   os.Getenv("ENV") == "production",
+			Secure:   os.Getenv("ENV") != "development",
 			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(7 * 24 * time.Hour),
 		})
@@ -666,7 +666,7 @@ func (h *Handler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 			Value:    rSigned,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   os.Getenv("ENV") == "production",
+			Secure:   os.Getenv("ENV") != "development",
 			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(7 * 24 * time.Hour),
 		})
