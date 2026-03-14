@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -111,7 +112,13 @@ func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 		var exists bool
 		if err := DB.QueryRowContext(r.Context(),
 			`SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)`, username,
-		).Scan(&exists); err != nil || !exists {
+		).Scan(&exists); err != nil {
+			log.Printf("WithAuth: db error for user %q: %v", username, err)
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+			return
+		}
+		if !exists {
 			w.WriteHeader(http.StatusUnauthorized)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: user no longer exists"})
 			return
