@@ -15,10 +15,7 @@ type ipLimiter struct {
 	lastSeenNano int64 // unix nano, accessed via atomic
 }
 
-var (
-	authLimiters   sync.Map // map[string]*ipLimiter
-	authLimitersMu sync.Mutex
-)
+var authLimiters sync.Map // map[string]*ipLimiter
 
 func init() {
 	go cleanupAuthLimiters()
