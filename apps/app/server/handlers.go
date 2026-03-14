@@ -924,10 +924,21 @@ func (h *Handler) SSEHandler(w http.ResponseWriter, r *http.Request) {
 		sseClientsMu.Unlock()
 	}()
 
+	// Flush headers immediately so the browser doesn't see ERR_EMPTY_RESPONSE.
+	fmt.Fprintf(w, ": ok\n\n")
+	flusher.Flush()
+
+	ticker := time.NewTicker(25 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case payload := <-ch:
 			fmt.Fprintf(w, "data: %s\n\n", payload)
+			flusher.Flush()
+		case <-ticker.C:
+			// Heartbeat comment keeps the connection alive through proxies.
+			fmt.Fprintf(w, ": heartbeat\n\n")
 			flusher.Flush()
 		case <-r.Context().Done():
 			return
