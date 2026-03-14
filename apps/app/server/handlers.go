@@ -800,12 +800,17 @@ func (h *Handler) GetDMListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	live := partners[:0]
+	var stale []interface{}
 	for _, p := range partners {
 		if existing[p] {
 			live = append(live, p)
 		} else {
-			// Clean up the stale entry so it doesn't resurface.
-			h.RDB.SRem(h.Ctx, "dms:"+username, p)
+			stale = append(stale, p)
+		}
+	}
+	if len(stale) > 0 {
+		if err := h.RDB.SRem(r.Context(), "dms:"+username, stale...).Err(); err != nil {
+			log.Printf("GetDMListHandler: failed to remove stale DM partners for %q: %v", username, err)
 		}
 	}
 	if live == nil {
