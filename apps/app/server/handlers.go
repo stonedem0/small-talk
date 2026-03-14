@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -350,12 +352,19 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	userErr := DB.QueryRowContext(r.Context(),
 		`SELECT password_hash FROM users WHERE username = $1`, username,
 	).Scan(&storedHash)
+	isNotFound := errors.Is(userErr, sql.ErrNoRows)
 	if userErr != nil {
 		// Always run bcrypt to prevent timing-based username enumeration.
 		storedHash = dummyHash
 	}
 	hashErr := bcrypt.CompareHashAndPassword(storedHash, []byte(password))
-	if userErr != nil || hashErr != nil {
+	if userErr != nil && !isNotFound {
+		log.Printf("LoginHandler: db error for user %q: %v", username, userErr)
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
+	}
+	if isNotFound || hashErr != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
