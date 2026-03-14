@@ -472,6 +472,8 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
+	req.OldUsername = strings.TrimSpace(req.OldUsername)
+	req.NewUsername = strings.TrimSpace(req.NewUsername)
 	// Ensure the caller is the account owner
 	tokenUser, err := h.VerifyToken(r)
 	if err != nil {
