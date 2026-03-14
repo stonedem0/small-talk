@@ -361,6 +361,9 @@ func TestStartDMHandler_TargetNotFound(t *testing.T) {
 
 func TestGetDMListHandler_ReturnsList(t *testing.T) {
 	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "shinji", "$2a$10$placeholder")
+	insertUser(t, "asuka", "$2a$10$placeholder")
 
 	RDB.SAdd(ctx, "dms:rei", "shinji", "asuka")
 
@@ -377,6 +380,30 @@ func TestGetDMListHandler_ReturnsList(t *testing.T) {
 	_ = json.NewDecoder(w.Body).Decode(&partners)
 	if len(partners) != 2 {
 		t.Fatalf("expected 2 partners, got %v", partners)
+	}
+}
+
+func TestGetDMListHandler_FiltersDeletedUser(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "shinji", "$2a$10$placeholder")
+	// asuka is NOT inserted — simulates a deleted account
+
+	RDB.SAdd(ctx, "dms:rei", "shinji", "asuka")
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/dms", nil)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().GetDMListHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var partners []string
+	_ = json.NewDecoder(w.Body).Decode(&partners)
+	if len(partners) != 1 || partners[0] != "shinji" {
+		t.Fatalf("expected only shinji, got %v", partners)
 	}
 }
 
@@ -433,9 +460,9 @@ func TestGetChatHistoryHandler_DMAllowsParticipant(t *testing.T) {
 
 func setupTestDB(t *testing.T) {
 	t.Helper()
-	dsn := os.Getenv("POSTGRES_URL")
+	dsn := os.Getenv("POSTGRES_TEST_URL")
 	if dsn == "" {
-		t.Skip("POSTGRES_URL not set, skipping postgres tests")
+		t.Skip("POSTGRES_TEST_URL not set, skipping postgres tests")
 	}
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -764,5 +791,5 @@ func TestUpdatePasswordHandler_TooShort(t *testing.T) {
 	}
 }
 
-// suppress unused import warning when POSTGRES_URL is not set
+// suppress unused import warning when POSTGRES_TEST_URL is not set
 var _ = fmt.Sprintf

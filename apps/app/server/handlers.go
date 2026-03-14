@@ -742,10 +742,42 @@ func (h *Handler) GetDMListHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
 		return
 	}
-	if partners == nil {
-		partners = []string{}
+	if len(partners) == 0 {
+		_ = json.NewEncoder(w).Encode([]string{})
+		return
 	}
-	_ = json.NewEncoder(w).Encode(partners)
+
+	// Filter out partners who no longer exist in the database.
+	rows, err := DB.QueryContext(r.Context(),
+		`SELECT username FROM users WHERE username = ANY($1)`, pq.Array(partners),
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
+	}
+	defer rows.Close()
+	existing := make(map[string]bool, len(partners))
+	for rows.Next() {
+		var u string
+		if err := rows.Scan(&u); err == nil {
+			existing[u] = true
+		}
+	}
+
+	live := partners[:0]
+	for _, p := range partners {
+		if existing[p] {
+			live = append(live, p)
+		} else {
+			// Clean up the stale entry so it doesn't resurface.
+			h.RDB.SRem(h.Ctx, "dms:"+username, p)
+		}
+	}
+	if live == nil {
+		live = []string{}
+	}
+	_ = json.NewEncoder(w).Encode(live)
 }
 
 func (h *Handler) VerifyToken(r *http.Request) (string, error) {
