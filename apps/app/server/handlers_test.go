@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func setupHandlerRedis(t *testing.T) {
@@ -359,6 +361,9 @@ func TestStartDMHandler_TargetNotFound(t *testing.T) {
 
 func TestGetDMListHandler_ReturnsList(t *testing.T) {
 	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "shinji", "$2a$10$placeholder")
+	insertUser(t, "asuka", "$2a$10$placeholder")
 
 	RDB.SAdd(ctx, "dms:rei", "shinji", "asuka")
 
@@ -375,6 +380,30 @@ func TestGetDMListHandler_ReturnsList(t *testing.T) {
 	_ = json.NewDecoder(w.Body).Decode(&partners)
 	if len(partners) != 2 {
 		t.Fatalf("expected 2 partners, got %v", partners)
+	}
+}
+
+func TestGetDMListHandler_FiltersDeletedUser(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "shinji", "$2a$10$placeholder")
+	// asuka is NOT inserted — simulates a deleted account
+
+	RDB.SAdd(ctx, "dms:rei", "shinji", "asuka")
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/dms", nil)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().GetDMListHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var partners []string
+	_ = json.NewDecoder(w.Body).Decode(&partners)
+	if len(partners) != 1 || partners[0] != "shinji" {
+		t.Fatalf("expected only shinji, got %v", partners)
 	}
 }
 
@@ -431,9 +460,9 @@ func TestGetChatHistoryHandler_DMAllowsParticipant(t *testing.T) {
 
 func setupTestDB(t *testing.T) {
 	t.Helper()
-	dsn := os.Getenv("POSTGRES_URL")
+	dsn := os.Getenv("POSTGRES_TEST_URL")
 	if dsn == "" {
-		t.Skip("POSTGRES_URL not set, skipping postgres tests")
+		t.Skip("POSTGRES_TEST_URL not set, skipping postgres tests")
 	}
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -470,6 +499,24 @@ func TestRegisterHandler_OK(t *testing.T) {
 
 	if w.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRegisterHandler_UsernameTooLong(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+
+	long := strings.Repeat("a", maxUsernameLen+1)
+	body := `{"username":"` + long + `","password":"password123"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(body))
+	newHandler().RegisterHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "characters or fewer") {
+		t.Fatalf("unexpected error body: %s", w.Body.String())
 	}
 }
 
@@ -679,5 +726,91 @@ func TestRemoveFriend_OK(t *testing.T) {
 	}
 }
 
-// suppress unused import warning when POSTGRES_URL is not set
+// --- UpdateUsernameHandler ---
+
+func TestUpdateUsernameHandler_NewUsernameTooLong(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.MinCost)
+	insertUser(t, "rei", string(hash))
+
+	long := strings.Repeat("a", maxUsernameLen+1)
+	body := strings.NewReader(`{"oldUsername":"rei","newUsername":"` + long + `","room":"gaming"}`)
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/update-username", body)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().UpdateUsernameHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+// --- CreateRoomHandler ---
+
+func TestCreateRoomHandler_RoomNameTooLong(t *testing.T) {
+	setupHandlerRedis(t)
+
+	longName := strings.Repeat("a", maxRoomLen+1)
+	body := strings.NewReader(`{"room":"` + longName + `"}`)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/create-room", body)
+	r = r.WithContext(context.WithValue(r.Context(), usernameKey, "rei"))
+	newHandler().CreateRoomHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestCreateRoomHandler_DMPrefixBlocked(t *testing.T) {
+	setupHandlerRedis(t)
+
+	body := strings.NewReader(`{"room":"dm:rei:shinji"}`)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/create-room", body)
+	r = r.WithContext(context.WithValue(r.Context(), usernameKey, "rei"))
+	newHandler().CreateRoomHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestCreateRoomHandler_OK(t *testing.T) {
+	setupHandlerRedis(t)
+
+	body := strings.NewReader(`{"room":"testroom","category":"chill"}`)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/create-room", body)
+	r = r.WithContext(context.WithValue(r.Context(), usernameKey, "rei"))
+	newHandler().CreateRoomHandler(w, r)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", w.Code)
+	}
+}
+
+// --- UpdatePasswordHandler ---
+
+func TestUpdatePasswordHandler_TooShort(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("validpass"), bcrypt.MinCost)
+	insertUser(t, "rei", string(hash))
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	body := strings.NewReader(`{"username":"rei","currentPassword":"validpass","newPassword":"short"}`)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/update-password", body)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().UpdatePasswordHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+// suppress unused import warning when POSTGRES_TEST_URL is not set
 var _ = fmt.Sprintf

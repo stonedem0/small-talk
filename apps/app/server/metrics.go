@@ -44,11 +44,10 @@ func collectNodeStats() NodeStats {
 		case "/memory/classes/heap/objects:bytes":
 			s.RSSMB = sm.Value.Uint64() / 1024 / 1024
 		case "/gc/pauses:seconds":
-			if hist := sm.Value.Float64Histogram(); hist != nil && len(hist.Counts) > 0 && len(hist.Buckets) > 1 {
+			if hist := sm.Value.Float64Histogram(); hist != nil && len(hist.Counts) > 0 && len(hist.Buckets) > len(hist.Counts) {
 				for i := len(hist.Counts) - 1; i >= 0; i-- {
 					if hist.Counts[i] > 0 {
-						upper := hist.Buckets[i+1]
-						s.LastGCPauseMS = uint64(upper * 1000.0)
+						s.LastGCPauseMS = uint64(hist.Buckets[i+1] * 1000.0)
 						break
 					}
 				}

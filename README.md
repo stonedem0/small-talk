@@ -22,7 +22,7 @@ Justfile        → build, run, deploy tasks
 
 ## prerequisites
 
-- go 1.22+
+- go 1.25+
 - node.js + npm
 - redis 6+
 - just task runner

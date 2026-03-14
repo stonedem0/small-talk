@@ -42,7 +42,7 @@ var (
 	roomSubs   = make(map[string]*redis.PubSub)
 	roomSubsMu sync.Mutex
 
-	sseClients   = make(map[string][]chan string)
+	sseClients   = make(map[string]map[chan string]struct{})
 	sseClientsMu sync.Mutex
 )
 
@@ -522,16 +522,19 @@ func (a *app) gracefulShutdown(ctx context.Context) {
 }
 
 func seedRooms() {
-	for _, room := range []string{
+	rooms := []string{
 		"gaming", "music", "anime", "programming", "chilling", "nerd_herd", "pets", "emo",
 		"movies", "books", "sports", "cooking", "travel", "art", "photography",
 		"fitness", "finance", "science", "history", "languages",
 		"memes", "fashion", "diy", "crypto", "food", "cars",
 		"astrology", "mental_health", "dating", "random",
-	} {
-		RDB.SAdd(ctx, "rooms", room)
 	}
-	for room, cat := range map[string]string{
+	for _, room := range rooms {
+		if err := RDB.SAdd(ctx, "rooms", room).Err(); err != nil {
+			log.Printf("seedRooms: SAdd %q: %v", room, err)
+		}
+	}
+	categories := map[string]string{
 		"gaming":        "gaming",
 		"nerd_herd":     "gaming",
 		"memes":         "gaming",
@@ -562,17 +565,20 @@ func seedRooms() {
 		"mental_health": "vibes & wellness",
 		"dating":        "vibes & wellness",
 		"random":        "random",
-	} {
-		RDB.HSet(ctx, "room:categories", room, cat)
+	}
+	for room, cat := range categories {
+		if err := RDB.HSet(ctx, "room:categories", room, cat).Err(); err != nil {
+			log.Printf("seedRooms: HSet %q: %v", room, err)
+		}
 	}
 }
 
 func registerRoutes(a *app, h *Handler) {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { handleConnections(a, w, r) })
-	http.HandleFunc("/login", WithCORS(h.LoginHandler))
-	http.HandleFunc("/register", WithCORS(h.RegisterHandler))
+	http.HandleFunc("/login", WithCORS(RateLimitAuth(h.LoginHandler)))
+	http.HandleFunc("/register", WithCORS(RateLimitAuth(h.RegisterHandler)))
 	http.HandleFunc("/user-info", WithCORS(h.WithAuth(h.UserInfoHandler)))
-	http.HandleFunc("/refresh", WithCORS(h.RefreshHandler))
+	http.HandleFunc("/refresh", WithCORS(RateLimitAuth(h.RefreshHandler)))
 	http.HandleFunc("/history", WithCORS(h.WithAuth(h.GetChatHistoryHandler)))
 	http.HandleFunc("/rooms", WithCORS(h.WithAuth(h.GetRoomsHandler)))
 	http.HandleFunc("/rooms-with-categories", WithCORS(h.WithAuth(h.GetRoomsWithCategoriesHandler)))

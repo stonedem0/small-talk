@@ -2,13 +2,18 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -28,7 +33,23 @@ type contextKey string
 
 const (
 	usernameKey contextKey = "username"
+
+	maxUsernameLen = 32
+	maxRoomLen     = 64
 )
+
+// dummyHash is a real bcrypt hash used when a login username is not found,
+// so CompareHashAndPassword always runs the full bcrypt work and the response
+// time doesn't reveal whether a username exists.
+var dummyHash []byte
+
+func init() {
+	var err error
+	dummyHash, err = bcrypt.GenerateFromPassword([]byte("dummy-timing-password"), bcrypt.DefaultCost)
+	if err != nil {
+		panic("failed to generate dummy bcrypt hash: " + err.Error())
+	}
+}
 
 type Credentials struct {
 	Username string `json:"username"`
@@ -88,6 +109,20 @@ func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: " + err.Error()})
+			return
+		}
+		var exists bool
+		if err := DB.QueryRowContext(r.Context(),
+			`SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)`, username,
+		).Scan(&exists); err != nil {
+			log.Printf("WithAuth: db error for user %q: %v", username, err)
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+			return
+		}
+		if !exists {
+			w.WriteHeader(http.StatusUnauthorized)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: user no longer exists"})
 			return
 		}
 		next(w, r.WithContext(context.WithValue(r.Context(), usernameKey, username)))
@@ -180,7 +215,7 @@ func (h *Handler) GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	messages, err := RDB.LRange(ctx, "chat_history:"+room, 0, 99).Result()
+	messages, err := RDB.LRange(r.Context(), "chat_history:"+room, 0, 99).Result()
 	if err != nil {
 		// history error
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -261,6 +296,10 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Username and password are required", http.StatusBadRequest)
 		return
 	}
+	if len(username) > maxUsernameLen {
+		http.Error(w, fmt.Sprintf("Username must be %d characters or fewer", maxUsernameLen), http.StatusBadRequest)
+		return
+	}
 	if len(password) < 8 {
 		http.Error(w, "Password must be at least 8 characters", http.StatusBadRequest)
 		return
@@ -275,7 +314,7 @@ func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		username, string(hash),
 	)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			http.Error(w, "Username already taken", http.StatusConflict)
 		} else {
 			http.Error(w, "Failed to save user", http.StatusInternalServerError)
@@ -302,24 +341,30 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
-	username := creds.Username
+	username := strings.TrimSpace(creds.Username)
 	password := creds.Password
 	if username == "" || password == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Username and password are required"})
 		return
 	}
-	var storedHash string
-	if err := DB.QueryRowContext(r.Context(),
+	var storedHash []byte
+	userErr := DB.QueryRowContext(r.Context(),
 		`SELECT password_hash FROM users WHERE username = $1`, username,
-	).Scan(&storedHash); err != nil {
-		// normalize to avoid user enumeration
-		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
+	).Scan(&storedHash)
+	isNotFound := errors.Is(userErr, sql.ErrNoRows)
+	if userErr != nil {
+		// Always run bcrypt to prevent timing-based username enumeration.
+		storedHash = dummyHash
+	}
+	hashErr := bcrypt.CompareHashAndPassword(storedHash, []byte(password))
+	if userErr != nil && !isNotFound {
+		log.Printf("LoginHandler: db error for user %q: %v", username, userErr)
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
 		return
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password)); err != nil {
-		// Normalize to avoid user enumeration
+	if isNotFound || hashErr != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid credentials"})
 		return
@@ -343,7 +388,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Value:    rSigned,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   false,
+			Secure:   os.Getenv("ENV") != "development",
 			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(7 * 24 * time.Hour),
 		})
@@ -374,6 +419,16 @@ func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 	if room == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Room name is required"})
+		return
+	}
+	if len(room) > maxRoomLen {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("Room name must be %d characters or fewer", maxRoomLen)})
+		return
+	}
+	if strings.HasPrefix(room, "dm:") {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Room name cannot start with 'dm:'"})
 		return
 	}
 	exists, err := h.RDB.SIsMember(h.Ctx, "rooms", room).Result()
@@ -417,6 +472,8 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
+	req.OldUsername = strings.TrimSpace(req.OldUsername)
+	req.NewUsername = strings.TrimSpace(req.NewUsername)
 	// Ensure the caller is the account owner
 	tokenUser, err := h.VerifyToken(r)
 	if err != nil {
@@ -434,6 +491,11 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Old username, new username, and room are required"})
 		return
 	}
+	if len(req.NewUsername) > maxUsernameLen {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("Username must be %d characters or fewer", maxUsernameLen)})
+		return
+	}
 	var storedHash string
 	err = DB.QueryRowContext(r.Context(),
 		`SELECT password_hash FROM users WHERE username = $1`, req.OldUsername,
@@ -447,7 +509,7 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 		`UPDATE users SET username = $1 WHERE username = $2`, req.NewUsername, req.OldUsername,
 	)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			w.WriteHeader(http.StatusConflict)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "New username already taken"})
 		} else {
@@ -472,7 +534,7 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 	onlineUsersLock.Unlock()
 	change := Message{Room: req.Room, Username: req.OldUsername, Message: fmt.Sprintf("changed username to %s", req.NewUsername), Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 	b, _ := json.Marshal(change)
-	RDB.Publish(ctx, "room:"+req.Room, string(b))
+	RDB.Publish(r.Context(), "room:"+req.Room, string(b))
 	// rotate refresh cookie as well
 	rclaims := jwt.MapClaims{"username": req.NewUsername, "exp": jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour))}
 	rtok := jwt.NewWithClaims(jwt.SigningMethodHS256, rclaims)
@@ -482,7 +544,7 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 			Value:    rSigned,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   false,
+			Secure:   os.Getenv("ENV") != "development",
 			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(7 * 24 * time.Hour),
 		})
@@ -521,6 +583,11 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 	if req.Username == "" || req.CurrentPassword == "" || req.NewPassword == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Username, current password, and new password are required"})
+		return
+	}
+	if len(req.NewPassword) < 8 {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Password must be at least 8 characters"})
 		return
 	}
 	var storedHash string
@@ -617,7 +684,7 @@ func (h *Handler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 			Value:    rSigned,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   false,
+			Secure:   os.Getenv("ENV") != "development",
 			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(7 * 24 * time.Hour),
 		})
@@ -701,10 +768,55 @@ func (h *Handler) GetDMListHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
 		return
 	}
-	if partners == nil {
-		partners = []string{}
+	if len(partners) == 0 {
+		_ = json.NewEncoder(w).Encode([]string{})
+		return
 	}
-	_ = json.NewEncoder(w).Encode(partners)
+
+	// Filter out partners who no longer exist in the database.
+	rows, err := DB.QueryContext(r.Context(),
+		`SELECT username FROM users WHERE username = ANY($1)`, pq.Array(partners),
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
+	}
+	defer rows.Close()
+	existing := make(map[string]bool, len(partners))
+	for rows.Next() {
+		var u string
+		if err := rows.Scan(&u); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+			return
+		}
+		existing[u] = true
+	}
+	if err := rows.Err(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		return
+	}
+
+	live := partners[:0]
+	var stale []interface{}
+	for _, p := range partners {
+		if existing[p] {
+			live = append(live, p)
+		} else {
+			stale = append(stale, p)
+		}
+	}
+	if len(stale) > 0 {
+		if err := h.RDB.SRem(r.Context(), "dms:"+username, stale...).Err(); err != nil {
+			log.Printf("GetDMListHandler: failed to remove stale DM partners for %q: %v", username, err)
+		}
+	}
+	if live == nil {
+		live = []string{}
+	}
+	_ = json.NewEncoder(w).Encode(live)
 }
 
 func (h *Handler) VerifyToken(r *http.Request) (string, error) {
@@ -748,7 +860,7 @@ func (h *Handler) VerifyToken(r *http.Request) (string, error) {
 func pushNotification(username, payload string) {
 	sseClientsMu.Lock()
 	defer sseClientsMu.Unlock()
-	for _, ch := range sseClients[username] {
+	for ch := range sseClients[username] {
 		select {
 		case ch <- payload:
 		default: // drop if channel full
@@ -765,8 +877,8 @@ func (h *Handler) SSEHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method")
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok || t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return h.JWTSecret, nil
 	})
@@ -797,25 +909,36 @@ func (h *Handler) SSEHandler(w http.ResponseWriter, r *http.Request) {
 
 	ch := make(chan string, 8)
 	sseClientsMu.Lock()
-	sseClients[username] = append(sseClients[username], ch)
+	if sseClients[username] == nil {
+		sseClients[username] = make(map[chan string]struct{})
+	}
+	sseClients[username][ch] = struct{}{}
 	sseClientsMu.Unlock()
 
 	defer func() {
 		sseClientsMu.Lock()
-		chans := sseClients[username]
-		for i, c := range chans {
-			if c == ch {
-				sseClients[username] = append(chans[:i], chans[i+1:]...)
-				break
-			}
+		delete(sseClients[username], ch)
+		if len(sseClients[username]) == 0 {
+			delete(sseClients, username)
 		}
 		sseClientsMu.Unlock()
 	}()
+
+	// Flush headers immediately so the browser doesn't see ERR_EMPTY_RESPONSE.
+	fmt.Fprintf(w, ": ok\n\n")
+	flusher.Flush()
+
+	ticker := time.NewTicker(25 * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case payload := <-ch:
 			fmt.Fprintf(w, "data: %s\n\n", payload)
+			flusher.Flush()
+		case <-ticker.C:
+			// Heartbeat comment keeps the connection alive through proxies.
+			fmt.Fprintf(w, ": heartbeat\n\n")
 			flusher.Flush()
 		case <-r.Context().Done():
 			return
