@@ -726,6 +726,27 @@ func TestRemoveFriend_OK(t *testing.T) {
 	}
 }
 
+// --- UpdateUsernameHandler ---
+
+func TestUpdateUsernameHandler_NewUsernameTooLong(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.MinCost)
+	insertUser(t, "rei", string(hash))
+
+	long := strings.Repeat("a", maxUsernameLen+1)
+	body := strings.NewReader(`{"oldUsername":"rei","newUsername":"` + long + `","room":"gaming"}`)
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/update-username", body)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().UpdateUsernameHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
 // --- CreateRoomHandler ---
 
 func TestCreateRoomHandler_RoomNameTooLong(t *testing.T) {
