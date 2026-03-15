@@ -575,6 +575,20 @@
   padding: 0 4px;
 }
 
+.sidebar-pending-badge {
+  color: #c084fc;
+  font-size: 0.85em;
+  padding: 0 4px;
+  opacity: 0.7;
+}
+
+.user-popup-pending {
+  color: #c084fc;
+  font-size: 0.82em;
+  padding: 3px 4px;
+  opacity: 0.8;
+}
+
 .dm-btn.fr-confirm {
   color: #39ff14;
   border-color: #39ff14;

@@ -262,14 +262,24 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
   };
 
   const sendFriendRequest = async (target: string) => {
-    await authFetch(`${API_URL}/friends/request`, {
+    const res = await authFetch(`${API_URL}/friends/request`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
       body: JSON.stringify({ target })
     });
     setConfirmFriend(null);
     setUserPopup(null);
-    setFriendToast(`Friend request sent to ${target}!`);
+    if (res.status === 409) {
+      const data = await res.json().catch(() => ({}));
+      const msg = data.error === "already friends"
+        ? `You're already friends with ${target}`
+        : `Request already sent to ${target}`;
+      setSentRequests(prev => new Set(prev).add(target));
+      setFriendToast(msg);
+    } else if (res.ok) {
+      setSentRequests(prev => new Set(prev).add(target));
+      setFriendToast(`Friend request sent to ${target}!`);
+    }
     setTimeout(() => setFriendToast(null), 3000);
   };
 
@@ -615,6 +625,8 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
                       </button>
                       {friends.has(user) ? (
                         <span className="sidebar-friend-badge" title="friends">♥</span>
+                      ) : sentRequests.has(user) ? (
+                        <span className="sidebar-pending-badge" title="Request pending">~</span>
                       ) : confirmFriend === user ? (
                         <>
                           <button className="dm-btn fr-confirm" title="Confirm" onClick={() => sendFriendRequest(user)}>✓</button>
@@ -650,6 +662,8 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
           <button className="user-popup-btn" onClick={() => openDM(userPopup.username)}>✉ message</button>
           {friends.has(userPopup.username) ? (
             <div className="user-popup-friend">♥ friends</div>
+          ) : sentRequests.has(userPopup.username) ? (
+            <div className="user-popup-pending">~ request pending</div>
           ) : confirmFriend === userPopup.username ? (
             <div className="user-popup-confirm">
               <span>Add {userPopup.username}?</span>

@@ -144,6 +144,10 @@
   padding: 0 0 4px 4px;
 }
 
+.friends-section a {
+  color: #ff69b4 !important;
+}
+
 .rooms-sidebar {
   display: flex;
   flex-direction: column;

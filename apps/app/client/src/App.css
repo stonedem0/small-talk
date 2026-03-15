@@ -254,3 +254,8 @@ body {
   background: #ef4444;
   color: #fff;
 }
+
+.friend-accepted-toast {
+  border-left: 3px solid #ff69b4;
+  cursor: default;
+}

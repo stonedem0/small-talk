@@ -15,6 +15,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const [userCounts, setUserCounts] = useState<{ [room: string]: number }>({});
   const [username, setUsername] = useState<string | null>(null);
   const [dmMessages, setDmMessages] = useState<string[]>([]);
+  const [friends, setFriends] = useState<string[]>([]);
   const toggleCategory = (cat: string) =>
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
 
@@ -59,6 +60,11 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
       .then((response) => response.json())
       .then((data: string[]) => setDmMessages(data || []))
       .catch((error) => console.error("dms fetch error", error));
+
+    authFetch(`${API_URL}/friends`)
+      .then((response) => response.json())
+      .then((data: string[]) => setFriends(data || []))
+      .catch(() => {});
   }, []);
 
   return (
@@ -108,6 +114,20 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
                     <li key={partner} className="room-item">
                       <Link to={`/dm/${partner}`} onClick={() => onDMOpen?.(partner)}>
                         ● {partner}{unreadDMs[partner] ? ` (${unreadDMs[partner]})` : ""}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {friends.length > 0 && (
+              <div className="dm-section friends-section">
+                <div className="dm-section-label">friends</div>
+                <ul className="room-category-list">
+                  {friends.sort().map((friend) => (
+                    <li key={friend} className="room-item">
+                      <Link to={`/dm/${friend}`} onClick={() => onDMOpen?.(friend)}>
+                        ♥ {friend}
                       </Link>
                     </li>
                   ))}

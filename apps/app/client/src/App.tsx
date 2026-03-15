@@ -22,6 +22,7 @@ const App = () => {
     try { return JSON.parse(localStorage.getItem("dm_notifications") ?? "{}"); } catch { return {}; }
   });
   const [friendRequests, setFriendRequests] = useState<string[]>([]);
+  const [friendAcceptedToast, setFriendAcceptedToast] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -115,6 +116,9 @@ const App = () => {
           notifAudio.play().catch(() => {});
         } else if (msg.type === "friend_request") {
           setFriendRequests((prev) => prev.includes(msg.from) ? prev : [...prev, msg.from]);
+        } else if (msg.type === "friend_accepted") {
+          setFriendAcceptedToast(`${msg.from} accepted your friend request! ♥`);
+          setTimeout(() => setFriendAcceptedToast(null), 4000);
         }
       } catch {
         // ignore malformed events
@@ -127,7 +131,7 @@ const App = () => {
     await fetch(`${API_URL}/friends/accept`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ target: from }),
+      body: JSON.stringify({ from }),
     });
     setFriendRequests((prev) => prev.filter((r) => r !== from));
   };
@@ -136,7 +140,7 @@ const App = () => {
     await fetch(`${API_URL}/friends/decline`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ target: from }),
+      body: JSON.stringify({ from }),
     });
     setFriendRequests((prev) => prev.filter((r) => r !== from));
   };
@@ -212,6 +216,12 @@ const App = () => {
             </div>
           )}
         </Window>
+      )}
+
+      {friendAcceptedToast && (
+        <div className="notifications">
+          <div className="notification-toast friend-accepted-toast">{friendAcceptedToast}</div>
+        </div>
       )}
 
       {(Object.keys(notifications).length > 0 || friendRequests.length > 0) && (
