@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { API_URL } from "../config";
@@ -81,6 +82,11 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
   const [linkUrl, setLinkUrl] = useState<string>("https://");
   const [linkText, setLinkText] = useState<string>("");
   const [typingUsers, setTypingUsers] = useState<{ [user: string]: ReturnType<typeof setTimeout> }>({});
+  const [friends, setFriends] = useState<Set<string>>(new Set());
+  const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
+  const [userPopup, setUserPopup] = useState<{ username: string; x: number; y: number } | null>(null);
+  const [confirmFriend, setConfirmFriend] = useState<string | null>(null);
+  const [friendToast, setFriendToast] = useState<string | null>(null);
 
   const ws = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -225,6 +231,57 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    authFetch(`${API_URL}/friends`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then((list: string[]) => setFriends(new Set(list)))
+      .catch(() => {});
+    authFetch(`${API_URL}/friends/sent`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then((list: string[]) => setSentRequests(new Set(list)))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!userPopup) return;
+    const close = () => { setUserPopup(null); setConfirmFriend(null); };
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [userPopup]);
+
+  const handleUsernameClick = (e: React.MouseEvent, target: string) => {
+    if (target === username) return;
+    e.stopPropagation();
+    setConfirmFriend(null);
+    setUserPopup({ username: target, x: e.clientX, y: e.clientY });
+  };
+
+  const sendFriendRequest = async (target: string) => {
+    const res = await authFetch(`${API_URL}/friends/request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+      body: JSON.stringify({ target })
+    });
+    setConfirmFriend(null);
+    setUserPopup(null);
+    if (res.status === 409) {
+      const data = await res.json().catch(() => ({}));
+      const msg = data.error === "already friends"
+        ? `You're already friends with ${target}`
+        : `Request already sent to ${target}`;
+      setSentRequests(prev => new Set(prev).add(target));
+      setFriendToast(msg);
+    } else if (res.ok) {
+      setSentRequests(prev => new Set(prev).add(target));
+      setFriendToast(`Friend request sent to ${target}!`);
+    }
+    setTimeout(() => setFriendToast(null), 3000);
+  };
 
   const openDM = (target: string) => {
     navigate(`/dm/${target}`);
@@ -409,8 +466,13 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
                 return (
                   <p key={index}>
                     {timeStr && <span style={{ color: "#c084fc" }}>[{timeStr}] </span>}
-                    <strong style={{ color: "#ff69b4" }}>{msg.username}:</strong> 
-                    <span 
+                    <strong
+                      style={{ color: "#ff69b4", cursor: msg.username !== username ? "pointer" : "default" }}
+                      onClick={(e) => handleUsernameClick(e, msg.username)}
+                    >
+                      {msg.username}{friends.has(msg.username) && <span title="friend" style={{ color: "#ff69b4", fontSize: "0.8em" }}> ♥</span>}:
+                    </strong>
+                    <span
                       className="msg-text"
                       dangerouslySetInnerHTML={{ __html: " " + formatMessage(msg.message) }}
                     />
@@ -553,19 +615,67 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
                     ● {user}
                   </span>
                   {user !== username && (
-                    <button
-                      className="dm-btn"
-                      title={`Message ${user}`}
-                      onClick={() => openDM(user)}
-                    >
-                      ✉
-                    </button>
+                    <>
+                      <button
+                        className="dm-btn"
+                        title={`Message ${user}`}
+                        onClick={() => openDM(user)}
+                      >
+                        ✉
+                      </button>
+                      {friends.has(user) ? (
+                        <span className="sidebar-friend-badge" title="friends">♥</span>
+                      ) : sentRequests.has(user) ? (
+                        <span className="sidebar-pending-badge" title="Request pending">~</span>
+                      ) : confirmFriend === user ? (
+                        <>
+                          <button className="dm-btn fr-confirm" title="Confirm" onClick={() => sendFriendRequest(user)}>✓</button>
+                          <button className="dm-btn fr-cancel" title="Cancel" onClick={() => setConfirmFriend(null)}>✕</button>
+                        </>
+                      ) : (
+                        <button
+                          className="dm-btn"
+                          title={`Add ${user} as friend`}
+                          onClick={() => setConfirmFriend(user)}
+                        >
+                          +
+                        </button>
+                      )}
+                    </>
                   )}
                 </li>
               ))}
             </ul>
         </div>
       </div>
+      {friendToast && createPortal(
+        <div className="friend-sent-toast">{friendToast}</div>,
+        document.body
+      )}
+      {userPopup && createPortal(
+        <div
+          className="user-popup"
+          style={{ top: userPopup.y + 8, left: userPopup.x + 8 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="user-popup-name">{userPopup.username}</div>
+          <button className="user-popup-btn" onClick={() => openDM(userPopup.username)}>✉ message</button>
+          {friends.has(userPopup.username) ? (
+            <div className="user-popup-friend">♥ friends</div>
+          ) : sentRequests.has(userPopup.username) ? (
+            <div className="user-popup-pending">~ request pending</div>
+          ) : confirmFriend === userPopup.username ? (
+            <div className="user-popup-confirm">
+              <span>Add {userPopup.username}?</span>
+              <button className="user-popup-btn fr-confirm" onClick={() => sendFriendRequest(userPopup.username)}>✓ yes</button>
+              <button className="user-popup-btn fr-cancel" onClick={() => setConfirmFriend(null)}>✕ no</button>
+            </div>
+          ) : (
+            <button className="user-popup-btn" onClick={() => setConfirmFriend(userPopup.username)}>+ add friend</button>
+          )}
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
