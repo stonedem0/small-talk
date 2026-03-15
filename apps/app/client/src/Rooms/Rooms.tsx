@@ -3,11 +3,18 @@ import { Link } from "react-router-dom";
 import "./Rooms.css";
 import { API_URL } from "../config";
 import { authFetch } from "../utils/authFetch";
+import Chat from "../Chat/Chat";
+import DMChat from "../Chat/DMChat";
 
 interface RoomsProps {
   unreadDMs?: { [from: string]: number };
   onDMOpen?: (from: string) => void;
 }
+
+type SelectedChat =
+  | { type: "room"; name: string }
+  | { type: "dm"; target: string }
+  | null;
 
 const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const [grouped, setGrouped] = useState<{ [category: string]: string[] }>({});
@@ -18,6 +25,13 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const [friends, setFriends] = useState<string[]>([]);
   const [friendsCollapsed, setFriendsCollapsed] = useState(false);
   const [dmsCollapsed, setDmsCollapsed] = useState(false);
+  const [selectedChat, setSelectedChat] = useState<SelectedChat>(() => {
+    try { return JSON.parse(localStorage.getItem("rooms_selected_chat") ?? "null"); } catch { return null; }
+  });
+  const [contactsHidden, setContactsHidden] = useState(() =>
+    localStorage.getItem("rooms_contacts_hidden") === "true"
+  );
+
   const toggleCategory = (cat: string) =>
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
 
@@ -67,6 +81,19 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem("rooms_selected_chat", JSON.stringify(selectedChat));
+  }, [selectedChat]);
+
+  useEffect(() => {
+    localStorage.setItem("rooms_contacts_hidden", String(contactsHidden));
+  }, [contactsHidden]);
+
+  const openDM = (partner: string) => {
+    onDMOpen?.(partner);
+    setSelectedChat({ type: "dm", target: partner });
+  };
+
   return (
     <div id="rooms-container">
 
@@ -79,12 +106,22 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
           <span className="rooms-topbar-name">{username || "User"}</span>
           <span className="rooms-topbar-status">online</span>
         </div>
+        {selectedChat && (
+          <>
+            <button className="rooms-back-btn" onClick={() => { setSelectedChat(null); setContactsHidden(false); localStorage.removeItem("rooms_selected_chat"); localStorage.removeItem("rooms_contacts_hidden"); }}>
+              ← back
+            </button>
+            <button className="rooms-toggle-btn" onClick={() => setContactsHidden(v => !v)}>
+              {contactsHidden ? "▶" : "◀"}
+            </button>
+          </>
+        )}
       </div>
 
       <div className="rooms-body">
 
         {/* left col — contacts */}
-        <div className="rooms-contacts">
+        <div className={`rooms-contacts${contactsHidden ? " rooms-contacts--hidden" : ""}`}>
 
           {/* friends */}
           <div className="contact-group">
@@ -99,10 +136,10 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
                 )}
                 {friends.sort().map((f) => (
                   <li key={f} className="contact-item">
-                    <Link to={`/dm/${f}`} onClick={() => onDMOpen?.(f)}>
+                    <a href="#" onClick={(e) => { e.preventDefault(); openDM(f); }}>
                       <span className="contact-status-dot contact-status-dot--online" />
                       {f}
-                    </Link>
+                    </a>
                   </li>
                 ))}
               </ul>
@@ -120,11 +157,11 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
                 <ul className="contact-list">
                   {dmMessages.sort().map((partner) => (
                     <li key={partner} className="contact-item">
-                      <Link to={`/dm/${partner}`} onClick={() => onDMOpen?.(partner)}>
+                      <a href="#" onClick={(e) => { e.preventDefault(); openDM(partner); }}>
                         <span className="contact-status-dot" />
                         {partner}
                         {unreadDMs[partner] ? <span className="contact-unread">{unreadDMs[partner]}</span> : null}
-                      </Link>
+                      </a>
                     </li>
                   ))}
                 </ul>
@@ -133,35 +170,46 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
           )}
         </div>
 
-        {/* right col — rooms */}
-        <div className="rooms-panel-wrapper">
-        <div className="rooms-panel">
-          <ul className="rooms-list">
-            <li className="room-item room-item--rules">
-              <Link to="/rules">#rules</Link>
-            </li>
-            {Object.entries(grouped).map(([category, rooms]) => (
-              <li key={category} className="room-category">
-                <button className="room-category-label" onClick={() => toggleCategory(category)}>
-                  <span className={`room-category-arrow ${collapsed[category] ? "room-category-arrow--closed" : ""}`} />
-                  {category.toLowerCase()}
-                </button>
-                {!collapsed[category] && (
-                  <ul className="room-category-list">
-                    {rooms.map((room) => (
-                      <li key={room} className="room-item">
-                        <Link to={`/${encodeURIComponent(room)}`}>
-                          #{room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-        </div>
+        {/* right col */}
+        {selectedChat ? (
+          <div className="rooms-chat-panel">
+            {selectedChat.type === "room" && username && (
+              <Chat username={username} roomNameOverride={selectedChat.name} />
+            )}
+            {selectedChat.type === "dm" && username && (
+              <DMChat username={username} targetUsernameOverride={selectedChat.target} />
+            )}
+          </div>
+        ) : (
+          <div className="rooms-panel-wrapper">
+            <div className="rooms-panel">
+              <ul className="rooms-list">
+                <li className="room-item room-item--rules">
+                  <Link to="/rules">#rules</Link>
+                </li>
+                {Object.entries(grouped).map(([category, rooms]) => (
+                  <li key={category} className="room-category">
+                    <button className="room-category-label" onClick={() => toggleCategory(category)}>
+                      <span className={`room-category-arrow ${collapsed[category] ? "room-category-arrow--closed" : ""}`} />
+                      {category.toLowerCase()}
+                    </button>
+                    {!collapsed[category] && (
+                      <ul className="room-category-list">
+                        {rooms.map((room) => (
+                          <li key={room} className="room-item">
+                            <a href="#" onClick={(e) => { e.preventDefault(); setSelectedChat({ type: "room", name: room }); }}>
+                              #{room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

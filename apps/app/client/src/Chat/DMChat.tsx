@@ -6,10 +6,12 @@ import Chat from "./Chat";
 
 interface DMChatProps {
   username: string;
+  targetUsernameOverride?: string;
 }
 
-const DMChat = ({ username }: DMChatProps) => {
-  const { targetUsername } = useParams<{ targetUsername: string }>();
+const DMChat = ({ username, targetUsernameOverride }: DMChatProps) => {
+  const { targetUsername: targetUsernameParam } = useParams<{ targetUsername: string }>();
+  const targetUsername = targetUsernameOverride ?? targetUsernameParam;
   const navigate = useNavigate();
   const [room, setRoom] = useState<string | null>(null);
 

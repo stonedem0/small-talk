@@ -78,6 +78,8 @@ const App = () => {
     localStorage.removeItem("username");
     localStorage.removeItem("token");
     localStorage.removeItem("dm_notifications");
+    localStorage.removeItem("rooms_selected_chat");
+    localStorage.removeItem("rooms_contacts_hidden");
     setUsername(null);
     setToken(null);
     setNotifications({});
