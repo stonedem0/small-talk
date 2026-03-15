@@ -171,8 +171,8 @@ const App = () => {
       {token && !windowClosed && (
         <Window
           title="Fella connect"
-          width={710}
-          height={400}
+          width={600}
+          height={420}
           username={username}
           onClose={() => setWindowClosed(true)}
           onSignOut={handleSignOut}
