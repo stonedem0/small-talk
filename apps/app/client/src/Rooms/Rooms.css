@@ -20,22 +20,30 @@
 }
 
 .rooms-topbar-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #9d4edd, #4a00f7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
 }
 
+.rooms-avatar-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 0;
+  object-fit: cover;
+  object-position: center top;
+  border: 2px solid #b08cff;
+  display: block;
+}
+
 .rooms-avatar-dot {
-  width: 10px;
-  height: 10px;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #39ff14;
   box-shadow: 0 0 4px #39ff14;
+  margin-right: 4px;
+  vertical-align: middle;
 }
 
 .rooms-topbar-info {
@@ -228,7 +236,7 @@
 }
 
 .rooms-panel {
-  width: 250px;
+  width: 320px;
   max-height: 220px;
   overflow: auto;
   border: 1px solid #b08cff;

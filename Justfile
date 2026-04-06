@@ -15,6 +15,21 @@ client:
 dev port="8080":
   just server {{port}} & just client
 
+# Create the smalltalk Postgres user and databases (idempotent)
+db-setup:
+  psql postgres -c "DO \$\$ BEGIN CREATE USER smalltalk WITH PASSWORD 'smalltalk'; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;"
+  psql postgres -c "SELECT 'CREATE DATABASE smalltalk OWNER smalltalk' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname='smalltalk')\gexec"
+  psql postgres -c "SELECT 'CREATE DATABASE smalltalk_test OWNER smalltalk' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname='smalltalk_test')\gexec"
+
+# Run the full stack: Redis + Postgres + BE + Directory + FE (uses local services, no Docker)
+dev-full port="8080":
+  redis-server --daemonize yes
+  sh -c 'for i in $(seq 1 20); do redis-cli ping >/dev/null 2>&1 && exit 0; sleep 0.5; done; echo "Redis not ready" >&2; exit 1'
+  brew services start postgresql@18 || true
+  sh -c 'for i in $(seq 1 20); do pg_isready -q && exit 0; sleep 0.5; done; echo "Postgres not ready" >&2; exit 1'
+  just db-setup
+  just server {{port}} & just directory & just client
+
 # Build React client
 build:
   cd apps/app/client && npm run build

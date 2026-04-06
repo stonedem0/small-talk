@@ -5,6 +5,7 @@ import { API_URL } from "../config";
 import { authFetch } from "../utils/authFetch";
 import Chat from "../Chat/Chat";
 import DMChat from "../Chat/DMChat";
+import avatar from "../assets/avatar.png";
 
 interface RoomsProps {
   unreadDMs?: { [from: string]: number };
@@ -100,18 +101,21 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
       {/* top bar */}
       <div className="rooms-topbar">
         <div className="rooms-topbar-avatar">
-          <div className="rooms-avatar-dot" />
+          <img src={avatar} alt="avatar" className="rooms-avatar-img" />
         </div>
         <div className="rooms-topbar-info">
           <span className="rooms-topbar-name">{username || "User"}</span>
-          <span className="rooms-topbar-status">online</span>
+          <span className="rooms-topbar-status">
+            <span className="rooms-avatar-dot" />
+            online
+          </span>
         </div>
         {selectedChat && (
           <>
             <button className="rooms-back-btn" onClick={() => { setSelectedChat(null); setContactsHidden(false); localStorage.removeItem("rooms_selected_chat"); localStorage.removeItem("rooms_contacts_hidden"); }}>
               ← back
             </button>
-            <button className="rooms-toggle-btn" onClick={() => setContactsHidden(v => !v)}>
+            <button className="rooms-toggle-btn" title={contactsHidden ? "show contacts" : "hide contacts"} onClick={() => setContactsHidden(v => !v)}>
               {contactsHidden ? "▶" : "◀"}
             </button>
           </>
