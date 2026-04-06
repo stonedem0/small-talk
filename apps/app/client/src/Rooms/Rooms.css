@@ -229,7 +229,8 @@
 .rooms-panel-wrapper {
   flex: 1;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   padding: 8px;
   background: linear-gradient(to bottom, #ffffff 0%, #faf5ff 100%);
   min-height: 0;
