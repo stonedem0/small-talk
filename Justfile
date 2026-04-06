@@ -15,6 +15,23 @@ client:
 dev port="8080":
   just server {{port}} & just client
 
+# Seed test friends for a given user (default: asya). Password for all fake users: "password"
+seed-db user="asya":
+  psql postgres://smalltalk:smalltalk@localhost:5432/smalltalk -c "\
+    INSERT INTO users (username, password_hash) VALUES \
+      ('alice',   '\$2a\$10\$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'), \
+      ('bob',     '\$2a\$10\$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'), \
+      ('charlie', '\$2a\$10\$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'), \
+      ('diana',   '\$2a\$10\$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy') \
+    ON CONFLICT DO NOTHING;"
+  psql postgres://smalltalk:smalltalk@localhost:5432/smalltalk -c "\
+    INSERT INTO friends (user_a, user_b) VALUES \
+      ('{{user}}', 'alice'),   \
+      ('{{user}}', 'bob'),     \
+      ('{{user}}', 'charlie'), \
+      ('{{user}}', 'diana')    \
+    ON CONFLICT DO NOTHING;"
+
 # Create the smalltalk Postgres user and databases (idempotent)
 db-setup:
   psql postgres -c "DO \$\$ BEGIN CREATE USER smalltalk WITH PASSWORD 'smalltalk'; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;"

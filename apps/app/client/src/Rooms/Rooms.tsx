@@ -29,9 +29,12 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const [selectedChat, setSelectedChat] = useState<SelectedChat>(() => {
     try { return JSON.parse(localStorage.getItem("rooms_selected_chat") ?? "null"); } catch { return null; }
   });
-  const [contactsHidden, setContactsHidden] = useState(() =>
-    localStorage.getItem("rooms_contacts_hidden") === "true"
-  );
+  const [contactsHidden, setContactsHidden] = useState(() => {
+    const stored = localStorage.getItem("rooms_contacts_hidden");
+    // default hidden whenever a chat is active
+    if (stored !== null) return stored === "true";
+    return localStorage.getItem("rooms_selected_chat") !== null;
+  });
 
   const toggleCategory = (cat: string) =>
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
@@ -93,6 +96,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const openDM = (partner: string) => {
     onDMOpen?.(partner);
     setSelectedChat({ type: "dm", target: partner });
+    setContactsHidden(true);
   };
 
   return (
@@ -112,7 +116,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
         </div>
         {selectedChat && (
           <>
-            <button className="rooms-back-btn" onClick={() => { setSelectedChat(null); setContactsHidden(false); localStorage.removeItem("rooms_selected_chat"); localStorage.removeItem("rooms_contacts_hidden"); }}>
+            <button className="rooms-back-btn" onClick={() => { setSelectedChat(null); setContactsHidden(false); localStorage.removeItem("rooms_selected_chat"); localStorage.removeItem("rooms_contacts_hidden"); }} >
               ← back
             </button>
             <button className="rooms-toggle-btn" title={contactsHidden ? "show contacts" : "hide contacts"} onClick={() => setContactsHidden(v => !v)}>
@@ -201,7 +205,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
                       <ul className="room-category-list">
                         {rooms.map((room) => (
                           <li key={room} className="room-item">
-                            <a href="#" onClick={(e) => { e.preventDefault(); setSelectedChat({ type: "room", name: room }); }}>
+                            <a href="#" onClick={(e) => { e.preventDefault(); setSelectedChat({ type: "room", name: room }); setContactsHidden(true); }}>
                               #{room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
                             </a>
                           </li>
