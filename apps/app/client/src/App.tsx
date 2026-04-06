@@ -78,6 +78,8 @@ const App = () => {
     localStorage.removeItem("username");
     localStorage.removeItem("token");
     localStorage.removeItem("dm_notifications");
+    localStorage.removeItem("rooms_selected_chat");
+    localStorage.removeItem("rooms_contacts_hidden");
     setUsername(null);
     setToken(null);
     setNotifications({});
@@ -171,8 +173,8 @@ const App = () => {
       {token && !windowClosed && (
         <Window
           title="Fella connect"
-          width={710}
-          height={400}
+          width={600}
+          height={420}
           username={username}
           onClose={() => setWindowClosed(true)}
           onSignOut={handleSignOut}

@@ -7,6 +7,10 @@ server/small-talk
 server/chat-server
 .gocache/
 apps/app/server/app
+apps/app/server/small-talk
+apps/directory/directory
 small-talk-app.tar.gz
 .DS_Store
+dump.rdb
 docs/aws-cli-commands.md
+.claude/
