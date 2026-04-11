@@ -620,6 +620,97 @@ func (h *Handler) UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) 
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
 }
 
+// SetStatusHandler sets a custom status for the authenticated user and
+// broadcasts a status_update message to all rooms they are currently in.
+func (h *Handler) SetStatusHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+		return
+	}
+	if len(req.Status) > 100 {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Status must be 100 characters or fewer"})
+		return
+	}
+	if _, err := DB.ExecContext(r.Context(),
+		`UPDATE users SET status = $1 WHERE username = $2`, req.Status, username,
+	); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to update status"})
+		return
+	}
+	// Broadcast to all rooms the user is in so sidebars update in real-time.
+	msg := Message{Username: username, Message: req.Status, Type: "status_update", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	b, _ := json.Marshal(msg)
+	onlineUsersLock.Lock()
+	for room, users := range onlineUsers {
+		if users[username] {
+			RDB.Publish(r.Context(), "room:"+room, string(b))
+		}
+	}
+	onlineUsersLock.Unlock()
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Status updated"})
+}
+
+// GetStatusesHandler returns a map of username → status for a list of usernames.
+// Query param: usernames=alice,bob,charlie
+func (h *Handler) GetStatusesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	raw := r.URL.Query().Get("usernames")
+	if raw == "" {
+		_ = json.NewEncoder(w).Encode(map[string]string{})
+		return
+	}
+	names := strings.Split(raw, ",")
+	// Deduplicate and sanitize
+	seen := make(map[string]bool)
+	var clean []string
+	for _, n := range names {
+		n = strings.TrimSpace(n)
+		if n != "" && !seen[n] {
+			seen[n] = true
+			clean = append(clean, n)
+		}
+	}
+	rows, err := DB.QueryContext(r.Context(),
+		`SELECT username, status FROM users WHERE username = ANY($1)`, pq.Array(clean),
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	result := make(map[string]string)
+	for rows.Next() {
+		var u, s string
+		if err := rows.Scan(&u, &s); err == nil {
+			result[u] = s
+		}
+	}
+	_ = json.NewEncoder(w).Encode(result)
+}
+
 // DebugUsersHandler removed
 
 func (h *Handler) UserInfoHandler(w http.ResponseWriter, r *http.Request) {

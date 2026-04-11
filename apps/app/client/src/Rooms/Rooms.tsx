@@ -26,6 +26,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const [friends, setFriends] = useState<string[]>([]);
   const [friendsCollapsed, setFriendsCollapsed] = useState(false);
   const [dmsCollapsed, setDmsCollapsed] = useState(false);
+  const [myStatus, setMyStatus] = useState<string>("");
   const [selectedChat, setSelectedChat] = useState<SelectedChat>(() => {
     try { return JSON.parse(localStorage.getItem("rooms_selected_chat") ?? "null"); } catch { return null; }
   });
@@ -61,7 +62,13 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
 
   useEffect(() => {
     const u = localStorage.getItem("username");
-    if (u) setUsername(u);
+    if (u) {
+      setUsername(u);
+      authFetch(`${API_URL}/statuses?usernames=${u}`)
+        .then((r) => r.json())
+        .then((data: Record<string, string>) => setMyStatus(data[u] || ""))
+        .catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -113,6 +120,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
             <span className="rooms-avatar-dot" />
             online
           </span>
+          {myStatus && <span className="rooms-topbar-custom-status">{myStatus}</span>}
         </div>
         {selectedChat && (
           <>

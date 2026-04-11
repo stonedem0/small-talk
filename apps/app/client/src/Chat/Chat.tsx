@@ -87,6 +87,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
   const [userPopup, setUserPopup] = useState<{ username: string; x: number; y: number } | null>(null);
   const [confirmFriend, setConfirmFriend] = useState<string | null>(null);
   const [friendToast, setFriendToast] = useState<string | null>(null);
+  const [userStatuses, setUserStatuses] = useState<Record<string, string>>({});
 
   const ws = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -188,6 +189,10 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
             });
             return;
           }
+          if (newMessage.type === "status_update") {
+            setUserStatuses((prev) => ({ ...prev, [newMessage.username]: newMessage.message }));
+            return;
+          }
 
           setMessages((prev) => [...prev, newMessage]);
         };
@@ -218,7 +223,16 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
         const response = await authFetch(`${API_URL}/room-usernames`);
         if (!response.ok) throw new Error("Failed to fetch online users");
         const data: Record<string, string[]> = await response.json();
-        setOnlineUsers(data[roomName!] || []);
+        const users = data[roomName!] || [];
+        setOnlineUsers(users);
+        // Fetch statuses for all online users in one request
+        if (users.length > 0) {
+          const sr = await authFetch(`${API_URL}/statuses?usernames=${users.join(",")}`);
+          if (sr.ok) {
+            const statuses: Record<string, string> = await sr.json();
+            setUserStatuses(statuses);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch online users:", error);
       }
@@ -613,6 +627,9 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
                 <li key={user} className="online-user-item">
                   <span style={{ color: getUserColor(user), fontWeight: "bold" }}>
                     ● {user}
+                    {userStatuses[user] && (
+                      <span className="user-status-text">{userStatuses[user]}</span>
+                    )}
                   </span>
                   {user !== username && (
                     <>

@@ -598,6 +598,8 @@ func registerRoutes(a *app, h *Handler) {
 	http.HandleFunc("/friends/accept", WithCORS(h.AcceptFriendRequestHandler))
 	http.HandleFunc("/friends/decline", WithCORS(h.DeclineFriendRequestHandler))
 	http.HandleFunc("/friends/remove", WithCORS(h.RemoveFriendHandler))
+	http.HandleFunc("/status", WithCORS(h.WithAuth(h.SetStatusHandler)))
+	http.HandleFunc("/statuses", WithCORS(h.GetStatusesHandler))
 }
 
 func main() {

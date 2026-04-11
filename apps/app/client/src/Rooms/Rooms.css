@@ -63,6 +63,16 @@
   color: #9d4edd;
 }
 
+.rooms-topbar-custom-status {
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
 /* ── two-col body ── */
 .rooms-body {
   display: flex;

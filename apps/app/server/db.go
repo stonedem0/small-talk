@@ -35,6 +35,8 @@ func migrateDB() {
 		created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 	);
 
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT '';
+
 	CREATE TABLE IF NOT EXISTS friend_requests (
 		from_username   TEXT NOT NULL,
 		to_username     TEXT NOT NULL,

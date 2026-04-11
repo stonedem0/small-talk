@@ -40,10 +40,12 @@ const Window = ({
   const location = useLocation();
   const [showUsernameForm, setShowUsernameForm] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showStatusForm, setShowStatusForm] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [statusInput, setStatusInput] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showChatMenu, setShowChatMenu] = useState(false);
@@ -251,6 +253,24 @@ const Window = ({
     setNewUsername("");
   };
 
+  const handleSetStatus = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await fetch(`${API_URL}/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ status: statusInput.trim() }),
+      });
+      setShowStatusForm(false);
+      setStatusInput("");
+    } catch {
+      alert("Failed to update status");
+    }
+  };
+
   const openCreateRoomForm = () => {
     setShowChatMenu(false);
     setCreateRoomError("");
@@ -360,6 +380,7 @@ const Window = ({
                   <div className="profile-menu" role="menu">
                     <button role="menuitem" onClick={() => { setShowUsernameForm(true); setShowProfileMenu(false); }}>Change username</button>
                     <button role="menuitem" onClick={() => { setShowPasswordForm(true); setShowProfileMenu(false); }}>Change password</button>
+                    <button role="menuitem" onClick={() => { setShowStatusForm(true); setShowProfileMenu(false); }}>Set status</button>
                   </div>
                 )}
               </div>
@@ -452,6 +473,30 @@ const Window = ({
               <div className="form-buttons">
                 <PrimaryButton size="sm" type="submit" disabled={!newRoom.trim()}>create</PrimaryButton>
                 <CancelButton size="sm" type="button" onClick={() => setShowCreateRoomForm(false)}>cancel</CancelButton>
+              </div>
+            </form>
+          </ModalWindow>
+        )}
+
+        {showStatusForm && (
+          <ModalWindow title="set status" onClose={() => { setShowStatusForm(false); setStatusInput(""); }}>
+            <form onSubmit={handleSetStatus}>
+              <input
+                type="text"
+                placeholder="what are you up to?"
+                value={statusInput}
+                onChange={(e) => setStatusInput(e.target.value)}
+                maxLength={100}
+                autoFocus
+              />
+              <div className="status-presets">
+                {["🎮 gaming", "🎵 listening", "💤 afk", "📚 studying", "💬 chatting"].map((s) => (
+                  <button key={s} type="button" className="status-preset-btn" onClick={() => setStatusInput(s)}>{s}</button>
+                ))}
+              </div>
+              <div className="form-buttons">
+                <PrimaryButton size="sm" type="submit">set</PrimaryButton>
+                <CancelButton size="sm" type="button" onClick={() => { setShowStatusForm(false); setStatusInput(""); }}>cancel</CancelButton>
               </div>
             </form>
           </ModalWindow>

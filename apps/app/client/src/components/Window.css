@@ -171,7 +171,7 @@
 .profile-menu {
   position: absolute;
   top: 100%;
-  right: 0;
+  left: 0;
   background: #fff;
   border: 1px solid #b08cff;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
@@ -191,6 +191,27 @@
 
 .profile-menu button:hover {
   background: #f6f0ff;
+}
+
+.status-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.status-preset-btn {
+  background: #f0e8ff;
+  border: 1px solid #b08cff;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.status-preset-btn:hover {
+  background: #ddd0ff;
 }
 
 #chat-options {
