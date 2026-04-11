@@ -471,9 +471,9 @@ func setupTestDB(t *testing.T) {
 	DB = db
 	migrateDB()
 	// clean slate for each test
-	db.Exec(`TRUNCATE users, friends, friend_requests RESTART IDENTITY CASCADE`)
+	db.Exec(`TRUNCATE users, friends, friend_requests, favorites RESTART IDENTITY CASCADE`)
 	t.Cleanup(func() {
-		db.Exec(`TRUNCATE users, friends, friend_requests RESTART IDENTITY CASCADE`)
+		db.Exec(`TRUNCATE users, friends, friend_requests, favorites RESTART IDENTITY CASCADE`)
 	})
 }
 
@@ -966,6 +966,177 @@ func TestGetStatusesHandler_DeduplicatesUsernames(t *testing.T) {
 	json.NewDecoder(w.Body).Decode(&result)
 	if len(result) != 1 {
 		t.Fatalf("expected 1 entry for deduplicated usernames, got %d", len(result))
+	}
+}
+
+// --- ToggleFavoriteHandler ---
+
+func TestToggleFavoriteHandler_AddAndRemove(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+
+	// add
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/favorites", strings.NewReader(`{"room":"gaming"}`))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().ToggleFavoriteHandler(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]bool
+	json.NewDecoder(w.Body).Decode(&resp)
+	if !resp["favorited"] {
+		t.Fatal("expected favorited=true after adding")
+	}
+	var count int
+	DB.QueryRow(`SELECT COUNT(*) FROM favorites WHERE username='rei' AND room='gaming'`).Scan(&count)
+	if count != 1 {
+		t.Fatal("expected row in favorites table")
+	}
+
+	// remove (toggle again)
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodPost, "/favorites", strings.NewReader(`{"room":"gaming"}`))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().ToggleFavoriteHandler(w, r)
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp["favorited"] {
+		t.Fatal("expected favorited=false after removing")
+	}
+	DB.QueryRow(`SELECT COUNT(*) FROM favorites WHERE username='rei' AND room='gaming'`).Scan(&count)
+	if count != 0 {
+		t.Fatal("expected row removed from favorites table")
+	}
+}
+
+func TestToggleFavoriteHandler_Unauthorized(t *testing.T) {
+	setupHandlerRedis(t)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/favorites", strings.NewReader(`{"room":"gaming"}`))
+	newHandler().ToggleFavoriteHandler(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestToggleFavoriteHandler_MissingRoom(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/favorites", strings.NewReader(`{"room":""}`))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().ToggleFavoriteHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestToggleFavoriteHandler_IdempotentAdd(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	add := func() {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodPost, "/favorites", strings.NewReader(`{"room":"music"}`))
+		r.Header.Set("Authorization", "Bearer "+tok)
+		newHandler().ToggleFavoriteHandler(w, r)
+	}
+	add()
+	// manually re-insert to simulate a race; ON CONFLICT DO NOTHING should protect it
+	DB.Exec(`INSERT INTO favorites (username, room) VALUES ('rei', 'music') ON CONFLICT DO NOTHING`)
+	add() // this should remove it, not error
+	var count int
+	DB.QueryRow(`SELECT COUNT(*) FROM favorites WHERE username='rei' AND room='music'`).Scan(&count)
+	if count != 0 {
+		t.Fatal("expected favorite removed after second toggle")
+	}
+}
+
+// --- GetFavoritesHandler ---
+
+func TestGetFavoritesHandler_ReturnsList(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	DB.Exec(`INSERT INTO favorites (username, room) VALUES ('rei', 'gaming'), ('rei', 'music')`)
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/favorites/list", nil)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().GetFavoritesHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var result []string
+	json.NewDecoder(w.Body).Decode(&result)
+	if len(result) != 2 {
+		t.Fatalf("expected 2 favorites, got %v", result)
+	}
+}
+
+func TestGetFavoritesHandler_Empty(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/favorites/list", nil)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().GetFavoritesHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var result []string
+	json.NewDecoder(w.Body).Decode(&result)
+	if len(result) != 0 {
+		t.Fatalf("expected empty list, got %v", result)
+	}
+}
+
+func TestGetFavoritesHandler_Unauthorized(t *testing.T) {
+	setupHandlerRedis(t)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/favorites/list", nil)
+	newHandler().GetFavoritesHandler(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestGetFavoritesHandler_IsolatedByUser(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	insertUser(t, "shinji", "$2a$10$x")
+	DB.Exec(`INSERT INTO favorites (username, room) VALUES ('shinji', 'gaming')`)
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/favorites/list", nil)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().GetFavoritesHandler(w, r)
+
+	var result []string
+	json.NewDecoder(w.Body).Decode(&result)
+	if len(result) != 0 {
+		t.Fatalf("rei should not see shinji's favorites, got %v", result)
 	}
 }
 

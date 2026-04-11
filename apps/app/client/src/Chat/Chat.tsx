@@ -617,8 +617,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
           </div>
         </div>
         <div className="online-users-sidebar">
-          <h3 style={{ marginTop: 0, marginBottom: "8px" }}>{roomName}</h3>
-          <h4>Online</h4>
+          <h4 style={{ marginTop: 0 }}>Online</h4>
             <ul>
               {onlineUsers
                 .slice()
@@ -627,9 +626,6 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
                 <li key={user} className="online-user-item">
                   <span style={{ color: getUserColor(user), fontWeight: "bold" }}>
                     ● {user}
-                    {userStatuses[user] && (
-                      <span className="user-status-text">{userStatuses[user]}</span>
-                    )}
                   </span>
                   {user !== username && (
                     <>

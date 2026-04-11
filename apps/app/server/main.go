@@ -600,6 +600,8 @@ func registerRoutes(a *app, h *Handler) {
 	http.HandleFunc("/friends/remove", WithCORS(h.RemoveFriendHandler))
 	http.HandleFunc("/status", WithCORS(h.WithAuth(h.SetStatusHandler)))
 	http.HandleFunc("/statuses", WithCORS(h.GetStatusesHandler))
+	http.HandleFunc("/favorites", WithCORS(h.WithAuth(h.ToggleFavoriteHandler)))
+	http.HandleFunc("/favorites/list", WithCORS(h.WithAuth(h.GetFavoritesHandler)))
 }
 
 func main() {
