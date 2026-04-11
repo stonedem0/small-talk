@@ -26,6 +26,10 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const [friends, setFriends] = useState<string[]>([]);
   const [friendsCollapsed, setFriendsCollapsed] = useState(false);
   const [dmsCollapsed, setDmsCollapsed] = useState(false);
+  const [myStatus, setMyStatus] = useState<string>("");
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [statusDraft, setStatusDraft] = useState("");
+  const [onlineSet, setOnlineSet] = useState<Set<string>>(new Set());
   const [selectedChat, setSelectedChat] = useState<SelectedChat>(() => {
     try { return JSON.parse(localStorage.getItem("rooms_selected_chat") ?? "null"); } catch { return null; }
   });
@@ -61,7 +65,13 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
 
   useEffect(() => {
     const u = localStorage.getItem("username");
-    if (u) setUsername(u);
+    if (u) {
+      setUsername(u);
+      authFetch(`${API_URL}/statuses?usernames=${u}`)
+        .then((r) => r.json())
+        .then((data: Record<string, string>) => setMyStatus(data[u] || ""))
+        .catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -81,8 +91,28 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
 
     authFetch(`${API_URL}/friends`)
       .then((r) => r.json())
-      .then((data: string[]) => setFriends(data || []))
+      .then((data: string[]) => {
+        setFriends(data || []);
+        // TEST: seed fake online status for first friend
+        if (data && data.length > 0) setOnlineSet(new Set([data[0]]));
+      })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const fetchOnline = () => {
+      authFetch(`${API_URL}/room-usernames`)
+        .then(r => r.json())
+        .then((data: Record<string, string[]>) => {
+          const all = new Set<string>();
+          Object.values(data).forEach(users => users.forEach(u => all.add(u)));
+          setOnlineSet(all);
+        })
+        .catch(() => {});
+    };
+    fetchOnline();
+    const interval = window.setInterval(fetchOnline, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -92,6 +122,17 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   useEffect(() => {
     localStorage.setItem("rooms_contacts_hidden", String(contactsHidden));
   }, [contactsHidden]);
+
+  const saveStatus = () => {
+    setEditingStatus(false);
+    const trimmed = statusDraft.trim().slice(0, 100);
+    setMyStatus(trimmed);
+    authFetch(`${API_URL}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: trimmed }),
+    }).catch(() => {});
+  };
 
   const openDM = (partner: string) => {
     onDMOpen?.(partner);
@@ -113,6 +154,26 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
             <span className="rooms-avatar-dot" />
             online
           </span>
+          {editingStatus ? (
+            <input
+              className="rooms-status-input"
+              autoFocus
+              value={statusDraft}
+              maxLength={100}
+              placeholder="set a status…"
+              onChange={(e) => setStatusDraft(e.target.value)}
+              onBlur={saveStatus}
+              onKeyDown={(e) => { if (e.key === "Enter") saveStatus(); if (e.key === "Escape") setEditingStatus(false); }}
+            />
+          ) : (
+            <span
+              className="rooms-topbar-custom-status rooms-topbar-custom-status--editable"
+              onClick={() => { setStatusDraft(myStatus); setEditingStatus(true); }}
+              title="click to edit status"
+            >
+              {myStatus || "set a status…"}
+            </span>
+          )}
         </div>
         {selectedChat && (
           <>
@@ -145,7 +206,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
                 {friends.sort().map((f) => (
                   <li key={f} className="contact-item">
                     <a href="#" onClick={(e) => { e.preventDefault(); openDM(f); }}>
-                      <span className="contact-status-dot contact-status-dot--online" />
+                      <span className={`contact-status-dot${onlineSet.has(f) ? " contact-status-dot--online" : ""}`} />
                       {f}
                     </a>
                   </li>

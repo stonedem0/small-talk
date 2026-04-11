@@ -63,6 +63,38 @@
   color: #9d4edd;
 }
 
+.rooms-topbar-custom-status {
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.rooms-topbar-custom-status--editable {
+  cursor: pointer;
+}
+
+.rooms-topbar-custom-status--editable:hover {
+  color: #9d4edd;
+  text-decoration: underline dotted;
+}
+
+.rooms-status-input {
+  font-size: 11px;
+  font-family: inherit;
+  font-style: italic;
+  color: #555;
+  border: none;
+  border-bottom: 1px solid #b08cff;
+  outline: none;
+  background: transparent;
+  width: 110px;
+  padding: 0;
+}
+
 /* ── two-col body ── */
 .rooms-body {
   display: flex;
@@ -153,8 +185,8 @@
 }
 
 .contact-status-dot--online {
-  background: #ff69b4;
-  box-shadow: 0 0 3px #ff69b4;
+  background: #39ff14;
+  box-shadow: 0 0 3px #39ff14;
 }
 
 .contact-unread {
