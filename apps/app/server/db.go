@@ -50,6 +50,12 @@ func migrateDB() {
 		created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 		PRIMARY KEY (user_a, user_b)
 	);
+
+	CREATE TABLE IF NOT EXISTS favorites (
+		username        TEXT NOT NULL,
+		room            TEXT NOT NULL,
+		PRIMARY KEY (username, room)
+	);
 	`
 	if _, err := DB.Exec(schema); err != nil {
 		log.Fatalf("schema migration error: %v", err)

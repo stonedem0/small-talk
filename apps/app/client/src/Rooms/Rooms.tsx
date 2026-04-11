@@ -27,6 +27,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const [friendsCollapsed, setFriendsCollapsed] = useState(false);
   const [dmsCollapsed, setDmsCollapsed] = useState(false);
   const [myStatus, setMyStatus] = useState<string>("");
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusDraft, setStatusDraft] = useState("");
   const [onlineSet, setOnlineSet] = useState<Set<string>>(new Set());
@@ -97,6 +98,11 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
         if (data && data.length > 0) setOnlineSet(new Set([data[0]]));
       })
       .catch(() => {});
+
+    authFetch(`${API_URL}/favorites/list`)
+      .then((r) => r.json())
+      .then((data: string[]) => setFavorites(data || []))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -131,6 +137,16 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: trimmed }),
+    }).catch(() => {});
+  };
+
+  const toggleFavorite = (room: string) => {
+    const isFav = favorites.includes(room);
+    setFavorites(isFav ? favorites.filter(f => f !== room) : [...favorites, room]);
+    authFetch(`${API_URL}/favorites`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room }),
     }).catch(() => {});
   };
 
@@ -215,6 +231,26 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
             )}
           </div>
 
+          {/* favorites */}
+          {favorites.length > 0 && (
+            <div className="contact-group">
+              <button className="contact-group-header" onClick={() => {}}>
+                <span className="contact-arrow" />
+                favorites ({favorites.length})
+              </button>
+              <ul className="contact-list">
+                {favorites.sort().map((room) => (
+                  <li key={room} className="contact-item">
+                    <a href="#" onClick={(e) => { e.preventDefault(); setSelectedChat({ type: "room", name: room }); setContactsHidden(true); }}>
+                      <span className="contact-fav-icon">★</span>
+                      #{room}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* dms */}
           {dmMessages.length > 0 && (
             <div className="contact-group">
@@ -269,6 +305,13 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
                             <a href="#" onClick={(e) => { e.preventDefault(); setSelectedChat({ type: "room", name: room }); setContactsHidden(true); }}>
                               #{room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
                             </a>
+                            <button
+                              className={`room-fav-btn${favorites.includes(room) ? " room-fav-btn--active" : ""}`}
+                              title={favorites.includes(room) ? "remove from favorites" : "add to favorites"}
+                              onClick={(e) => { e.preventDefault(); toggleFavorite(room); }}
+                            >
+                              {favorites.includes(room) ? "★" : "☆"}
+                            </button>
                           </li>
                         ))}
                       </ul>

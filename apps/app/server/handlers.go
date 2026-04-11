@@ -1348,3 +1348,80 @@ func (h *Handler) GetSentFriendRequestsHandler(w http.ResponseWriter, r *http.Re
 	}
 	_ = json.NewEncoder(w).Encode(sent)
 }
+
+// ToggleFavoriteHandler adds or removes a room from the user's favorites.
+// POST /favorites  body: {"room":"gaming"}
+// Returns {"favorited":true} or {"favorited":false}.
+func (h *Handler) ToggleFavoriteHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	var req struct {
+		Room string `json:"room"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Room) == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "room is required"})
+		return
+	}
+	// Check if already favorited
+	var exists bool
+	err = DB.QueryRowContext(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM favorites WHERE username=$1 AND room=$2)`, username, req.Room,
+	).Scan(&exists)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if exists {
+		_, err = DB.ExecContext(r.Context(), `DELETE FROM favorites WHERE username=$1 AND room=$2`, username, req.Room)
+	} else {
+		_, err = DB.ExecContext(r.Context(), `INSERT INTO favorites (username, room) VALUES ($1, $2) ON CONFLICT DO NOTHING`, username, req.Room)
+	}
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]bool{"favorited": !exists})
+}
+
+// GetFavoritesHandler returns the list of favorited rooms for the authenticated user.
+// GET /favorites
+func (h *Handler) GetFavoritesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	username, err := h.VerifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
+		return
+	}
+	rows, err := DB.QueryContext(r.Context(), `SELECT room FROM favorites WHERE username=$1 ORDER BY room`, username)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	result := []string{}
+	for rows.Next() {
+		var room string
+		if err := rows.Scan(&room); err == nil {
+			result = append(result, room)
+		}
+	}
+	_ = json.NewEncoder(w).Encode(result)
+}
+
