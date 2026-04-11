@@ -812,5 +812,162 @@ func TestUpdatePasswordHandler_TooShort(t *testing.T) {
 	}
 }
 
+// --- SetStatusHandler ---
+
+func TestSetStatusHandler_OK(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	body := `{"status":"🎮 gaming"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/status", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().SetStatusHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var status string
+	DB.QueryRow(`SELECT status FROM users WHERE username='rei'`).Scan(&status)
+	if status != "🎮 gaming" {
+		t.Fatalf("expected status '🎮 gaming', got %q", status)
+	}
+}
+
+func TestSetStatusHandler_ClearsStatus(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	DB.Exec(`UPDATE users SET status='old status' WHERE username='rei'`)
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	body := `{"status":""}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/status", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().SetStatusHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var status string
+	DB.QueryRow(`SELECT status FROM users WHERE username='rei'`).Scan(&status)
+	if status != "" {
+		t.Fatalf("expected empty status, got %q", status)
+	}
+}
+
+func TestSetStatusHandler_Unauthorized(t *testing.T) {
+	setupHandlerRedis(t)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/status", strings.NewReader(`{"status":"hi"}`))
+	newHandler().SetStatusHandler(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestSetStatusHandler_TooLong(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+
+	tok := makeToken("rei", time.Now().Add(time.Hour))
+	long := strings.Repeat("a", 101)
+	body := `{"status":"` + long + `"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/status", strings.NewReader(body))
+	r.Header.Set("Authorization", "Bearer "+tok)
+	newHandler().SetStatusHandler(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+// --- GetStatusesHandler ---
+
+func TestGetStatusesHandler_ReturnsStatuses(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	insertUser(t, "shinji", "$2a$10$x")
+	DB.Exec(`UPDATE users SET status='brb' WHERE username='rei'`)
+	DB.Exec(`UPDATE users SET status='studying' WHERE username='shinji'`)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/statuses?usernames=rei,shinji", nil)
+	newHandler().GetStatusesHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var result map[string]string
+	json.NewDecoder(w.Body).Decode(&result)
+	if result["rei"] != "brb" {
+		t.Fatalf("expected rei status 'brb', got %q", result["rei"])
+	}
+	if result["shinji"] != "studying" {
+		t.Fatalf("expected shinji status 'studying', got %q", result["shinji"])
+	}
+}
+
+func TestGetStatusesHandler_EmptyParam(t *testing.T) {
+	setupHandlerRedis(t)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/statuses", nil)
+	newHandler().GetStatusesHandler(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var result map[string]string
+	json.NewDecoder(w.Body).Decode(&result)
+	if len(result) != 0 {
+		t.Fatalf("expected empty map, got %v", result)
+	}
+}
+
+func TestGetStatusesHandler_UnknownUserOmitted(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/statuses?usernames=rei,kaworu", nil)
+	newHandler().GetStatusesHandler(w, r)
+
+	var result map[string]string
+	json.NewDecoder(w.Body).Decode(&result)
+	if _, ok := result["kaworu"]; ok {
+		t.Fatal("kaworu (unknown user) should not appear in result")
+	}
+	if _, ok := result["rei"]; !ok {
+		t.Fatal("rei should appear in result")
+	}
+}
+
+func TestGetStatusesHandler_DeduplicatesUsernames(t *testing.T) {
+	setupHandlerRedis(t)
+	setupTestDB(t)
+	insertUser(t, "rei", "$2a$10$x")
+	DB.Exec(`UPDATE users SET status='hi' WHERE username='rei'`)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/statuses?usernames=rei,rei,rei", nil)
+	newHandler().GetStatusesHandler(w, r)
+
+	var result map[string]string
+	json.NewDecoder(w.Body).Decode(&result)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 entry for deduplicated usernames, got %d", len(result))
+	}
+}
+
 // suppress unused import warning when POSTGRES_TEST_URL is not set
 var _ = fmt.Sprintf
