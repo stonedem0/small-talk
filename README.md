@@ -1,7 +1,25 @@
 # small talk ☁️
 
-a small, real-time chat experiment built with **go** and **react**.
-nothing fancy — just websockets, redis, and curiosity… that accidentally grew into a tiny distributed system.
+a real-time chat app built with **go** and **react**. started as a websocket experiment, grew into a small distributed system.
+
+the backend is a go server handling websocket connections, jwt auth, and postgres persistence. rooms are distributed across multiple app nodes via a separate **directory service** that uses consistent hashing (HRW) and redis leases to decide which node owns each room — so users in the same room always land on the same server. a redis pubsub layer bridges nodes so messages flow correctly regardless of where a client connects.
+
+the frontend is a react + vite SPA with a retro-inspired UI. users can join public chat rooms, send direct messages, manage a friends list, set custom statuses, and pin favorite rooms to their sidebar.
+
+---
+
+## features
+
+- real-time chat rooms with categories
+- direct messages (DMs) between users
+- friends system (send / accept / decline / remove)
+- custom user statuses (set from the topbar, broadcasts live)
+- favorite rooms (pinned in the sidebar, persisted per user)
+- online presence — see who's in a room and which friends are online
+- typing indicators
+- chat history (last 100 messages per room via redis)
+- jwt auth with refresh tokens
+- username updates broadcast live to all room members
 
 ---
 
@@ -25,6 +43,7 @@ Justfile        → build, run, deploy tasks
 - go 1.25+
 - node.js + npm
 - redis 6+
+- postgresql 14+
 - just task runner
 
 ---
@@ -38,6 +57,7 @@ JWT_SECRET=your-secret
 REFRESH_JWT_SECRET=your-refresh-secret
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=devpass123
+POSTGRES_URL=postgres://user:pass@localhost:5432/smalltalk?sslmode=disable
 DIRECTORY_URL=http://localhost:8081
 CORS_ORIGINS=http://localhost:5173
 ```
@@ -55,6 +75,11 @@ CORS_ORIGINS=http://localhost:5173
 ```
 VITE_API_URL=http://localhost:8080
 VITE_DIRECTORY_URL=http://localhost:8081
+```
+
+### tests
+```
+POSTGRES_TEST_URL=postgres://user:pass@localhost:5432/smalltalk_test?sslmode=disable
 ```
 
 ---
@@ -107,6 +132,12 @@ just build
 ### "prod-ish" local run
 ```bash
 just start
+```
+
+### run tests
+```bash
+cd apps/app/server
+go test ./...
 ```
 
 ---
@@ -172,4 +203,3 @@ systemd units (`app`, `react-client`).
 ## license
 
 MIT
-
