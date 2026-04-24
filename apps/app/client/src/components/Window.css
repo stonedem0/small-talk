@@ -221,7 +221,7 @@
   background-position: center;
 }
 
-#icon-drive { background-image: url("../assets/icons/drive-01.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }
+#icon-home { background-image: url("../assets/icons/bin-full.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }
 #icon-downloads { background-image: url("../assets/icons/downloads.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }
 #icon-folder { background-image: url("../assets/icons/folder-02.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }
 #icon-folder-alt { background-image: url("../assets/icons/folder-05.png"); background-size: 22px; background-repeat: no-repeat; background-position: center; }

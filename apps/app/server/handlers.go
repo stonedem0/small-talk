@@ -129,6 +129,11 @@ func (h *Handler) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func (h *Handler) PingHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{}`))
+}
+
 func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	rooms, err := h.RDB.SMembers(h.Ctx, "rooms").Result()
 	if err != nil {

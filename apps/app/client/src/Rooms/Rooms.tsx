@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import "./Rooms.css";
 import { API_URL } from "../config";
 import { authFetch } from "../utils/authFetch";
@@ -31,6 +31,9 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusDraft, setStatusDraft] = useState("");
   const [onlineSet, setOnlineSet] = useState<Set<string>>(new Set());
+  const [roomSearch, setRoomSearch] = useState("");
+  const [ping, setPing] = useState<number | null>(null);
+  const [connected, setConnected] = useState(true);
   const [selectedChat, setSelectedChat] = useState<SelectedChat>(() => {
     try { return JSON.parse(localStorage.getItem("rooms_selected_chat") ?? "null"); } catch { return null; }
   });
@@ -40,6 +43,30 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
     if (stored !== null) return stored === "true";
     return localStorage.getItem("rooms_selected_chat") !== null;
   });
+
+  const location = useLocation();
+  useEffect(() => {
+    if ((location.state as any)?.goHome) {
+      setSelectedChat(null);
+      setContactsHidden(false);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    const measure = async () => {
+      const t0 = performance.now();
+      try {
+        await fetch(`${API_URL}/ping`);
+        setPing(Math.round(performance.now() - t0));
+        setConnected(true);
+      } catch {
+        setConnected(false);
+      }
+    };
+    measure();
+    const id = setInterval(measure, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   const toggleCategory = (cat: string) =>
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
@@ -158,171 +185,186 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
 
   return (
     <div id="rooms-container">
-
-      {/* top bar */}
-      <div className="rooms-topbar">
-        <div className="rooms-topbar-avatar">
-          <img src={avatar} alt="avatar" className="rooms-avatar-img" />
-        </div>
-        <div className="rooms-topbar-info">
-          <span className="rooms-topbar-name">{username || "User"}</span>
-          <span className="rooms-topbar-status">
-            <span className="rooms-avatar-dot" />
-            online
-          </span>
-          {editingStatus ? (
-            <input
-              className="rooms-status-input"
-              autoFocus
-              value={statusDraft}
-              maxLength={100}
-              placeholder="set a status…"
-              onChange={(e) => setStatusDraft(e.target.value)}
-              onBlur={saveStatus}
-              onKeyDown={(e) => { if (e.key === "Enter") saveStatus(); if (e.key === "Escape") setEditingStatus(false); }}
-            />
-          ) : (
-            <span
-              className="rooms-topbar-custom-status rooms-topbar-custom-status--editable"
-              onClick={() => { setStatusDraft(myStatus); setEditingStatus(true); }}
-              title="click to edit status"
-            >
-              {myStatus || "set a status…"}
-            </span>
-          )}
-        </div>
-        {selectedChat && (
-          <>
-            <button className="rooms-back-btn" onClick={() => { setSelectedChat(null); setContactsHidden(false); localStorage.removeItem("rooms_selected_chat"); localStorage.removeItem("rooms_contacts_hidden"); }} >
-              ← back
-            </button>
-            <button className="rooms-toggle-btn" title={contactsHidden ? "show contacts" : "hide contacts"} onClick={() => setContactsHidden(v => !v)}>
-              {contactsHidden ? "▶" : "◀"}
-            </button>
-          </>
-        )}
-      </div>
-
       <div className="rooms-body">
 
-        {/* left col — contacts */}
-        <div className={`rooms-contacts${contactsHidden ? " rooms-contacts--hidden" : ""}`}>
-
-          {/* friends */}
-          <div className="contact-group">
-            <button className="contact-group-header" onClick={() => setFriendsCollapsed(v => !v)}>
-              <span className={`contact-arrow ${friendsCollapsed ? "contact-arrow--closed" : ""}`} />
-              friends ({friends.length})
-            </button>
-            {!friendsCollapsed && (
-              <ul className="contact-list">
-                {friends.length === 0 && (
-                  <li className="contact-empty">no friends yet</li>
-                )}
-                {friends.sort().map((f) => (
-                  <li key={f} className="contact-item">
-                    <a href="#" onClick={(e) => { e.preventDefault(); openDM(f); }}>
-                      <span className={`contact-status-dot${onlineSet.has(f) ? " contact-status-dot--online" : ""}`} />
-                      {f}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
+        {/* left col — home screen only */}
+        {!selectedChat && <div className="rooms-left">
+          <div className="rooms-topbar">
+            <div className="rooms-topbar-avatar">
+              <img src={avatar} alt="avatar" className="rooms-avatar-img" />
+            </div>
+            <div className="rooms-topbar-info">
+              <span className="rooms-topbar-name">{username || "User"}</span>
+              <span className="rooms-topbar-status">
+                <span className="rooms-avatar-dot" />
+                online
+              </span>
+              {editingStatus ? (
+                <input
+                  className="rooms-status-input"
+                  autoFocus
+                  value={statusDraft}
+                  maxLength={100}
+                  placeholder="set a status…"
+                  onChange={(e) => setStatusDraft(e.target.value)}
+                  onBlur={saveStatus}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveStatus(); if (e.key === "Escape") setEditingStatus(false); }}
+                />
+              ) : (
+                <span
+                  className="rooms-topbar-custom-status rooms-topbar-custom-status--editable"
+                  onClick={() => { setStatusDraft(myStatus); setEditingStatus(true); }}
+                  title="click to edit status"
+                >
+                  {myStatus || "set a status…"}
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* favorites */}
-          {favorites.length > 0 && (
+          <div className="rooms-contacts">
+            {/* friends */}
             <div className="contact-group">
-              <button className="contact-group-header" onClick={() => {}}>
-                <span className="contact-arrow" />
-                favorites ({favorites.length})
+              <button className="contact-group-header" onClick={() => setFriendsCollapsed(v => !v)}>
+                <span className={`contact-arrow ${friendsCollapsed ? "contact-arrow--closed" : ""}`} />
+                friends ({friends.length})
               </button>
-              <ul className="contact-list">
-                {favorites.sort().map((room) => (
-                  <li key={room} className="contact-item">
-                    <a href="#" onClick={(e) => { e.preventDefault(); setSelectedChat({ type: "room", name: room }); setContactsHidden(true); }}>
-                      <span className="contact-fav-icon">★</span>
-                      #{room}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* dms */}
-          {dmMessages.length > 0 && (
-            <div className="contact-group">
-              <button className="contact-group-header" onClick={() => setDmsCollapsed(v => !v)}>
-                <span className={`contact-arrow ${dmsCollapsed ? "contact-arrow--closed" : ""}`} />
-                messages ({dmMessages.length})
-              </button>
-              {!dmsCollapsed && (
+              {!friendsCollapsed && (
                 <ul className="contact-list">
-                  {dmMessages.sort().map((partner) => (
-                    <li key={partner} className="contact-item">
-                      <a href="#" onClick={(e) => { e.preventDefault(); openDM(partner); }}>
-                        <span className="contact-status-dot" />
-                        {partner}
-                        {unreadDMs[partner] ? <span className="contact-unread">{unreadDMs[partner]}</span> : null}
+                  {friends.length === 0 && (
+                    <li className="contact-empty">no friends yet</li>
+                  )}
+                  {friends.sort().map((f) => (
+                    <li key={f} className="contact-item">
+                      <a href="#" onClick={(e) => { e.preventDefault(); openDM(f); }}>
+                        <span className={`contact-status-dot${onlineSet.has(f) ? " contact-status-dot--online" : ""}`} />
+                        {f}
                       </a>
                     </li>
                   ))}
                 </ul>
               )}
             </div>
+
+            {/* favorites */}
+            {favorites.length > 0 && (
+              <div className="contact-group">
+                <button className="contact-group-header" onClick={() => {}}>
+                  <span className="contact-arrow" />
+                  favorites ({favorites.length})
+                </button>
+                <ul className="contact-list">
+                  {favorites.sort().map((room) => (
+                    <li key={room} className="contact-item">
+                      <a href="#" onClick={(e) => { e.preventDefault(); setSelectedChat({ type: "room", name: room }); }}>
+                        <span className="contact-fav-icon">★</span>
+                        #{room}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* dms */}
+            {dmMessages.length > 0 && (
+              <div className="contact-group">
+                <button className="contact-group-header" onClick={() => setDmsCollapsed(v => !v)}>
+                  <span className={`contact-arrow ${dmsCollapsed ? "contact-arrow--closed" : ""}`} />
+                  messages ({dmMessages.length})
+                </button>
+                {!dmsCollapsed && (
+                  <ul className="contact-list">
+                    {dmMessages.sort().map((partner) => (
+                      <li key={partner} className="contact-item">
+                        <a href="#" onClick={(e) => { e.preventDefault(); openDM(partner); }}>
+                          <span className="contact-status-dot" />
+                          {partner}
+                          {unreadDMs[partner] ? <span className="contact-unread">{unreadDMs[partner]}</span> : null}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        </div>}
+
+        {/* right col */}
+        <div className="rooms-right">
+          {selectedChat ? (
+            <div className="rooms-chat-panel">
+              {selectedChat.type === "room" && username && (
+                <Chat username={username} roomNameOverride={selectedChat.name} />
+              )}
+              {selectedChat.type === "dm" && username && (
+                <DMChat username={username} targetUsernameOverride={selectedChat.target} />
+              )}
+            </div>
+          ) : (
+            <div className="rooms-panel-wrapper">
+              <input
+                className="rooms-search-input"
+                type="text"
+                placeholder="search rooms…"
+                value={roomSearch}
+                onChange={(e) => setRoomSearch(e.target.value)}
+              />
+              <div className="rooms-panel">
+                <ul className="rooms-list">
+                  {!roomSearch && (
+                    <li className="room-item room-item--rules">
+                      <Link to="/rules">#rules</Link>
+                    </li>
+                  )}
+                  {Object.entries(grouped).map(([category, rooms]) => {
+                    const filtered = roomSearch
+                      ? rooms.filter((r) => r.toLowerCase().includes(roomSearch.toLowerCase()))
+                      : rooms;
+                    if (filtered.length === 0) return null;
+                    const isExpanded = !!roomSearch || !collapsed[category];
+                    return (
+                      <li key={category} className="room-category">
+                        <button className="room-category-label" onClick={() => toggleCategory(category)}>
+                          <span className={`room-category-arrow ${!isExpanded ? "room-category-arrow--closed" : ""}`} />
+                          {category.toLowerCase()}
+                        </button>
+                        {isExpanded && (
+                          <ul className="room-category-list">
+                            {filtered.map((room) => (
+                              <li key={room} className="room-item">
+                                <a href="#" onClick={(e) => { e.preventDefault(); setSelectedChat({ type: "room", name: room }); }}>
+                                  #{room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
+                                </a>
+                                <button
+                                  className={`room-fav-btn${favorites.includes(room) ? " room-fav-btn--active" : ""}`}
+                                  title={favorites.includes(room) ? "remove from favorites" : "add to favorites"}
+                                  onClick={(e) => { e.preventDefault(); toggleFavorite(room); }}
+                                >
+                                  {favorites.includes(room) ? "★" : "☆"}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* right col */}
-        {selectedChat ? (
-          <div className="rooms-chat-panel">
-            {selectedChat.type === "room" && username && (
-              <Chat username={username} roomNameOverride={selectedChat.name} />
-            )}
-            {selectedChat.type === "dm" && username && (
-              <DMChat username={username} targetUsernameOverride={selectedChat.target} />
-            )}
-          </div>
-        ) : (
-          <div className="rooms-panel-wrapper">
-            <div className="rooms-panel">
-              <ul className="rooms-list">
-                <li className="room-item room-item--rules">
-                  <Link to="/rules">#rules</Link>
-                </li>
-                {Object.entries(grouped).map(([category, rooms]) => (
-                  <li key={category} className="room-category">
-                    <button className="room-category-label" onClick={() => toggleCategory(category)}>
-                      <span className={`room-category-arrow ${collapsed[category] ? "room-category-arrow--closed" : ""}`} />
-                      {category.toLowerCase()}
-                    </button>
-                    {!collapsed[category] && (
-                      <ul className="room-category-list">
-                        {rooms.map((room) => (
-                          <li key={room} className="room-item">
-                            <a href="#" onClick={(e) => { e.preventDefault(); setSelectedChat({ type: "room", name: room }); setContactsHidden(true); }}>
-                              #{room}{userCounts[room] > 0 ? ` (${userCounts[room]})` : ""}
-                            </a>
-                            <button
-                              className={`room-fav-btn${favorites.includes(room) ? " room-fav-btn--active" : ""}`}
-                              title={favorites.includes(room) ? "remove from favorites" : "add to favorites"}
-                              onClick={(e) => { e.preventDefault(); toggleFavorite(room); }}
-                            >
-                              {favorites.includes(room) ? "★" : "☆"}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
+      </div>
 
+      <div className="rooms-statusbar">
+        <span>{connected ? "connected" : "disconnected"}</span>
+        <span className="rooms-statusbar-sep">|</span>
+        <span>rooms: {Object.values(grouped).flat().length}</span>
+        <span className="rooms-statusbar-sep">|</span>
+        <span>ping: {ping !== null ? `${ping}ms` : "…"}</span>
       </div>
     </div>
   );

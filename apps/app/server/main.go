@@ -575,6 +575,7 @@ func seedRooms() {
 
 func registerRoutes(a *app, h *Handler) {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { handleConnections(a, w, r) })
+	http.HandleFunc("/ping", WithCORS(h.PingHandler))
 	http.HandleFunc("/login", WithCORS(RateLimitAuth(h.LoginHandler)))
 	http.HandleFunc("/register", WithCORS(RateLimitAuth(h.RegisterHandler)))
 	http.HandleFunc("/user-info", WithCORS(h.WithAuth(h.UserInfoHandler)))

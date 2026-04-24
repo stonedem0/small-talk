@@ -163,7 +163,6 @@ const App = () => {
         <Window
           title="Login"
           width={300}
-          height={400}
           username={username}
         >
           <Popup setUsername={setUsername} setToken={setToken} />
@@ -172,7 +171,7 @@ const App = () => {
 
       {token && !windowClosed && (
         <Window
-          title="Fella connect"
+          title="small talk"
           width={600}
           height={420}
           username={username}

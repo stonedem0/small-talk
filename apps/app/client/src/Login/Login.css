@@ -13,6 +13,7 @@
   background: var(--purple-gradient);
   box-shadow: var(--window-shadow);
   width: 350px;
+  overflow: hidden;
 }
 
 .login-header {
