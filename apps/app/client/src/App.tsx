@@ -171,7 +171,7 @@ const App = () => {
 
       {token && !windowClosed && (
         <Window
-          title="Fella connect"
+          title="small talk"
           width={600}
           height={420}
           username={username}
