@@ -8,13 +8,13 @@
   box-sizing: border-box;
 }
 
-/* ── top bar ── */
+/* ── top bar (inside left col) ── */
 .rooms-topbar {
   display: flex;
   align-items: center;
   gap: 10px;
   background: linear-gradient(to bottom, #ffffff 0%, #f7efff 100%);
-  padding: 6px 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid #b08cff;
   flex-shrink: 0;
 }
@@ -103,15 +103,30 @@
   background: #ffffff;
 }
 
-/* ── left col: contacts ── */
-.rooms-contacts {
-  width: 175px;
+/* ── left col: topbar + contacts ── */
+.rooms-left {
+  width: 200px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
   border-right: 1px solid #b08cff;
   background: linear-gradient(to bottom, #ffffff 0%, #f7efff 100%);
+}
+
+.rooms-contacts {
+  flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+
+/* ── right col ── */
+.rooms-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #ffffff;
 }
 
 .contact-group {
@@ -257,25 +272,40 @@
   padding: 0;
 }
 
-/* ── right col: rooms ── */
 .rooms-panel-wrapper {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  background: linear-gradient(to bottom, #ffffff 0%, #faf5ff 100%);
+  flex-direction: column;
+  margin: 5px;
+  border: 1px solid #b08cff;
   min-height: 0;
+  background: #fff;
+}
+
+.rooms-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 12px;
+  border: none;
+  border-bottom: 1px solid #d4c0ff;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  background: #faf5ff;
+  color: #333;
+  flex-shrink: 0;
+}
+
+.rooms-search-input:focus {
+  background: #f3eaff;
 }
 
 .rooms-panel {
-  width: 320px;
-  max-height: 220px;
-  overflow: auto;
-  border: 1px solid #b08cff;
-  padding: 6px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
   background: #fff;
-  box-sizing: border-box;
+  min-height: 0;
 }
 
 .rooms-list {
@@ -294,7 +324,7 @@
   font-size: 14px;
   text-decoration: none;
   color: var(--deep-purple);
-  padding: 2px 6px;
+  padding: 5px 12px;
   border-radius: 3px;
   white-space: nowrap;
 }
@@ -311,21 +341,21 @@
 
 .room-category {
   list-style: none;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .room-category-label {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
   background: none;
   border: none;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: bold;
   color: #ff47a3;
-  padding: 2px 6px;
+  padding: 6px 12px;
   cursor: pointer;
   text-align: left;
 }

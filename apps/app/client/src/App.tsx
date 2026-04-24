@@ -163,7 +163,6 @@ const App = () => {
         <Window
           title="Login"
           width={300}
-          height={400}
           username={username}
         >
           <Popup setUsername={setUsername} setToken={setToken} />

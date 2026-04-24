@@ -385,7 +385,7 @@ const Window = ({
                 )}
               </div>
               {/* Additional decorative/action icons */}
-              <button id="icon-drive" className="menu-button" title="Drive" aria-label="Drive" data-tooltip="Drive"></button>
+              <button id="icon-home" className="menu-button" title="Home" aria-label="Home" data-tooltip="Home" onClick={() => { localStorage.removeItem("rooms_selected_chat"); localStorage.removeItem("rooms_contacts_hidden"); navigate("/", { state: { goHome: true } }); }}></button>
               <button id="icon-downloads" className="menu-button" title="Downloads" aria-label="Downloads" data-tooltip="Downloads"></button>
               <button id="icon-folder" className="menu-button" title="Folder" aria-label="Folder" data-tooltip="Folder"></button>
               <button id="icon-folder-alt" className="menu-button" title="Folder alt" aria-label="Folder alt" data-tooltip="Folder alt"></button>
