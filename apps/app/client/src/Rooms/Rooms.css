@@ -1,3 +1,19 @@
+.rooms-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  background: #ede5ff;
+  font-size: 11px;
+  color: #6633cc;
+  flex-shrink: 0;
+  border-top: 1px solid #b08cff;
+}
+
+.rooms-statusbar-sep {
+  color: #b08cff;
+}
+
 #rooms-container {
   display: flex;
   flex-direction: column;
@@ -352,10 +368,10 @@
   background: none;
   border: none;
   font-family: inherit;
-  font-size: 15px;
+  font-size: var(--font-md);
   font-weight: bold;
   color: #ff47a3;
-  padding: 6px 12px;
+  padding: 5px 12px;
   cursor: pointer;
   text-align: left;
 }

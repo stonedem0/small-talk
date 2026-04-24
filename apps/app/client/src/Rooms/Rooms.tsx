@@ -32,6 +32,8 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const [statusDraft, setStatusDraft] = useState("");
   const [onlineSet, setOnlineSet] = useState<Set<string>>(new Set());
   const [roomSearch, setRoomSearch] = useState("");
+  const [ping, setPing] = useState<number | null>(null);
+  const [connected, setConnected] = useState(true);
   const [selectedChat, setSelectedChat] = useState<SelectedChat>(() => {
     try { return JSON.parse(localStorage.getItem("rooms_selected_chat") ?? "null"); } catch { return null; }
   });
@@ -49,6 +51,22 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
       setContactsHidden(false);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    const measure = async () => {
+      const t0 = performance.now();
+      try {
+        await fetch(`${API_URL}/ping`);
+        setPing(Math.round(performance.now() - t0));
+        setConnected(true);
+      } catch {
+        setConnected(false);
+      }
+    };
+    measure();
+    const id = setInterval(measure, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   const toggleCategory = (cat: string) =>
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
@@ -339,6 +357,14 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
           )}
         </div>
 
+      </div>
+
+      <div className="rooms-statusbar">
+        <span>{connected ? "connected" : "disconnected"}</span>
+        <span className="rooms-statusbar-sep">|</span>
+        <span>rooms: {Object.values(grouped).flat().length}</span>
+        <span className="rooms-statusbar-sep">|</span>
+        <span>ping: {ping !== null ? `${ping}ms` : "…"}</span>
       </div>
     </div>
   );
