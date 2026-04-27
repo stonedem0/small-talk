@@ -10,6 +10,7 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -333,5 +334,69 @@ func TestJoinHandler_DM_DerivesRoomAndRoutes(t *testing.T) {
 	}
 	if resp["wss_url"] == "" {
 		t.Fatal("expected wss_url in response")
+	}
+}
+
+// --- join outcome counters ---
+
+func TestJoinMetric_NoHealthyApps(t *testing.T) {
+	setupDirectoryRedis(t)
+	s := NewState() // no apps registered
+
+	before := testutil.ToFloat64(joinRequestsTotal.WithLabelValues("no_healthy_apps"))
+	w := httptest.NewRecorder()
+	s.JoinHandler(w, joinRequest("gaming"))
+	after := testutil.ToFloat64(joinRequestsTotal.WithLabelValues("no_healthy_apps"))
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", w.Code)
+	}
+	if after-before != 1 {
+		t.Fatalf("expected no_healthy_apps counter delta 1, got %.0f", after-before)
+	}
+}
+
+func TestJoinMetric_NewClaim(t *testing.T) {
+	setupDirectoryRedis(t)
+	s := NewState()
+	s.mu.Lock()
+	s.apps["app-1"] = healthyApp("app-1", "ws://app-1:8080/ws")
+	s.mu.Unlock()
+
+	before := testutil.ToFloat64(joinRequestsTotal.WithLabelValues("new_claim"))
+	w := httptest.NewRecorder()
+	s.JoinHandler(w, joinRequest("gaming"))
+	after := testutil.ToFloat64(joinRequestsTotal.WithLabelValues("new_claim"))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if after-before != 1 {
+		t.Fatalf("expected new_claim counter delta 1, got %.0f", after-before)
+	}
+}
+
+func TestJoinMetric_OwnerRouted(t *testing.T) {
+	setupDirectoryRedis(t)
+	s := NewState()
+	s.mu.Lock()
+	s.apps["app-1"] = healthyApp("app-1", "ws://app-1:8080/ws")
+	s.apps["app-1"].Rooms = map[string]int{"gaming": 5}
+	s.mu.Unlock()
+	// Pre-claim the room so owner lookup succeeds.
+	if _, err := TryClaim("gaming", "app-1"); err != nil {
+		t.Fatal(err)
+	}
+
+	before := testutil.ToFloat64(joinRequestsTotal.WithLabelValues("owner_routed"))
+	w := httptest.NewRecorder()
+	s.JoinHandler(w, joinRequest("gaming"))
+	after := testutil.ToFloat64(joinRequestsTotal.WithLabelValues("owner_routed"))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if after-before != 1 {
+		t.Fatalf("expected owner_routed counter delta 1, got %.0f", after-before)
 	}
 }
