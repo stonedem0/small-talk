@@ -46,17 +46,23 @@ func (rc *roomCounters) inc(room string) {
 	rc.data[room]++
 	rc.mu.Unlock()
 	rc.tot.Add(1)
+	roomUsersGauge.WithLabelValues(room).Inc()
+	wsConnectionsActive.Inc()
+	wsConnectionsTotal.Inc()
 }
 
 func (rc *roomCounters) dec(room string) {
 	rc.mu.Lock()
-	if v := rc.data[room]; v > 1 {
-		rc.data[room] = v - 1
+	prev := rc.data[room]
+	if prev > 1 {
+		rc.data[room] = prev - 1
 	} else {
 		delete(rc.data, room)
 	}
 	rc.mu.Unlock()
 	rc.tot.Add(-1)
+	roomUsersGauge.WithLabelValues(room).Dec()
+	wsConnectionsActive.Dec()
 }
 
 func (rc *roomCounters) snapshotActive() (map[string]int, int) {
@@ -113,13 +119,17 @@ func sendHeartbeat() {
 	resp, err := httpc.Do(req)
 	if err != nil {
 		log.Printf("heartbeat: post error: %v", err)
+		heartbeatErrors.Inc()
 		return
 	}
 	fmt.Println("sent heartbeat")
 	_ = resp.Body.Close()
 	if resp.StatusCode != 200 {
 		log.Printf("heartbeat: non-200: %d", resp.StatusCode)
+		heartbeatErrors.Inc()
+		return
 	}
+	heartbeatsSent.Inc()
 }
 
 func hostnameOrFallback() string {

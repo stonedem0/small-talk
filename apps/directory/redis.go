@@ -56,18 +56,39 @@ func Owner(room string) (string, error) {
 }
 
 func TryClaim(room, appID string) (bool, error) {
-	return RDB.SetNX(ctx, key(room), appID, leaseTTL).Result()
+	ok, err := RDB.SetNX(ctx, key(room), appID, leaseTTL).Result()
+	switch {
+	case err != nil:
+		leaseClaimsTotal.WithLabelValues("error").Inc()
+	case ok:
+		leaseClaimsTotal.WithLabelValues("success").Inc()
+	default:
+		leaseClaimsTotal.WithLabelValues("conflict").Inc()
+	}
+	return ok, err
 }
 
 func RefreshLease(room, appID string) error {
 	ttlSecs := int(leaseTTL.Seconds())
-	return refreshLeaseScript.Run(ctx, RDB, []string{key(room)}, appID, ttlSecs).Err()
+	err := refreshLeaseScript.Run(ctx, RDB, []string{key(room)}, appID, ttlSecs).Err()
+	if err != nil {
+		leaseRefreshesTotal.WithLabelValues("error").Inc()
+	} else {
+		leaseRefreshesTotal.WithLabelValues("ok").Inc()
+	}
+	return err
 }
 
 func Release(room, appID string) error {
 	err := releaseScript.Run(ctx, RDB, []string{key(room)}, appID).Err()
 	if err == redis.Nil {
+		leaseReleasesTotal.WithLabelValues("ok").Inc()
 		return nil
 	}
-	return err
+	if err != nil {
+		leaseReleasesTotal.WithLabelValues("error").Inc()
+		return err
+	}
+	leaseReleasesTotal.WithLabelValues("ok").Inc()
+	return nil
 }

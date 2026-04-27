@@ -18,6 +18,7 @@ func main() {
 	if os.Getenv("ENVIRONMENT") == "production" && key == "" {
 		log.Fatal("INTERNAL_API_KEY required in production")
 	}
+	http.Handle("/metrics", dirMetricsHandler())
 	http.HandleFunc("/health", withInternalKey(key, HealthHandler))
 	http.HandleFunc("/heartbeat", withInternalKey(key, st.HeartbeatHandler))
 	http.HandleFunc("/join", withCORSAndAuth(true, st.JoinHandler))

@@ -236,6 +236,7 @@ func readPump(c *client) {
 			change := Message{Room: c.room, Username: oldU, Message: fmt.Sprintf("changed username to %s", newU), Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 			b, _ := json.Marshal(change)
 			RDB.Publish(ctx, "room:"+c.room, string(b))
+			messagesTotal.WithLabelValues("username_update").Inc()
 			continue
 		}
 
@@ -244,6 +245,11 @@ func readPump(c *client) {
 		msg.Timestamp = time.Now().UTC().Format(time.RFC3339)
 		b, _ := json.Marshal(msg)
 		RDB.Publish(ctx, "room:"+c.room, string(b))
+		msgType := msg.Type
+		if msgType == "" {
+			msgType = "chat"
+		}
+		messagesTotal.WithLabelValues(msgType).Inc()
 	}
 }
 
@@ -574,6 +580,7 @@ func seedRooms() {
 }
 
 func registerRoutes(a *app, h *Handler) {
+	http.Handle("/metrics", metricsHandler())
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { handleConnections(a, w, r) })
 	http.HandleFunc("/ping", WithCORS(h.PingHandler))
 	http.HandleFunc("/login", WithCORS(RateLimitAuth(h.LoginHandler)))
@@ -614,7 +621,7 @@ func main() {
 	defer cancel()
 	startHeartbeat(root)
 	a := &app{
-		server:   &http.Server{Addr: ":" + port},
+		server:   &http.Server{Addr: ":" + port, Handler: instrumentedMux(http.DefaultServeMux)},
 		wg:       sync.WaitGroup{},
 		shutting: atomic.Bool{},
 		cancel:   cancel,
