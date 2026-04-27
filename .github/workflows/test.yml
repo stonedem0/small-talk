@@ -1,0 +1,29 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  test-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/app/server/go.mod
+          cache-dependency-path: apps/app/server/go.sum
+      - run: go test ./...
+        working-directory: apps/app/server
+
+  test-directory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/directory/go.mod
+          cache-dependency-path: apps/directory/go.sum
+      - run: go mod tidy && go test ./...
+        working-directory: apps/directory

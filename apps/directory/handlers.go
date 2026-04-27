@@ -207,6 +207,8 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	a.Draining = hb.Draining
 	a.LastSeen = time.Now()
 	a.Healthy = true
+	appUsersGauge.WithLabelValues(hb.AppID).Set(float64(hb.UsersTotal))
+	appRoomsGauge.WithLabelValues(hb.AppID).Set(float64(len(hb.Rooms)))
 
 	for room, count := range hb.Rooms {
 		if count > 0 {
@@ -264,6 +266,8 @@ func resolveDMRoom(w http.ResponseWriter, r *http.Request) string {
 
 func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	start := time.Now()
+	defer func() { joinDuration.Observe(time.Since(start).Seconds()) }()
 
 	room := r.URL.Query().Get("room")
 	if r.URL.Query().Get("type") == "dm" {
@@ -286,6 +290,7 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 	} else if owner != "" {
 		if a, ok := s.getApp(owner); ok && a.Healthy && !a.Draining && s.belowRoomLimit(owner, room) {
 			log.Printf("join: using owner app=%s for room=%s", owner, room)
+			joinRequestsTotal.WithLabelValues("owner_routed").Inc()
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"wss_url": a.WSURL + "?room=" + room,
 				"room":    room,
@@ -299,6 +304,7 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "no healthy apps"})
 		log.Printf("join: no healthy apps for room=%s", room)
+		joinRequestsTotal.WithLabelValues("no_healthy_apps").Inc()
 		return
 	}
 
@@ -327,6 +333,7 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if a, ok := s.getApp(appID); ok && a.WSURL != "" {
 			log.Printf("join: assigned app=%s for room=%s", appID, room)
+			joinRequestsTotal.WithLabelValues("new_claim").Inc()
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"wss_url": a.WSURL + "?room=" + room,
 				"room":    room,
@@ -344,6 +351,7 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTooManyRequests)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": "room_full"})
 	log.Printf("join: room full room=%s", room)
+	joinRequestsTotal.WithLabelValues("room_full").Inc()
 }
 
 func (s *State) WSURL(appID string) (string, bool) {
@@ -393,7 +401,13 @@ func (s *State) MarkStale() {
 	now := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	healthy := 0
 	for _, a := range s.apps {
 		a.Healthy = !a.Draining && now.Sub(a.LastSeen) <= s.healthyTTL
+		if a.Healthy {
+			healthy++
+		}
 	}
+	healthyAppsGauge.Set(float64(healthy))
+	totalAppsGauge.Set(float64(len(s.apps)))
 }

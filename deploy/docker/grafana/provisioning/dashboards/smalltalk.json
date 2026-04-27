@@ -1,0 +1,145 @@
+{
+  "title": "small-talk",
+  "uid": "smalltalk-main",
+  "schemaVersion": 39,
+  "refresh": "15s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Active WS Connections",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "smalltalk_ws_connections_active", "legendFormat": "connections", "datasource": "Prometheus" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"green","value":null},{"color":"yellow","value":200},{"color":"red","value":400}] } } }
+    },
+    {
+      "id": 2, "type": "stat", "title": "Messages / sec",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "sum(rate(smalltalk_messages_total[1m]))", "legendFormat": "msg/s", "datasource": "Prometheus" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "fieldConfig": { "defaults": { "decimals": 2, "color": { "mode": "fixed", "fixedColor": "blue" } } }
+    },
+    {
+      "id": 3, "type": "stat", "title": "Healthy App Nodes",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "smalltalk_directory_healthy_apps", "legendFormat": "healthy", "datasource": "Prometheus" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"red","value":null},{"color":"green","value":1}] } } }
+    },
+    {
+      "id": 4, "type": "stat", "title": "Heartbeat Error Rate",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "rate(smalltalk_heartbeat_errors_total[5m])", "legendFormat": "errors/s", "datasource": "Prometheus" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "fieldConfig": { "defaults": { "decimals": 4, "color": { "mode": "thresholds" }, "thresholds": { "steps": [{"color":"green","value":null},{"color":"red","value":0.01}] } } }
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "WebSocket Connections",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "smalltalk_ws_connections_active", "legendFormat": "active", "datasource": "Prometheus" },
+        { "expr": "rate(smalltalk_ws_connections_total[1m])*60", "legendFormat": "new/min", "datasource": "Prometheus" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "Message Rate by Type",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by(type)(rate(smalltalk_messages_total[1m]))", "legendFormat": "{{type}}", "datasource": "Prometheus" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 20, "type": "bargauge", "title": "Users per Room",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 10 },
+      "targets": [
+        { "expr": "sort_desc(smalltalk_room_users_active > 0)", "legendFormat": "{{room}}", "datasource": "Prometheus" }
+      ],
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "min": 0 } }
+    },
+    {
+      "id": 21, "type": "timeseries", "title": "HTTP Request Rate by Path",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 10 },
+      "targets": [
+        { "expr": "sum by(path)(rate(smalltalk_http_requests_total[1m]))", "legendFormat": "{{path}}", "datasource": "Prometheus" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 1 } } }
+    },
+    {
+      "id": 30, "type": "timeseries", "title": "HTTP p95 Latency by Path",
+      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by(path,le)(rate(smalltalk_http_request_duration_seconds_bucket[2m])))",
+          "legendFormat": "p95 {{path}}", "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 31, "type": "piechart", "title": "Join Placement Outcomes",
+      "gridPos": { "x": 12, "y": 22, "w": 6, "h": 8 },
+      "targets": [
+        { "expr": "sum by(outcome)(increase(smalltalk_directory_join_requests_total[10m]))", "legendFormat": "{{outcome}}", "datasource": "Prometheus" }
+      ],
+      "options": { "legendDisplayMode": "table", "pieType": "donut" }
+    },
+    {
+      "id": 32, "type": "piechart", "title": "Lease Claim Outcomes",
+      "gridPos": { "x": 18, "y": 22, "w": 6, "h": 8 },
+      "targets": [
+        { "expr": "sum by(outcome)(increase(smalltalk_directory_lease_claims_total[10m]))", "legendFormat": "{{outcome}}", "datasource": "Prometheus" }
+      ],
+      "options": { "legendDisplayMode": "table", "pieType": "donut" }
+    },
+    {
+      "id": 40, "type": "timeseries", "title": "Directory — Join Latency",
+      "gridPos": { "x": 0, "y": 30, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by(le)(rate(smalltalk_directory_join_duration_seconds_bucket[2m])))",
+          "legendFormat": "p50", "datasource": "Prometheus"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by(le)(rate(smalltalk_directory_join_duration_seconds_bucket[2m])))",
+          "legendFormat": "p95", "datasource": "Prometheus"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by(le)(rate(smalltalk_directory_join_duration_seconds_bucket[2m])))",
+          "legendFormat": "p99", "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 41, "type": "timeseries", "title": "Lease Operations / sec",
+      "gridPos": { "x": 12, "y": 30, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by(outcome)(rate(smalltalk_directory_lease_claims_total[1m]))", "legendFormat": "claim {{outcome}}", "datasource": "Prometheus" },
+        { "expr": "sum by(outcome)(rate(smalltalk_directory_lease_refreshes_total[1m]))", "legendFormat": "refresh {{outcome}}", "datasource": "Prometheus" },
+        { "expr": "sum by(outcome)(rate(smalltalk_directory_lease_releases_total[1m]))", "legendFormat": "release {{outcome}}", "datasource": "Prometheus" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 1 } } }
+    },
+    {
+      "id": 50, "type": "bargauge", "title": "Users per App Node",
+      "gridPos": { "x": 0, "y": 38, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "smalltalk_directory_app_users", "legendFormat": "{{app_id}}", "datasource": "Prometheus" }
+      ],
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "min": 0 } }
+    },
+    {
+      "id": 51, "type": "timeseries", "title": "Go Runtime — Goroutines",
+      "gridPos": { "x": 12, "y": 38, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "go_goroutines{job=\"app-server\"}", "legendFormat": "app-server", "datasource": "Prometheus" },
+        { "expr": "go_goroutines{job=\"directory\"}", "legendFormat": "directory", "datasource": "Prometheus" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2 } } }
+    }
+  ]
+}
