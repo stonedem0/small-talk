@@ -6,6 +6,7 @@ import { API_URL } from "../config";
 import { authFetch } from "../utils/authFetch";
 import { format } from 'date-fns';
 import PrimaryButton from "../components/PrimaryButton";
+import DropdownMenu from "../components/DropdownMenu";
 
 const DIR_URL = (import.meta as any).env?.VITE_DIRECTORY_URL || "http://localhost:8081";
 // Simple sanitizer that whitelists a small set of tags/attrs
@@ -624,38 +625,15 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
                 .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
                 .map((user) => (
                 <li key={user} className="online-user-item">
-                  <span style={{ color: getUserColor(user), fontWeight: "bold" }}>
+                  <span
+                    style={{ color: getUserColor(user), fontWeight: "bold", cursor: user !== username ? "pointer" : "default" }}
+                    onClick={(e) => handleUsernameClick(e, user)}
+                    title={user !== username ? `Click to message or add ${user}` : undefined}
+                  >
                     ● {user}
                   </span>
-                  {user !== username && (
-                    <>
-                      <button
-                        className="dm-btn"
-                        title={`Message ${user}`}
-                        onClick={() => openDM(user)}
-                      >
-                        ✉
-                      </button>
-                      {friends.has(user) ? (
-                        <span className="sidebar-friend-badge" title="friends">♥</span>
-                      ) : sentRequests.has(user) ? (
-                        <span className="sidebar-pending-badge" title="Request pending">~</span>
-                      ) : confirmFriend === user ? (
-                        <>
-                          <button className="dm-btn fr-confirm" title="Confirm" onClick={() => sendFriendRequest(user)}>✓</button>
-                          <button className="dm-btn fr-cancel" title="Cancel" onClick={() => setConfirmFriend(null)}>✕</button>
-                        </>
-                      ) : (
-                        <button
-                          className="dm-btn"
-                          title={`Add ${user} as friend`}
-                          onClick={() => setConfirmFriend(user)}
-                        >
-                          +
-                        </button>
-                      )}
-                    </>
-                  )}
+                  {friends.has(user) && <span className="sidebar-friend-badge" title="friends">♥</span>}
+                  {sentRequests.has(user) && <span className="sidebar-pending-badge" title="Request pending">~</span>}
                 </li>
               ))}
             </ul>
@@ -666,27 +644,27 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
         document.body
       )}
       {userPopup && createPortal(
-        <div
-          className="user-popup"
+        <DropdownMenu
+          header={userPopup.username}
+          position="fixed"
           style={{ top: userPopup.y + 8, left: userPopup.x + 8 }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="user-popup-name">{userPopup.username}</div>
-          <button className="user-popup-btn" onClick={() => openDM(userPopup.username)}>✉ message</button>
+          <button onClick={() => openDM(userPopup.username)}>message</button>
           {friends.has(userPopup.username) ? (
-            <div className="user-popup-friend">♥ friends</div>
+            <div className="dropdown-item-text" style={{ color: "#ff69b4" }}>♥ friends</div>
           ) : sentRequests.has(userPopup.username) ? (
-            <div className="user-popup-pending">~ request pending</div>
+            <div className="dropdown-item-text" style={{ color: "#a07ccc" }}>request pending</div>
           ) : confirmFriend === userPopup.username ? (
-            <div className="user-popup-confirm">
-              <span>Add {userPopup.username}?</span>
-              <button className="user-popup-btn fr-confirm" onClick={() => sendFriendRequest(userPopup.username)}>✓ yes</button>
-              <button className="user-popup-btn fr-cancel" onClick={() => setConfirmFriend(null)}>✕ no</button>
-            </div>
+            <>
+              <div className="dropdown-item-text">add {userPopup.username}?</div>
+              <button style={{ color: "green" }} onClick={() => sendFriendRequest(userPopup.username)}>yes</button>
+              <button style={{ color: "red" }} onClick={() => setConfirmFriend(null)}>no</button>
+            </>
           ) : (
-            <button className="user-popup-btn" onClick={() => setConfirmFriend(userPopup.username)}>+ add friend</button>
+            <button onClick={() => setConfirmFriend(userPopup.username)}>add friend</button>
           )}
-        </div>,
+        </DropdownMenu>,
         document.body
       )}
     </div>
