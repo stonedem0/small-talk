@@ -1,8 +1,9 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import PrimaryButton from "./PrimaryButton";
 import CancelButton from "./CancelButton";
 import ModalWindow from "./ModalWindow";
+import DropdownMenu from "./DropdownMenu";
 import WindowControls from "./WindowControls";
 import "./Window.css";
 import { API_URL } from "../config";
@@ -113,6 +114,22 @@ const Window = ({
       document.exitFullscreen();
     }
   };
+
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const chatMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+      if (chatMenuRef.current && !chatMenuRef.current.contains(e.target as Node)) {
+        setShowChatMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const toggleProfileMenu = () => {
     setShowChatMenu(false);
@@ -365,7 +382,7 @@ const Window = ({
                   onClick={() => navigate("/")}
                 ></button>
               )}
-              <div className="profile-menu-wrapper">
+              <div className="profile-menu-wrapper" ref={profileMenuRef}>
                 <button
                   id="edit-profile"
                   className="menu-button"
@@ -377,11 +394,11 @@ const Window = ({
                   aria-expanded={showProfileMenu}
                 ></button>
                 {showProfileMenu && (
-                  <div className="profile-menu" role="menu">
+                  <DropdownMenu>
                     <button role="menuitem" onClick={() => { setShowUsernameForm(true); setShowProfileMenu(false); }}>Change username</button>
                     <button role="menuitem" onClick={() => { setShowPasswordForm(true); setShowProfileMenu(false); }}>Change password</button>
                     <button role="menuitem" onClick={() => { setShowStatusForm(true); setShowProfileMenu(false); }}>Set status</button>
-                  </div>
+                  </DropdownMenu>
                 )}
               </div>
               {/* Additional decorative/action icons */}
@@ -391,7 +408,7 @@ const Window = ({
               <button id="icon-folder-alt" className="menu-button" title="Folder alt" aria-label="Folder alt" data-tooltip="Folder alt"></button>
               <button id="icon-music" className="menu-button" title="Music" aria-label="Music" data-tooltip="Music"></button>
               <button id="icon-speaker" className="menu-button" title="Speaker" aria-label="Speaker" data-tooltip="Speaker"></button>
-              <div className="profile-menu-wrapper">
+              <div className="profile-menu-wrapper" ref={chatMenuRef}>
                 <button
                   id="chat-options"
                   className="menu-button"
@@ -403,10 +420,10 @@ const Window = ({
                   aria-expanded={showChatMenu}
                 ></button>
                 {showChatMenu && (
-                  <div className="profile-menu" role="menu">
+                  <DropdownMenu>
                     <button role="menuitem" onClick={openCreateRoomForm}>Create room</button>
                     <button role="menuitem" onClick={() => { onSignOut && onSignOut(); setShowChatMenu(false); }}>Sign out</button>
-                  </div>
+                  </DropdownMenu>
                 )}
               </div>
             </div>
