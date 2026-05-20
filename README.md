@@ -1,5 +1,7 @@
 # small talk ☁️
 
+![small talk UI](docs/screenshot.png)
+
 a real-time chat app built with **go** and **react**. started as a websocket experiment, grew into a small distributed system.
 
 the backend is a go server handling websocket connections, jwt auth, and postgres persistence. rooms are distributed across multiple app nodes via a separate **directory service** that uses consistent hashing (HRW) and redis leases to decide which node owns each room — so users in the same room always land on the same server. a redis pubsub layer bridges nodes so messages flow correctly regardless of where a client connects.
