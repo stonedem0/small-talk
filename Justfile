@@ -35,8 +35,8 @@ seed-db user="asya":
 # Create the smalltalk Postgres user and databases (idempotent)
 db-setup:
   psql postgres -c "DO \$\$ BEGIN CREATE USER smalltalk WITH PASSWORD 'smalltalk'; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;"
-  psql postgres -c "SELECT 'CREATE DATABASE smalltalk OWNER smalltalk' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname='smalltalk')\gexec"
-  psql postgres -c "SELECT 'CREATE DATABASE smalltalk_test OWNER smalltalk' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname='smalltalk_test')\gexec"
+  psql postgres -c "CREATE DATABASE smalltalk OWNER smalltalk" 2>/dev/null || true
+  psql postgres -c "CREATE DATABASE smalltalk_test OWNER smalltalk" 2>/dev/null || true
 
 # Run the full stack: Redis + Postgres + BE + Directory + FE (uses local services, no Docker)
 dev-full port="8080":

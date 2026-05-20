@@ -20,6 +20,7 @@ the frontend is a react + vite SPA with a retro-inspired UI. users can join publ
 - chat history (last 100 messages per room via redis)
 - jwt auth with refresh tokens
 - username updates broadcast live to all room members
+- status bar showing ping, room count, and connection state
 
 ---
 
@@ -119,9 +120,14 @@ just server port=8080
 just client
 ```
 
-### run both
+### run both (server + client)
 ```bash
 just dev port=8080
+```
+
+### run full stack (redis + postgres + server + directory + client)
+```bash
+just dev-full port=8080
 ```
 
 ### build react
@@ -136,9 +142,28 @@ just start
 
 ### run tests
 ```bash
-cd apps/app/server
-go test ./...
+just test
 ```
+
+---
+
+## observability
+
+prometheus and grafana run via docker compose from `deploy/docker/`.
+
+```bash
+cd deploy/docker
+docker compose up -d
+```
+
+- **prometheus** → http://localhost:9090 — scrapes `/metrics` on both server (:8080) and directory (:8081) every 15s
+- **grafana** → http://localhost:3001 — pre-provisioned dashboard, no login required
+
+---
+
+## ci
+
+github actions runs the full test suite on every push and pull request (`.github/workflows/test.yml`).
 
 ---
 
