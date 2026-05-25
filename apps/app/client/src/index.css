@@ -31,6 +31,23 @@ body {
   min-height: 100vh;
 }
 
+/* Standalone-only page styles (not imported by the embeddable component) */
+html,
+body {
+  height: 100%;
+  padding: 0;
+  background-image: url("./assets/bg-grain.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  font-family: "Trebuchet MS";
+  font-size: 15px;
+}
+
+* {
+  font-family: "Trebuchet MS";
+}
+
 h1 {
   font-size: 3.2em;
   line-height: 1.1;

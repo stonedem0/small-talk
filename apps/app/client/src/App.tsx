@@ -130,7 +130,8 @@ const App = ({ onClose, initialX, initialY }: AppProps = {}) => {
 
 
   return (
-      <div id="main-container">
+    <div className="st-root">
+      <div className="st-main-container">
         {!token && (
         <Window
           title="Login"
@@ -220,6 +221,7 @@ const App = ({ onClose, initialX, initialY }: AppProps = {}) => {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 };
