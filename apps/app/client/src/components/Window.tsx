@@ -7,6 +7,7 @@ import DropdownMenu from "./DropdownMenu";
 import WindowControls from "./WindowControls";
 import "./Window.css";
 import { API_URL } from "../config";
+import { useSmallTalk } from "../context";
 
 type WindowProps = {
   title: string;
@@ -37,6 +38,7 @@ const Window = ({
   activeTab,
   onTabClick,
 }: WindowProps) => {
+  const { token, setToken, setUsername, wsRef, bumpRoomsRevision } = useSmallTalk();
   const navigate = useNavigate();
   const location = useLocation();
   const [showUsernameForm, setShowUsernameForm] = useState(false);
@@ -158,7 +160,7 @@ const Window = ({
     const newUsernameValue = newUsername.trim();
     
     try {
-      const pathParts = window.location.pathname.split('/');
+      const pathParts = location.pathname.split('/');
       const currentRoom = pathParts[pathParts.length - 1];
       
       const requestBody = {
@@ -171,7 +173,7 @@ const Window = ({
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem("token")}`
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(requestBody),
         });
@@ -184,11 +186,11 @@ const Window = ({
           } else {
             const responseData = await response.json();
             
-            localStorage.setItem("username", responseData.newUsername);
-            localStorage.setItem("token", responseData.token);
-            
+            setUsername(responseData.newUsername);
+            setToken(responseData.token);
+
             if (currentRoom && currentRoom !== 'home' && currentRoom !== '') {
-              const ws = (window as any).currentWebSocket;
+              const ws = wsRef.current;
               if (ws && ws.readyState === WebSocket.OPEN) {
                 const updateMessage = {
                   type: "username_update",
@@ -235,7 +237,7 @@ const Window = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem("token")}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(requestBody),
       });
@@ -277,7 +279,7 @@ const Window = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({ status: statusInput.trim() }),
       });
@@ -294,7 +296,7 @@ const Window = ({
     setNewRoom("");
     setNewCategory("");
     fetch(`${API_URL}/rooms-with-categories`, {
-      headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+      headers: { "Authorization": `Bearer ${token}` }
     })
       .then((r) => r.json())
       .then((data: { [cat: string]: string[] }) => setCategories(Object.keys(data).sort()))
@@ -312,14 +314,14 @@ const Window = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({ room, category: newCategory.trim() })
       });
       if (response.status === 409) { setCreateRoomError("room already exists"); return; }
       if (!response.ok) { setCreateRoomError("failed to create room"); return; }
       setShowCreateRoomForm(false);
-      window.location.reload();
+      bumpRoomsRevision();
     } catch {
       setCreateRoomError("failed to create room");
     }

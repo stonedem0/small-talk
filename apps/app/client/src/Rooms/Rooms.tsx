@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import "./Rooms.css";
 import { API_URL } from "../config";
 import { authFetch } from "../utils/authFetch";
+import { useSmallTalk, storage } from "../context";
 import Chat from "../Chat/Chat";
 import DMChat from "../Chat/DMChat";
 import avatar from "../assets/avatar.png";
@@ -18,10 +19,10 @@ type SelectedChat =
   | null;
 
 const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
+  const { token, username, roomsRevision } = useSmallTalk();
   const [grouped, setGrouped] = useState<{ [category: string]: string[] }>({});
   const [collapsed, setCollapsed] = useState<{ [category: string]: boolean }>({});
   const [userCounts, setUserCounts] = useState<{ [room: string]: number }>({});
-  const [username, setUsername] = useState<string | null>(null);
   const [dmMessages, setDmMessages] = useState<string[]>([]);
   const [friends, setFriends] = useState<string[]>([]);
   const [friendsCollapsed, setFriendsCollapsed] = useState(false);
@@ -35,13 +36,12 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const [ping, setPing] = useState<number | null>(null);
   const [connected, setConnected] = useState(true);
   const [selectedChat, setSelectedChat] = useState<SelectedChat>(() => {
-    try { return JSON.parse(localStorage.getItem("rooms_selected_chat") ?? "null"); } catch { return null; }
+    try { return JSON.parse(storage.get("rooms_selected_chat") ?? "null"); } catch { return null; }
   });
   const [contactsHidden, setContactsHidden] = useState(() => {
-    const stored = localStorage.getItem("rooms_contacts_hidden");
-    // default hidden whenever a chat is active
+    const stored = storage.get("rooms_contacts_hidden");
     if (stored !== null) return stored === "true";
-    return localStorage.getItem("rooms_selected_chat") !== null;
+    return storage.get("rooms_selected_chat") !== null;
   });
 
   const location = useLocation();
@@ -92,20 +92,22 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   };
 
   useEffect(() => {
-    const u = localStorage.getItem("username");
-    if (u) {
-      setUsername(u);
-      authFetch(`${API_URL}/statuses?usernames=${u}`)
+    if (username) {
+      authFetch(`${API_URL}/statuses?usernames=${username}`)
         .then((r) => r.json())
-        .then((data: Record<string, string>) => setMyStatus(data[u] || ""))
+        .then((data: Record<string, string>) => setMyStatus(data[username] || ""))
         .catch(() => {});
     }
-  }, []);
+  }, [username]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
     if (!token) return;
     fetchRooms();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomsRevision]);
+
+  useEffect(() => {
+    if (!token) return;
 
     authFetch(`${API_URL}/online-users`)
       .then((r) => r.json())
@@ -149,11 +151,11 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("rooms_selected_chat", JSON.stringify(selectedChat));
+    storage.set("rooms_selected_chat", JSON.stringify(selectedChat));
   }, [selectedChat]);
 
   useEffect(() => {
-    localStorage.setItem("rooms_contacts_hidden", String(contactsHidden));
+    storage.set("rooms_contacts_hidden", String(contactsHidden));
   }, [contactsHidden]);
 
   const saveStatus = () => {

@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { API_URL } from "../config";
 import { authFetch } from "../utils/authFetch";
+import { useSmallTalk } from "../context";
 import { format } from 'date-fns';
 import PrimaryButton from "../components/PrimaryButton";
 import DropdownMenu from "../components/DropdownMenu";
@@ -69,6 +70,7 @@ interface Message {
 }
 
 const Chat = ({ username, roomNameOverride }: ChatProps) => {
+  const { token, wsRef } = useSmallTalk();
   const params = useParams<{ roomName: string }>();
   const roomName = roomNameOverride ?? params.roomName;
   const navigate = useNavigate();
@@ -112,11 +114,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
         return;
       }
       try {
-        const response = await authFetch(`${API_URL}/rooms`, {
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem("token")}`
-          }
-        });
+        const response = await authFetch(`${API_URL}/rooms`);
         if (!response.ok) throw new Error("Failed to fetch rooms");
         const data: string[] = await response.json();
         if (data.includes(roomName || "")) {
@@ -137,11 +135,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
 
     const setupChat = async () => {
       try {
-        const response = await authFetch(`${API_URL}/history?room=${roomName}`, {
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem("token")}`
-          }
-        });
+        const response = await authFetch(`${API_URL}/history?room=${roomName}`);
         if (response.status === 403 || response.status === 404) { navigate("/"); return; }
         if (!response.ok) throw new Error("Failed to fetch history");
         const data: Message[] = await response.json();
@@ -150,14 +144,11 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
         } else {
           setMessages([]);
         }
-        const token = localStorage.getItem("token") || "";
-        const joinRes = await authFetch(`${DIR_URL}/join?room=${encodeURIComponent(roomName!)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const joinRes = await authFetch(`${DIR_URL}/join?room=${encodeURIComponent(roomName!)}`);
         if (!joinRes.ok) throw new Error(`join failed: ${joinRes.status}`);
         const { wss_url, app_id } = await joinRes.json();
         console.log("directory/join →", { wss_url, app_id });
-        ws.current = new WebSocket(wss_url, [token]);
+        ws.current = new WebSocket(wss_url, [token ?? ""]);
         
         ws.current.onopen = () => {
           setIsLoadingMessages(false);
@@ -166,7 +157,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
           console.error("WebSocket error", e);
         };
         
-        (window as any).currentWebSocket = ws.current;
+        wsRef.current = ws.current;
 
         ws.current.onmessage = (event) => {
           const newMessage: Message = JSON.parse(event.data);
@@ -248,15 +239,11 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
   }, [messages]);
 
   useEffect(() => {
-    authFetch(`${API_URL}/friends`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-    })
+    authFetch(`${API_URL}/friends`)
       .then(r => r.ok ? r.json() : [])
       .then((list: string[]) => setFriends(new Set(list)))
       .catch(() => {});
-    authFetch(`${API_URL}/friends/sent`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-    })
+    authFetch(`${API_URL}/friends/sent`)
       .then(r => r.ok ? r.json() : [])
       .then((list: string[]) => setSentRequests(new Set(list)))
       .catch(() => {});
@@ -279,7 +266,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
   const sendFriendRequest = async (target: string) => {
     const res = await authFetch(`${API_URL}/friends/request`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target })
     });
     setConfirmFriend(null);

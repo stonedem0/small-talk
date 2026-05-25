@@ -20,10 +20,7 @@ const DMChat = ({ username, targetUsernameOverride }: DMChatProps) => {
 
     authFetch(`${API_URL}/dm/start`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem("token")}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target: targetUsername }),
     }).then(async (res) => {
       if (!res.ok) { navigate("/"); return; }
