@@ -79,90 +79,117 @@
   background-color: #ff5252;
 }
 
-/* Custom Scrollbar Styling — scoped to small-talk root */
-.st-root ::-webkit-scrollbar {
-  width: 18px;
+/* Custom Scrollbar Styling — scoped to small-talk scrollable elements */
+/* .st-root prefix gives specificity (0,2,1) which beats pastelcore's html[data-theme] *:: rules at (0,1,2) */
+#messages::-webkit-scrollbar,
+.st-root .rooms-contacts::-webkit-scrollbar,
+.st-root .rooms-panel::-webkit-scrollbar,
+.st-root .window-content::-webkit-scrollbar { width: 18px; }
+
+#messages::-webkit-scrollbar:horizontal,
+.st-root .rooms-contacts::-webkit-scrollbar:horizontal,
+.st-root .rooms-panel::-webkit-scrollbar:horizontal,
+.st-root .window-content::-webkit-scrollbar:horizontal { height: 18px; }
+
+#messages::-webkit-scrollbar-track,
+.st-root .rooms-contacts::-webkit-scrollbar-track,
+.st-root .rooms-panel::-webkit-scrollbar-track,
+.st-root .window-content::-webkit-scrollbar-track {
+  background: linear-gradient(to right, #fff9ff 0%, #f4effc 10%, #ebe0fd 100%) !important;
 }
 
-.st-root ::-webkit-scrollbar:horizontal {
-  height: 18px;
-}
-
-.st-root ::-webkit-scrollbar-track {
-  background: linear-gradient(to right, #fff9ff 0%, #f4effc 10%, #ebe0fd 100%);
-}
-
-.st-root ::-webkit-scrollbar-thumb {
+#messages::-webkit-scrollbar-thumb,
+.st-root .rooms-contacts::-webkit-scrollbar-thumb,
+.st-root .rooms-panel::-webkit-scrollbar-thumb,
+.st-root .window-content::-webkit-scrollbar-thumb {
   height: 115px;
   background-color: transparent !important;
   background-image:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'><rect fill='%23784cff' opacity='0.6' x='2' y='4' width='12' height='1'/><rect fill='%23784cff' opacity='0.6' x='2' y='7' width='12' height='1'/><rect fill='%23784cff' opacity='0.6' x='2' y='10' width='12' height='1'/></svg>"),
-    linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+    linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%) !important;
   background-repeat: no-repeat, no-repeat !important;
   background-position: center, center !important;
-  background-size: auto, cover;
-  border: 1px solid var(--scroll-thumb-bg) !important;
-  box-shadow:
-    inset 1px 1px 1px rgba(255, 255, 255, 0.6),
-    inset -1px -1px 1px rgba(0, 0, 0, 0.12),
-    0 0 0 1px #caaaff;
-  border-radius: 2px;
+  background-size: auto, cover !important;
+  border: 1px solid #4a00f7 !important;
+  box-shadow: inset 1px 1px 1px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.12), 0 0 0 1px #caaaff !important;
+  border-radius: 2px !important;
 }
 
-.st-root ::-webkit-scrollbar-thumb:hover {
-  box-shadow: inset -2px 2px 1px var(--scroll-thumb-shadow-light),
-    inset 2px -2px 1px #636265 !important;
+#messages::-webkit-scrollbar-thumb:hover,
+.st-root .rooms-contacts::-webkit-scrollbar-thumb:hover,
+.st-root .rooms-panel::-webkit-scrollbar-thumb:hover,
+.st-root .window-content::-webkit-scrollbar-thumb:hover {
+  box-shadow: inset -2px 2px 1px #ffffff, inset 2px -2px 1px #636265 !important;
 }
 
-.st-root ::-webkit-scrollbar-button {
-  background-color: var(--scroll-button-shadow-light) !important;
-  height: 16px;
-  width: 20px;
-  border: 1px solid var(--scroll-thumb-bg) !important;
+#messages::-webkit-scrollbar-button,
+.st-root .rooms-contacts::-webkit-scrollbar-button,
+.st-root .rooms-panel::-webkit-scrollbar-button,
+.st-root .window-content::-webkit-scrollbar-button {
+  background-color: #ffffff !important;
+  height: 16px !important;
+  width: 20px !important;
+  border: 1px solid #4a00f7 !important;
   display: block !important;
+  box-shadow: none !important;
 }
 
-.st-root ::-webkit-scrollbar-button:vertical:decrement {
-  height: 18px;
-  width: 18px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='4,10 8,6 12,10' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
-  linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
+#messages::-webkit-scrollbar-button:vertical:decrement,
+.st-root .rooms-contacts::-webkit-scrollbar-button:vertical:decrement,
+.st-root .rooms-panel::-webkit-scrollbar-button:vertical:decrement,
+.st-root .window-content::-webkit-scrollbar-button:vertical:decrement {
+  height: 18px !important; width: 18px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='4,10 8,6 12,10' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%) !important;
   background-repeat: no-repeat, no-repeat !important;
-  background-position: center;
+  background-position: center !important;
 }
 
-.st-root ::-webkit-scrollbar-button:vertical:increment {
-  height: 18px;
-  width: 18px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='4,6 8,10 12,6' fill='none'  stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),   linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
-  background-repeat: no-repeat;
-  background-position: center;
+#messages::-webkit-scrollbar-button:vertical:increment,
+.st-root .rooms-contacts::-webkit-scrollbar-button:vertical:increment,
+.st-root .rooms-panel::-webkit-scrollbar-button:vertical:increment,
+.st-root .window-content::-webkit-scrollbar-button:vertical:increment {
+  height: 18px !important; width: 18px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='4,6 8,10 12,6' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
 }
 
-.st-root ::-webkit-scrollbar-button:horizontal:decrement {
-  height: 18px;
-  width: 18px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='10,4 6,8 10,12' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
-  background-repeat: no-repeat;
-  background-position: center;
+#messages::-webkit-scrollbar-button:horizontal:decrement,
+.st-root .rooms-contacts::-webkit-scrollbar-button:horizontal:decrement,
+.st-root .rooms-panel::-webkit-scrollbar-button:horizontal:decrement,
+.st-root .window-content::-webkit-scrollbar-button:horizontal:decrement {
+  height: 18px !important; width: 18px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='10,4 6,8 10,12' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
 }
 
-.st-root ::-webkit-scrollbar-button:horizontal:increment {
-  height: 18px;
-  width: 18px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='6,4 10,8 6,12' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
-  background-repeat: no-repeat;
-  background-position: center;
+#messages::-webkit-scrollbar-button:horizontal:increment,
+.st-root .rooms-contacts::-webkit-scrollbar-button:horizontal:increment,
+.st-root .rooms-panel::-webkit-scrollbar-button:horizontal:increment,
+.st-root .window-content::-webkit-scrollbar-button:horizontal:increment {
+  height: 18px !important; width: 18px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='6,4 10,8 6,12' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
 }
 
-.st-root ::-webkit-scrollbar-button:vertical:increment:start,
-.st-root ::-webkit-scrollbar-button:vertical:decrement:end {
-  display: none !important;
-  border: none !important;
-}
-
-.st-root ::-webkit-scrollbar-button:horizontal:increment:start,
-.st-root ::-webkit-scrollbar-button:horizontal:decrement:end {
+#messages::-webkit-scrollbar-button:vertical:increment:start,
+#messages::-webkit-scrollbar-button:vertical:decrement:end,
+.st-root .rooms-contacts::-webkit-scrollbar-button:vertical:increment:start,
+.st-root .rooms-contacts::-webkit-scrollbar-button:vertical:decrement:end,
+.st-root .rooms-panel::-webkit-scrollbar-button:vertical:increment:start,
+.st-root .rooms-panel::-webkit-scrollbar-button:vertical:decrement:end,
+.st-root .window-content::-webkit-scrollbar-button:vertical:increment:start,
+.st-root .window-content::-webkit-scrollbar-button:vertical:decrement:end,
+#messages::-webkit-scrollbar-button:horizontal:increment:start,
+#messages::-webkit-scrollbar-button:horizontal:decrement:end,
+.st-root .rooms-contacts::-webkit-scrollbar-button:horizontal:increment:start,
+.st-root .rooms-contacts::-webkit-scrollbar-button:horizontal:decrement:end,
+.st-root .rooms-panel::-webkit-scrollbar-button:horizontal:increment:start,
+.st-root .rooms-panel::-webkit-scrollbar-button:horizontal:decrement:end,
+.st-root .window-content::-webkit-scrollbar-button:horizontal:increment:start,
+.st-root .window-content::-webkit-scrollbar-button:horizontal:decrement:end {
   display: none !important;
   border: none !important;
 }
@@ -185,7 +212,7 @@
 
 /* Firefox support */
 @-moz-document url-prefix() {
-  .st-root * {
+  #messages, .rooms-contacts, .rooms-panel, .window-content {
     scrollbar-width: thin;
     scrollbar-color: var(--scroll-thumb-bg) var(--scroll-track-bg);
   }
