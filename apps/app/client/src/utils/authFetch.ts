@@ -1,5 +1,4 @@
-import { API_URL } from "../config";
-import { storage, authExpiredCallback } from "../context";
+import { storage, authExpiredCallback, apiUrlRef } from "../context";
 
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
     const token = storage.get("token");
@@ -11,7 +10,7 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
     let res = await fetch(input, { ...init, headers, credentials });
     if (res.status !== 401) return res;
 
-    const refresh = await fetch(`${API_URL}/refresh`, { method: "POST", credentials: "include" });
+    const refresh = await fetch(`${apiUrlRef.current}/refresh`, { method: "POST", credentials: "include" });
     if (!refresh.ok) {
         authExpiredCallback.current?.();
         return res;

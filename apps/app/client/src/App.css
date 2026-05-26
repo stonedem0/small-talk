@@ -20,10 +20,21 @@
   --font-sm: 0.8rem;
   --font-md: 0.95rem;
   --font-lg: 1.1rem;
+
+  /* Scrollbar Variables */
+  --scroll-track-bg: #f1f1f1;
+  --scroll-thumb-bg: #4a00f7;
+  --scroll-thumb-shadow-light: #ffffff;
+  --scroll-thumb-shadow-dark: #2a00d7;
+  --scroll-button-bg: #ccc;
+  --scroll-button-shadow-light: #ffffff;
+  --scroll-button-shadow-dark: #a2a2a2;
+  --scroll-arrow-color: #1C1C1C;
 }
 
-html,
-body {
+/* Standalone-only page styles */
+.st-standalone html,
+.st-standalone body {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -41,6 +52,9 @@ body {
   gap: 39px;
 }
 
+.st-root * {
+  font-family: "Trebuchet MS";
+}
 
 .username {
   color: var(--deep-purple);
@@ -61,37 +75,20 @@ body {
   background-color: #ff5252;
 }
 
-* {
-  font-family: "Trebuchet MS";
-}
-
-/* Scrollbar Variables */
-:root {
-  --scroll-track-bg: #f1f1f1;
-  --scroll-thumb-bg: #4a00f7;
-  --scroll-thumb-shadow-light: #ffffff;
-  --scroll-thumb-shadow-dark: #2a00d7;
-  --scroll-button-bg: #ccc;
-  --scroll-button-shadow-light: #ffffff;
-  --scroll-button-shadow-dark: #a2a2a2;
-  --scroll-arrow-color: #1C1C1C;
-}
-
-/* Custom Scrollbar Styling */
-::-webkit-scrollbar {
+/* Custom Scrollbar Styling — scoped to small-talk root */
+.st-root ::-webkit-scrollbar {
   width: 18px;
 }
 
-::-webkit-scrollbar:horizontal {
+.st-root ::-webkit-scrollbar:horizontal {
   height: 18px;
 }
 
-::-webkit-scrollbar-track {
+.st-root ::-webkit-scrollbar-track {
   background: linear-gradient(to right, #fff9ff 0%, #f4effc 10%, #ebe0fd 100%);
-  
 }
 
-::-webkit-scrollbar-thumb {
+.st-root ::-webkit-scrollbar-thumb {
   height: 115px;
   background-color: transparent !important;
   background-image:
@@ -108,12 +105,12 @@ body {
   border-radius: 2px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+.st-root ::-webkit-scrollbar-thumb:hover {
   box-shadow: inset -2px 2px 1px var(--scroll-thumb-shadow-light),
     inset 2px -2px 1px #636265 !important;
 }
 
-::-webkit-scrollbar-button {
+.st-root ::-webkit-scrollbar-button {
   background-color: var(--scroll-button-shadow-light) !important;
   height: 16px;
   width: 20px;
@@ -121,26 +118,24 @@ body {
   display: block !important;
 }
 
-::-webkit-scrollbar-button:vertical:decrement {
+.st-root ::-webkit-scrollbar-button:vertical:decrement {
   height: 18px;
   width: 18px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='4,10 8,6 12,10' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), 
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='4,10 8,6 12,10' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
   linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
   background-repeat: no-repeat, no-repeat !important;
   background-position: center;
-
 }
 
-::-webkit-scrollbar-button:vertical:increment {
+.st-root ::-webkit-scrollbar-button:vertical:increment {
   height: 18px;
   width: 18px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='4,6 8,10 12,6' fill='none'  stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),   linear-gradient(to right, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
   background-repeat: no-repeat;
   background-position: center;
-
 }
 
-::-webkit-scrollbar-button:horizontal:decrement {
+.st-root ::-webkit-scrollbar-button:horizontal:decrement {
   height: 18px;
   width: 18px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='10,4 6,8 10,12' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
@@ -148,7 +143,7 @@ body {
   background-position: center;
 }
 
-::-webkit-scrollbar-button:horizontal:increment {
+.st-root ::-webkit-scrollbar-button:horizontal:increment {
   height: 18px;
   width: 18px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='6,4 10,8 6,12' fill='none' stroke='%23784cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(to bottom, #fff9ff 0%, #e6d9ff 10%, #d3b8ff 100%);
@@ -156,19 +151,17 @@ body {
   background-position: center;
 }
 
-::-webkit-scrollbar-button:vertical:increment:start,
-::-webkit-scrollbar-button:vertical:decrement:end {
+.st-root ::-webkit-scrollbar-button:vertical:increment:start,
+.st-root ::-webkit-scrollbar-button:vertical:decrement:end {
   display: none !important;
   border: none !important;
 }
 
-::-webkit-scrollbar-button:horizontal:increment:start,
-::-webkit-scrollbar-button:horizontal:decrement:end {
+.st-root ::-webkit-scrollbar-button:horizontal:increment:start,
+.st-root ::-webkit-scrollbar-button:horizontal:decrement:end {
   display: none !important;
   border: none !important;
 }
-
-
 
 .tab-container {
   display: flex;
@@ -188,7 +181,7 @@ body {
 
 /* Firefox support */
 @-moz-document url-prefix() {
-  * {
+  .st-root * {
     scrollbar-width: thin;
     scrollbar-color: var(--scroll-thumb-bg) var(--scroll-track-bg);
   }
@@ -241,7 +234,6 @@ body {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 
 .friend-request-toast {
   display: flex;

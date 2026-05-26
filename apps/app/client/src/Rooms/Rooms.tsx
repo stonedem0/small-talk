@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "./Rooms.css";
-import { API_URL } from "../config";
 import { authFetch } from "../utils/authFetch";
-import { useSmallTalk, storage } from "../context";
+import { useSmallTalk, storage, apiUrlRef } from "../context";
 import Chat from "../Chat/Chat";
 import DMChat from "../Chat/DMChat";
 import avatar from "../assets/avatar.png";
@@ -56,7 +55,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
     const measure = async () => {
       const t0 = performance.now();
       try {
-        await fetch(`${API_URL}/ping`);
+        await fetch(`${apiUrlRef.current}/ping`);
         setPing(Math.round(performance.now() - t0));
         setConnected(true);
       } catch {
@@ -72,7 +71,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
 
   const fetchRooms = () => {
-    authFetch(`${API_URL}/rooms-with-categories`)
+    authFetch(`${apiUrlRef.current}/rooms-with-categories`)
       .then((response) => response.json())
       .then((data: { [cat: string]: string[] }) => {
         const sorted: { [cat: string]: string[] } = {};
@@ -93,7 +92,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
 
   useEffect(() => {
     if (username) {
-      authFetch(`${API_URL}/statuses?usernames=${username}`)
+      authFetch(`${apiUrlRef.current}/statuses?usernames=${username}`)
         .then((r) => r.json())
         .then((data: Record<string, string>) => setMyStatus(data[username] || ""))
         .catch(() => {});
@@ -109,17 +108,17 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   useEffect(() => {
     if (!token) return;
 
-    authFetch(`${API_URL}/online-users`)
+    authFetch(`${apiUrlRef.current}/online-users`)
       .then((r) => r.json())
       .then((data) => setUserCounts(data))
       .catch(() => {});
 
-    authFetch(`${API_URL}/dms`)
+    authFetch(`${apiUrlRef.current}/dms`)
       .then((r) => r.json())
       .then((data: string[]) => setDmMessages(data || []))
       .catch(() => {});
 
-    authFetch(`${API_URL}/friends`)
+    authFetch(`${apiUrlRef.current}/friends`)
       .then((r) => r.json())
       .then((data: string[]) => {
         setFriends(data || []);
@@ -128,7 +127,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
       })
       .catch(() => {});
 
-    authFetch(`${API_URL}/favorites/list`)
+    authFetch(`${apiUrlRef.current}/favorites/list`)
       .then((r) => r.json())
       .then((data: string[]) => setFavorites(data || []))
       .catch(() => {});
@@ -136,7 +135,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
 
   useEffect(() => {
     const fetchOnline = () => {
-      authFetch(`${API_URL}/room-usernames`)
+      authFetch(`${apiUrlRef.current}/room-usernames`)
         .then(r => r.json())
         .then((data: Record<string, string[]>) => {
           const all = new Set<string>();
@@ -162,7 +161,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
     setEditingStatus(false);
     const trimmed = statusDraft.trim().slice(0, 100);
     setMyStatus(trimmed);
-    authFetch(`${API_URL}/status`, {
+    authFetch(`${apiUrlRef.current}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: trimmed }),
@@ -172,7 +171,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
   const toggleFavorite = (room: string) => {
     const isFav = favorites.includes(room);
     setFavorites(isFav ? favorites.filter(f => f !== room) : [...favorites, room]);
-    authFetch(`${API_URL}/favorites`, {
+    authFetch(`${apiUrlRef.current}/favorites`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ room }),

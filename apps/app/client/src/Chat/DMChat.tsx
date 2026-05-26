@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { API_URL } from "../config";
 import { authFetch } from "../utils/authFetch";
+import { apiUrlRef } from "../context";
 import Chat from "./Chat";
 
 interface DMChatProps {
@@ -18,7 +18,7 @@ const DMChat = ({ username, targetUsernameOverride }: DMChatProps) => {
   useEffect(() => {
     if (!targetUsername) { navigate("/"); return; }
 
-    authFetch(`${API_URL}/dm/start`, {
+    authFetch(`${apiUrlRef.current}/dm/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target: targetUsername }),

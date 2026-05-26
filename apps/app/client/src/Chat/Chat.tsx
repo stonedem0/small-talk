@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Chat.css";
-import { API_URL } from "../config";
 import { authFetch } from "../utils/authFetch";
-import { useSmallTalk } from "../context";
+import { useSmallTalk, apiUrlRef } from "../context";
 import { format } from 'date-fns';
 import PrimaryButton from "../components/PrimaryButton";
 import DropdownMenu from "../components/DropdownMenu";
@@ -114,7 +113,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
         return;
       }
       try {
-        const response = await authFetch(`${API_URL}/rooms`);
+        const response = await authFetch(`${apiUrlRef.current}/rooms`);
         if (!response.ok) throw new Error("Failed to fetch rooms");
         const data: string[] = await response.json();
         if (data.includes(roomName || "")) {
@@ -135,7 +134,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
 
     const setupChat = async () => {
       try {
-        const response = await authFetch(`${API_URL}/history?room=${roomName}`);
+        const response = await authFetch(`${apiUrlRef.current}/history?room=${roomName}`);
         if (response.status === 403 || response.status === 404) { navigate("/"); return; }
         if (!response.ok) throw new Error("Failed to fetch history");
         const data: Message[] = await response.json();
@@ -212,14 +211,14 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
     let interval: number;
     const fetchOnlineUsers = async () => {
       try {
-        const response = await authFetch(`${API_URL}/room-usernames`);
+        const response = await authFetch(`${apiUrlRef.current}/room-usernames`);
         if (!response.ok) throw new Error("Failed to fetch online users");
         const data: Record<string, string[]> = await response.json();
         const users = data[roomName!] || [];
         setOnlineUsers(users);
         // Fetch statuses for all online users in one request
         if (users.length > 0) {
-          const sr = await authFetch(`${API_URL}/statuses?usernames=${users.join(",")}`);
+          const sr = await authFetch(`${apiUrlRef.current}/statuses?usernames=${users.join(",")}`);
           if (sr.ok) {
             const statuses: Record<string, string> = await sr.json();
             setUserStatuses(statuses);
@@ -239,11 +238,11 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
   }, [messages]);
 
   useEffect(() => {
-    authFetch(`${API_URL}/friends`)
+    authFetch(`${apiUrlRef.current}/friends`)
       .then(r => r.ok ? r.json() : [])
       .then((list: string[]) => setFriends(new Set(list)))
       .catch(() => {});
-    authFetch(`${API_URL}/friends/sent`)
+    authFetch(`${apiUrlRef.current}/friends/sent`)
       .then(r => r.ok ? r.json() : [])
       .then((list: string[]) => setSentRequests(new Set(list)))
       .catch(() => {});
@@ -264,7 +263,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
   };
 
   const sendFriendRequest = async (target: string) => {
-    const res = await authFetch(`${API_URL}/friends/request`, {
+    const res = await authFetch(`${apiUrlRef.current}/friends/request`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target })

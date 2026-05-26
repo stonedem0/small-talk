@@ -11,6 +11,9 @@ export const storage = {
 
 // Module-level ref so authFetch (not a hook) can call authExpired without window.dispatchEvent
 export const authExpiredCallback: { current: (() => void) | null } = { current: null };
+// Module-level refs so non-hook code (authFetch, etc.) can access the configured URLs
+export const apiUrlRef: { current: string } = { current: "" };
+export const wsUrlRef: { current: string } = { current: "" };
 
 export interface SmallTalkContextValue {
   token: string | null;
@@ -53,6 +56,9 @@ export function SmallTalkProvider({
   onAuthExpired,
   children,
 }: SmallTalkProviderProps) {
+  apiUrlRef.current = apiUrl;
+  wsUrlRef.current = wsUrl;
+
   const [token, setTokenState] = useState<string | null>(
     tokenProp ?? storage.get("token")
   );

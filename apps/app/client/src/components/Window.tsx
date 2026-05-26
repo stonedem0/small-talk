@@ -6,8 +6,8 @@ import ModalWindow from "./ModalWindow";
 import DropdownMenu from "./DropdownMenu";
 import WindowControls from "./WindowControls";
 import "./Window.css";
-import { API_URL } from "../config";
-import { useSmallTalk } from "../context";
+
+import { useSmallTalk, apiUrlRef } from "../context";
 
 type WindowProps = {
   title: string;
@@ -169,7 +169,7 @@ const Window = ({
         room: currentRoom || 'home' 
       };
         
-        const response = await fetch(`${API_URL}/update-username`, {
+        const response = await fetch(`${apiUrlRef.current}/update-username`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -233,7 +233,7 @@ const Window = ({
         newPassword: newPassword.trim()
       };
       
-      const response = await fetch(`${API_URL}/update-password`, {
+      const response = await fetch(`${apiUrlRef.current}/update-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -275,7 +275,7 @@ const Window = ({
   const handleSetStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await fetch(`${API_URL}/status`, {
+      await fetch(`${apiUrlRef.current}/status`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -295,7 +295,7 @@ const Window = ({
     setCreateRoomError("");
     setNewRoom("");
     setNewCategory("");
-    fetch(`${API_URL}/rooms-with-categories`, {
+    fetch(`${apiUrlRef.current}/rooms-with-categories`, {
       headers: { "Authorization": `Bearer ${token}` }
     })
       .then((r) => r.json())
@@ -310,7 +310,7 @@ const Window = ({
     const room = newRoom.trim().toLowerCase().replace(/\s+/g, "_");
     if (!room) return;
     try {
-      const response = await fetch(`${API_URL}/create-room`, {
+      const response = await fetch(`${apiUrlRef.current}/create-room`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
