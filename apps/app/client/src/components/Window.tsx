@@ -336,7 +336,7 @@ const Window = ({
     <div
       ref={winRef}
       className="window"
-      style={{ width, ...(height !== undefined && { height }), top, left, visibility: minimized ? "hidden" : undefined }}
+      style={{ width, ...(height !== undefined && { height }), top, left, ...(top !== "50%" ? { transform: "none" } : {}), visibility: minimized ? "hidden" : undefined }}
     >
       <div className="window-header">
         <div className="window-header-top">

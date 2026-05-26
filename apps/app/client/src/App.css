@@ -52,6 +52,10 @@
   gap: 39px;
 }
 
+.st-root {
+  font-size: 15px;
+}
+
 .st-root * {
   font-family: "Trebuchet MS";
 }
