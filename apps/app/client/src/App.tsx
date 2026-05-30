@@ -6,68 +6,45 @@ import Chat from "./Chat/Chat";
 import DMChat from "./Chat/DMChat";
 import Rules from "./Rules/Rules";
 import Window from "./components/Window";
-import { API_URL } from "./config";
+import { useSmallTalk, storage } from "./context";
 import coinSound from "./assets/sounds/pickupCoin.wav";
 import "./App.css";
 
 const notifAudio = new Audio(coinSound);
 
-const App = () => {
-  
-  const [username, setUsername] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+interface AppProps {
+  onClose?: () => void;
+  initialX?: number;
+  initialY?: number;
+}
+
+const App = ({ onClose, initialX, initialY }: AppProps = {}) => {
+  const { token, username, setToken, setUsername, signOut, authExpired, apiUrl } = useSmallTalk();
   const [tab, setTab] = useState("Chat");
   const [windowClosed, setWindowClosed] = useState(false);
   const [notifications, setNotifications] = useState<{ [from: string]: { room: string; count: number } }>(() => {
-    try { return JSON.parse(localStorage.getItem("dm_notifications") ?? "{}"); } catch { return {}; }
+    try { return JSON.parse(storage.get("dm_notifications") ?? "{}"); } catch { return {}; }
   });
   const [friendRequests, setFriendRequests] = useState<string[]>([]);
   const [friendAcceptedToast, setFriendAcceptedToast] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Restore username from server if token exists but username is missing
   useEffect(() => {
-    const storedUsername = localStorage.getItem("username");
-    const storedToken = localStorage.getItem("token");
-    
-    if (storedToken) {
-      setToken(storedToken);
-      if (storedUsername) {
-        setUsername(storedUsername);
-      } else {
-        // Fetch username from server using the token
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/user-info`, {
-          headers: {
-            "Authorization": `Bearer ${storedToken}`
-          },
-          credentials: 'include'
-        })
-        .then(response => {
-          if (response.ok) {
-            return response.json();
-          }
-          throw new Error('Failed to fetch user info');
-        })
-        .then(data => {
-          if (data.username) {
-            setUsername(data.username);
-            localStorage.setItem("username", data.username);
-          }
-        })
-        .catch(error => {
-          console.error("user-info fetch error", error);
-          // Failed to fetch username
-          // If we can't fetch the username, clear the token and redirect to login
-          localStorage.removeItem("token");
-          setToken(null);
-        });
-      }
+    if (token && !username) {
+      fetch(`${apiUrl}/user-info`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => { if (data.username) setUsername(data.username); })
+        .catch(() => setToken(null));
     }
   }, []);
 
-
   useEffect(() => {
-    localStorage.setItem("dm_notifications", JSON.stringify(notifications));
+    storage.set("dm_notifications", JSON.stringify(notifications));
   }, [notifications]);
 
   const unreadDMs = Object.fromEntries(Object.entries(notifications).map(([k, v]) => [k, v.count]));
@@ -75,25 +52,20 @@ const App = () => {
     setNotifications((prev) => { const next = { ...prev }; delete next[from]; return next; });
 
   const handleSignOut = () => {
-    localStorage.removeItem("username");
-    localStorage.removeItem("token");
-    localStorage.removeItem("dm_notifications");
-    localStorage.removeItem("rooms_selected_chat");
-    localStorage.removeItem("rooms_contacts_hidden");
-    setUsername(null);
-    setToken(null);
     setNotifications({});
+    signOut();
     navigate("/");
   };
 
   useEffect(() => {
-    window.addEventListener("auth:expired", handleSignOut);
-    return () => window.removeEventListener("auth:expired", handleSignOut);
+    const onExpired = () => { authExpired(); navigate("/"); };
+    window.addEventListener("auth:expired", onExpired);
+    return () => window.removeEventListener("auth:expired", onExpired);
   }, []);
 
   useEffect(() => {
     if (!token) return;
-    fetch(`${API_URL}/friends/requests`, {
+    fetch(`${apiUrl}/friends/requests`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : [])
@@ -103,7 +75,7 @@ const App = () => {
 
   useEffect(() => {
     if (!token) return;
-    const es = new EventSource(`${API_URL}/events?token=${token}`);
+    const es = new EventSource(`${apiUrl}/events?token=${token}`);
     es.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data);
@@ -130,7 +102,7 @@ const App = () => {
   }, [token]);
 
   const acceptFriend = async (from: string) => {
-    await fetch(`${API_URL}/friends/accept`, {
+    await fetch(`${apiUrl}/friends/accept`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ from }),
@@ -139,7 +111,7 @@ const App = () => {
   };
 
   const declineFriend = async (from: string) => {
-    await fetch(`${API_URL}/friends/decline`, {
+    await fetch(`${apiUrl}/friends/decline`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ from }),
@@ -158,14 +130,16 @@ const App = () => {
 
 
   return (
-      <div id="main-container">
-        {!token && (
+    <div className="st-root">
+      <div className="st-main-container">
+        {!token && !windowClosed && (
         <Window
           title="Login"
           width={300}
           username={username}
+          onClose={onClose ?? (() => setWindowClosed(true))}
         >
-          <Popup setUsername={setUsername} setToken={setToken} />
+          <Popup />
         </Window>
       )}
 
@@ -175,7 +149,9 @@ const App = () => {
           width={600}
           height={420}
           username={username}
-          onClose={() => setWindowClosed(true)}
+          onClose={onClose ?? (() => setWindowClosed(true))}
+          top={initialY !== undefined ? `${initialY}px` : "50%"}
+          left={initialX !== undefined ? `${initialX}px` : "50%"}
           onSignOut={handleSignOut}
           tabs={["File", "Chat", "Appearance", "Settings"]}
           activeTab={tab}
@@ -246,6 +222,7 @@ const App = () => {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 };

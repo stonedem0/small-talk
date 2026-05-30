@@ -2,15 +2,11 @@ import { useState } from "react";
 import "./Login.css";
 import PrimaryButton from "../components/PrimaryButton";
 import logo from "../assets/fella.png";
-import { API_URL } from "../config";
+import { useSmallTalk } from "../context";
 import { useNavigate } from "react-router-dom";
 
-interface PopupProps {
-  setUsername: (name: string) => void;
-  setToken: (token: string) => void;
-}
-
-const Popup = ({ setUsername, setToken }: PopupProps) => {
+const Popup = () => {
+  const { setToken, setUsername, apiUrl } = useSmallTalk();
   const [username, setUsernameLocal] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -21,7 +17,7 @@ const Popup = ({ setUsername, setToken }: PopupProps) => {
   const login = async () => {
     setError("");
 
-    const response = await fetch(`${API_URL}/login`, {
+    const response = await fetch(`${apiUrl}/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -43,8 +39,6 @@ const Popup = ({ setUsername, setToken }: PopupProps) => {
       return;
     }
 
-    localStorage.setItem("username", username.trim());
-    localStorage.setItem("token", token);
     setUsername(username.trim());
     setToken(token);
     navigate("/home");
@@ -53,7 +47,7 @@ const Popup = ({ setUsername, setToken }: PopupProps) => {
   const register = async () => {
     setError("");
     setRegisterSuccess(false);
-    const response = await fetch(`${API_URL}/register`, {
+    const response = await fetch(`${apiUrl}/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
