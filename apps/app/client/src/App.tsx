@@ -132,11 +132,12 @@ const App = ({ onClose, initialX, initialY }: AppProps = {}) => {
   return (
     <div className="st-root">
       <div className="st-main-container">
-        {!token && (
+        {!token && !windowClosed && (
         <Window
           title="Login"
           width={300}
           username={username}
+          onClose={onClose ?? (() => setWindowClosed(true))}
         >
           <Popup />
         </Window>
