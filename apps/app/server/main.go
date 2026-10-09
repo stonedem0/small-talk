@@ -353,6 +353,21 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A room lives on one node. Refuse to host it if another node owns the lease.
+	owner, err := claimOrGetRoomOwner(room)
+	if err != nil {
+		log.Printf("room lease lookup failed for %s: %v", room, err)
+		http.Error(w, "Room placement unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	if owner != appID {
+		if debugEnabled {
+			log.Printf("[Room %s] refused: hosted by %s, this node is %s", room, owner, appID)
+		}
+		http.Error(w, "Room is hosted on another node", http.StatusConflict)
+		return
+	}
+
 	// Echo back a selected subprotocol if the client sent one (required by browsers when specified)
 	var respHeader http.Header
 	if proto := r.Header.Get("Sec-WebSocket-Protocol"); proto != "" {

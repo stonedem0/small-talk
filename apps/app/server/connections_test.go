@@ -106,6 +106,7 @@ func reachedUpgrader(w *httptest.ResponseRecorder) bool {
 }
 
 func TestHandleConnections_TokenViaQueryParam(t *testing.T) {
+	setupAppRedis(t)
 	a := newApp()
 
 	tok := makeToken("alice", time.Now().Add(time.Hour))
@@ -122,6 +123,7 @@ func TestHandleConnections_TokenViaQueryParam(t *testing.T) {
 }
 
 func TestHandleConnections_TokenViaWebSocketProtocol(t *testing.T) {
+	setupAppRedis(t)
 	a := newApp()
 
 	tok := makeToken("alice", time.Now().Add(time.Hour))
@@ -151,6 +153,7 @@ func TestHandleConnections_DMForbidsNonParticipant(t *testing.T) {
 }
 
 func TestHandleConnections_DMAllowsParticipant(t *testing.T) {
+	setupAppRedis(t)
 	a := newApp()
 
 	tok := makeToken("alice", time.Now().Add(time.Hour))
