@@ -47,6 +47,18 @@ end
 return 0
 `)
 
+// takeoverScript atomically moves a lease from a specific stale owner to a new
+// one. It also succeeds if the lease already expired, so it never steals a
+// lease that someone else claimed in the meantime.
+var takeoverScript = redis.NewScript(`
+local cur = redis.call('GET', KEYS[1])
+if (not cur) or cur == ARGV[1] then
+    redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])
+    return 1
+end
+return 0
+`)
+
 func Owner(room string) (string, error) {
 	val, err := RDB.Get(ctx, key(room)).Result()
 	if err == redis.Nil {
@@ -91,4 +103,21 @@ func Release(room, appID string) error {
 	}
 	leaseReleasesTotal.WithLabelValues("ok").Inc()
 	return nil
+}
+
+// Takeover moves the lease for room from staleOwner (draining/unhealthy) to
+// newOwner. Returns false if the lease is now held by a different app.
+func Takeover(room, staleOwner, newOwner string) (bool, error) {
+	n, err := takeoverScript.Run(ctx, RDB, []string{key(room)}, staleOwner, newOwner, int(leaseTTL.Seconds())).Int()
+	switch {
+	case err != nil:
+		leaseClaimsTotal.WithLabelValues("error").Inc()
+		return false, err
+	case n == 1:
+		leaseClaimsTotal.WithLabelValues("takeover").Inc()
+		return true, nil
+	default:
+		leaseClaimsTotal.WithLabelValues("conflict").Inc()
+		return false, nil
+	}
 }

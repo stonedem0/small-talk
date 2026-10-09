@@ -64,6 +64,8 @@ func (s *State) WeightedRankApps(room string, appIDs []string) []string {
 		w   float64
 		val float64
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	ps := make([]pair, 0, len(appIDs))
 	for _, id := range appIDs {
 		a := s.apps[id]

@@ -22,6 +22,7 @@ func cleanSubscriptions(t *testing.T) {
 	t.Helper()
 	subLock.Lock()
 	subscriptions = make(map[string]bool)
+	subGens = make(map[string]uint64)
 	subLock.Unlock()
 }
 
