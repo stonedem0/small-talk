@@ -25,5 +25,5 @@ jobs:
         with:
           go-version-file: apps/directory/go.mod
           cache-dependency-path: apps/directory/go.sum
-      - run: go mod tidy && go test ./...
+      - run: go test ./...
         working-directory: apps/directory
