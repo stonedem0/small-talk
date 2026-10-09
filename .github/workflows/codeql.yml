@@ -1,0 +1,54 @@
+name: CodeQL
+
+# GitHub's security scan: looks through the code for things like injection,
+# XSS, unsafe auth handling and unsafe workflow patterns. Findings show on
+# PRs and under Security > Code scanning.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    # Weekly, for new kinds of findings in code that hasn't changed
+    - cron: "41 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The server, directory service and shared code (all three modules)
+          - language: go
+            build-mode: autobuild
+          # The React client
+          - language: javascript-typescript
+            build-mode: none
+          # These workflows
+          - language: actions
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - if: matrix.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/app/server/go.mod
+          cache: false
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
