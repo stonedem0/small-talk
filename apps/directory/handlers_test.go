@@ -401,14 +401,17 @@ func TestJoinMetric_OwnerRouted(t *testing.T) {
 	}
 }
 
-func TestJoinHandler_TakesOverFromDrainingOwner(t *testing.T) {
+// A crashed owner (no heartbeat within the TTL) must not lock its rooms until the
+// lease expires: the next join takes the lease over.
+func TestJoinHandler_TakesOverFromDeadOwner(t *testing.T) {
 	setupDirectoryRedis(t)
 	s := NewState()
 
-	draining := healthyApp("app-1", "ws://app-1:8080/ws")
-	draining.Draining = true
+	dead := healthyApp("app-1", "ws://app-1:8080/ws")
+	dead.Healthy = false
+	dead.LastSeen = time.Now().Add(-time.Minute)
 	s.mu.Lock()
-	s.apps["app-1"] = draining
+	s.apps["app-1"] = dead
 	s.apps["app-2"] = healthyApp("app-2", "ws://app-2:8080/ws")
 	s.mu.Unlock()
 	_, _ = TryClaim("gaming", "app-1")
@@ -426,6 +429,54 @@ func TestJoinHandler_TakesOverFromDrainingOwner(t *testing.T) {
 	}
 	if owner, _ := Owner("gaming"); owner != "app-2" {
 		t.Fatalf("expected app-2 to own the room, got %q", owner)
+	}
+}
+
+// An owner the directory has never heard of (e.g. after a directory restart) holds
+// a lease nobody can serve; it is taken over too.
+func TestJoinHandler_TakesOverFromUnknownOwner(t *testing.T) {
+	setupDirectoryRedis(t)
+	s := NewState()
+
+	s.mu.Lock()
+	s.apps["app-2"] = healthyApp("app-2", "ws://app-2:8080/ws")
+	s.mu.Unlock()
+	_, _ = TryClaim("gaming", "app-ghost")
+
+	w := httptest.NewRecorder()
+	s.JoinHandler(w, joinRequest("gaming"))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 after takeover, got %d: %s", w.Code, w.Body.String())
+	}
+	if owner, _ := Owner("gaming"); owner != "app-2" {
+		t.Fatalf("expected app-2 to own the room, got %q", owner)
+	}
+}
+
+// A draining owner is still alive and still has clients in the room. Handing the
+// room to another node would split it across nodes, so the owner keeps the lease.
+func TestJoinHandler_DrainingOwnerKeepsLease(t *testing.T) {
+	setupDirectoryRedis(t)
+	s := NewState()
+
+	draining := healthyApp("app-1", "ws://app-1:8080/ws")
+	draining.Draining = true
+	draining.Healthy = false
+	s.mu.Lock()
+	s.apps["app-1"] = draining
+	s.apps["app-2"] = healthyApp("app-2", "ws://app-2:8080/ws")
+	s.mu.Unlock()
+	_, _ = TryClaim("gaming", "app-1")
+
+	w := httptest.NewRecorder()
+	s.JoinHandler(w, joinRequest("gaming"))
+
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429 while owner drains, got %d: %s", w.Code, w.Body.String())
+	}
+	if owner, _ := Owner("gaming"); owner != "app-1" {
+		t.Fatalf("draining owner must keep its lease, got %q", owner)
 	}
 }
 
