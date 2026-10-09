@@ -15,10 +15,10 @@ import (
 )
 
 var (
-	directoryURL   = getenv("DIRECTORY_URL", "http://localhost:8081")
-	appID          = getenv("APP_ID", hostnameOrFallback())
-	wsPublicURL    = getenv("WS_PUBLIC_URL", "ws://localhost:8080/ws")
-	heartbeatEvery = envDuration("HEARTBEAT_INTERVAL", 5*time.Second)
+	directoryURL   string        // set by loadConfig
+	appID          string        // set by loadConfig
+	wsPublicURL    string        // set by loadConfig
+	heartbeatEvery time.Duration // set by loadConfig
 	internalAPIKey string
 
 	httpc = &http.Client{Timeout: 1 * time.Second}

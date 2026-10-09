@@ -26,8 +26,8 @@ var (
 	ctx            = context.Background()
 	jwtSecret      []byte
 	refreshSecret  []byte
-	port           = getenv("PORT", "8080")
-	debugEnabled   = getenv("DEBUG", "") == "true"
+	port           string // set by loadConfig
+	debugEnabled   bool   // set by loadConfig
 	allowedOrigins []string
 
 	onlineUsers     = make(map[string]map[string]bool) // room -> username -> online
@@ -51,6 +51,7 @@ func init() {
 	if err := godotenv.Load("app.env"); err != nil {
 		_ = godotenv.Load()
 	}
+	loadConfig()
 	secret := os.Getenv("JWT_SECRET")
 	if strings.TrimSpace(secret) == "" {
 		log.Fatal("JWT_SECRET is required; set it via environment or .env")
@@ -71,6 +72,18 @@ func init() {
 			}
 		}
 	}
+}
+
+// loadConfig reads settings that have defaults. It must run after the .env file
+// is loaded: package-level var initializers run before any init(), so reading
+// these there silently ignores values that only exist in app.env.
+func loadConfig() {
+	port = getenv("PORT", "8080")
+	debugEnabled = getenv("DEBUG", "") == "true"
+	directoryURL = getenv("DIRECTORY_URL", "http://localhost:8081")
+	appID = getenv("APP_ID", hostnameOrFallback())
+	wsPublicURL = getenv("WS_PUBLIC_URL", "ws://localhost:8080/ws")
+	heartbeatEvery = envDuration("HEARTBEAT_INTERVAL", 5*time.Second)
 }
 
 func getenv(k, def string) string {
