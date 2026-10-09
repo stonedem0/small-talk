@@ -211,10 +211,6 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	appRoomsGauge.WithLabelValues(hb.AppID).Set(float64(len(hb.Rooms)))
 
 	for room, count := range hb.Rooms {
-		if hb.Draining && count > 0 {
-			// A draining node must not keep its rooms pinned; let other nodes take over.
-			continue
-		}
 		if count > 0 {
 			if err := RefreshLease(room, hb.AppID); err != nil {
 				log.Printf("refresh lease error room=%s app=%s: %v", room, hb.AppID, err)
@@ -384,13 +380,16 @@ func (s *State) ownerEligible(appID, room string) bool {
 	return a.Rooms[room] < ROOM_CAPACITY
 }
 
-// ownerGone reports whether the lease owner is unknown, unhealthy or draining
-// (as opposed to merely at capacity), meaning its lease may be taken over.
+// ownerGone reports whether the lease owner is dead: unknown to the directory or
+// silent for longer than the heartbeat TTL. A dead node has no live clients, so
+// its lease can be taken over without splitting the room across nodes. A node
+// that is merely draining, unhealthy-but-heartbeating, or full is not gone and
+// keeps its lease; rooms stay on a single node.
 func (s *State) ownerGone(appID string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	a, ok := s.apps[appID]
-	return !ok || !a.Healthy || a.Draining
+	return !ok || time.Since(a.LastSeen) > s.healthyTTL
 }
 
 // logTopRanked logs the top candidates with their load stats.

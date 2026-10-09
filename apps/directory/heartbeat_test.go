@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
@@ -174,24 +173,5 @@ func TestHeartbeatHandler_RefreshesLeaseForActiveRooms(t *testing.T) {
 	ttl := s2.TTL(key("gaming"))
 	if ttl < 55*leaseTTL/60 {
 		t.Fatalf("expected lease TTL to be refreshed, got %v", ttl)
-	}
-}
-
-func TestHeartbeatHandler_DrainingDoesNotRefreshLease(t *testing.T) {
-	s2 := setupHeartbeatRedis(t)
-	s := NewState()
-
-	_, _ = TryClaim("gaming", "app-1")
-	s2.FastForward(30 * time.Second) // lease now has ~30s left
-
-	s.HeartbeatHandler(httptest.NewRecorder(), heartbeatRequest(t, Heartbeat{
-		AppID:    "app-1",
-		WSURL:    "ws://app-1:8080/ws",
-		Rooms:    map[string]int{"gaming": 5},
-		Draining: true,
-	}))
-
-	if ttl := s2.TTL(key("gaming")); ttl > 35*time.Second {
-		t.Fatalf("draining node must not refresh its lease, got TTL %v", ttl)
 	}
 }
