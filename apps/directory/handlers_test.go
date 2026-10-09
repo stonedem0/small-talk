@@ -400,3 +400,54 @@ func TestJoinMetric_OwnerRouted(t *testing.T) {
 		t.Fatalf("expected owner_routed counter delta 1, got %.0f", after-before)
 	}
 }
+
+func TestJoinHandler_TakesOverFromDrainingOwner(t *testing.T) {
+	setupDirectoryRedis(t)
+	s := NewState()
+
+	draining := healthyApp("app-1", "ws://app-1:8080/ws")
+	draining.Draining = true
+	s.mu.Lock()
+	s.apps["app-1"] = draining
+	s.apps["app-2"] = healthyApp("app-2", "ws://app-2:8080/ws")
+	s.mu.Unlock()
+	_, _ = TryClaim("gaming", "app-1")
+
+	w := httptest.NewRecorder()
+	s.JoinHandler(w, joinRequest("gaming"))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 after takeover, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]string
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["wss_url"] != "ws://app-2:8080/ws?room=gaming" {
+		t.Fatalf("expected app-2 url, got %q", resp["wss_url"])
+	}
+	if owner, _ := Owner("gaming"); owner != "app-2" {
+		t.Fatalf("expected app-2 to own the room, got %q", owner)
+	}
+}
+
+func TestJoinHandler_FullOwnerIsNotTakenOver(t *testing.T) {
+	setupDirectoryRedis(t)
+	s := NewState()
+
+	full := healthyApp("app-1", "ws://app-1:8080/ws")
+	full.Rooms["gaming"] = ROOM_CAPACITY
+	s.mu.Lock()
+	s.apps["app-1"] = full
+	s.apps["app-2"] = healthyApp("app-2", "ws://app-2:8080/ws")
+	s.mu.Unlock()
+	_, _ = TryClaim("gaming", "app-1")
+
+	w := httptest.NewRecorder()
+	s.JoinHandler(w, joinRequest("gaming"))
+
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429 for full room, got %d", w.Code)
+	}
+	if owner, _ := Owner("gaming"); owner != "app-1" {
+		t.Fatalf("full owner must keep its lease, got %q", owner)
+	}
+}

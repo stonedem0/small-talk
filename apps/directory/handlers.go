@@ -211,6 +211,10 @@ func (s *State) HeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	appRoomsGauge.WithLabelValues(hb.AppID).Set(float64(len(hb.Rooms)))
 
 	for room, count := range hb.Rooms {
+		if hb.Draining && count > 0 {
+			// A draining node must not keep its rooms pinned; let other nodes take over.
+			continue
+		}
 		if count > 0 {
 			if err := RefreshLease(room, hb.AppID); err != nil {
 				log.Printf("refresh lease error room=%s app=%s: %v", room, hb.AppID, err)
@@ -285,19 +289,24 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	s.MarkStale()
 
+	staleOwner := ""
 	if owner, err := Owner(room); err != nil {
 		log.Printf("join: owner lookup error room=%s: %v", room, err)
 	} else if owner != "" {
-		if a, ok := s.getApp(owner); ok && a.Healthy && !a.Draining && s.belowRoomLimit(owner, room) {
+		if s.ownerEligible(owner, room) {
 			log.Printf("join: using owner app=%s for room=%s", owner, room)
 			joinRequestsTotal.WithLabelValues("owner_routed").Inc()
+			wsURL, _ := s.WSURL(owner)
 			_ = json.NewEncoder(w).Encode(map[string]string{
-				"wss_url": a.WSURL + "?room=" + room,
+				"wss_url": wsURL + "?room=" + room,
 				"room":    room,
 			})
 			return
 		}
 		log.Printf("join: owner app not eligible app=%s room=%s", owner, room)
+		if s.ownerGone(owner) {
+			staleOwner = owner
+		}
 	}
 	apps := s.getHealthyAppIDs()
 	if len(apps) == 0 {
@@ -309,20 +318,20 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ranked := s.WeightedRankApps(room, apps)
-	for i := 0; i < len(ranked) && i < 3; i++ {
-		a := s.apps[ranked[i]]
-		if a != nil && a.Stats != nil {
-			log.Printf("rank %d: %s w=%.3f cpu=%.0f%% mem=%dMB users=%d",
-				i+1, a.AppID, nodeWeight(a), a.Stats.CPUPercent, a.Stats.RSSMB, a.UsersTotal)
-		}
-	}
+	s.logTopRanked(ranked)
 
 	for _, appID := range ranked {
 		if !s.belowRoomLimit(appID, room) {
 			log.Printf("join: app over room limit app=%s room=%s", appID, room)
 			continue
 		}
-		claimed, err := TryClaim(room, appID)
+		var claimed bool
+		var err error
+		if staleOwner != "" {
+			claimed, err = Takeover(room, staleOwner, appID)
+		} else {
+			claimed, err = TryClaim(room, appID)
+		}
 		if err != nil {
 			log.Printf("join: try-claim error room=%s app=%s: %v", room, appID, err)
 			continue
@@ -331,11 +340,11 @@ func (s *State) JoinHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("join: try-claim conflict room=%s app=%s", room, appID)
 			continue
 		}
-		if a, ok := s.getApp(appID); ok && a.WSURL != "" {
+		if wsURL, ok := s.WSURL(appID); ok {
 			log.Printf("join: assigned app=%s for room=%s", appID, room)
 			joinRequestsTotal.WithLabelValues("new_claim").Inc()
 			_ = json.NewEncoder(w).Encode(map[string]string{
-				"wss_url": a.WSURL + "?room=" + room,
+				"wss_url": wsURL + "?room=" + room,
 				"room":    room,
 			})
 			return
@@ -362,6 +371,39 @@ func (s *State) WSURL(appID string) (string, bool) {
 		return "", false
 	}
 	return a.WSURL, a.WSURL != ""
+}
+
+// ownerEligible reports whether the lease owner can still serve the room.
+func (s *State) ownerEligible(appID, room string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	a, ok := s.apps[appID]
+	if !ok || !a.Healthy || a.Draining {
+		return false
+	}
+	return a.Rooms[room] < ROOM_CAPACITY
+}
+
+// ownerGone reports whether the lease owner is unknown, unhealthy or draining
+// (as opposed to merely at capacity), meaning its lease may be taken over.
+func (s *State) ownerGone(appID string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	a, ok := s.apps[appID]
+	return !ok || !a.Healthy || a.Draining
+}
+
+// logTopRanked logs the top candidates with their load stats.
+func (s *State) logTopRanked(ranked []string) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for i := 0; i < len(ranked) && i < 3; i++ {
+		a := s.apps[ranked[i]]
+		if a != nil && a.Stats != nil {
+			log.Printf("rank %d: %s w=%.3f cpu=%.0f%% mem=%dMB users=%d",
+				i+1, a.AppID, nodeWeight(a), a.Stats.CPUPercent, a.Stats.RSSMB, a.UsersTotal)
+		}
+	}
 }
 
 func (s *State) belowRoomLimit(appID, room string) bool {

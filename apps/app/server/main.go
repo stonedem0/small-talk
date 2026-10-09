@@ -34,6 +34,8 @@ var (
 	onlineUsersLock sync.Mutex
 
 	subscriptions = make(map[string]bool)
+	subGens       = make(map[string]uint64) // room -> generation of the live subscription
+	subGen        uint64
 	subLock       sync.Mutex
 
 	rooms     = make(map[string]map[*client]struct{})
@@ -185,9 +187,13 @@ func readPump(c *client) {
 		roomsLock.Lock()
 		if set, ok := rooms[c.room]; ok {
 			delete(set, c)
+			if len(set) == 0 {
+				delete(rooms, c.room)
+			}
 		}
 		roomsLock.Unlock()
 		roomsCounter.dec(c.room)
+		stopSubscriptionIfEmpty(c.room)
 		safeClose(c.send, &c.closed)
 		c.conn.Close()
 
@@ -225,14 +231,20 @@ func readPump(c *client) {
 		}
 
 		if msg.Type == "username_update" {
-			oldU := msg.Username
-			newU := msg.Message
+			// Identity comes from the authenticated connection, never the payload;
+			// otherwise any client could drop or rename another user's presence.
+			oldU := c.username
+			newU := strings.TrimSpace(msg.Message)
+			if newU == "" || len(newU) > 64 || newU == oldU {
+				continue
+			}
 			onlineUsersLock.Lock()
 			if onlineUsers[c.room] != nil {
 				delete(onlineUsers[c.room], oldU)
 				onlineUsers[c.room][newU] = true
 			}
 			onlineUsersLock.Unlock()
+			c.username = newU
 			change := Message{Room: c.room, Username: oldU, Message: fmt.Sprintf("changed username to %s", newU), Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 			b, _ := json.Marshal(change)
 			RDB.Publish(ctx, "room:"+c.room, string(b))
@@ -377,13 +389,19 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 	subLock.Lock()
 	if !subscriptions[room] {
 		subscriptions[room] = true
+		subGen++
+		subGens[room] = subGen
+		gen := subGen
 		subLock.Unlock()
-		go subscribeToRoom(ctx, room)
+		a.wg.Add(1)
+		go func() { defer a.wg.Done(); runSubscription(ctx, room, gen) }()
 	} else {
 		subLock.Unlock()
 	}
 
+	a.wg.Add(1)
 	go func() {
+		defer a.wg.Done()
 		time.Sleep(100 * time.Millisecond)
 		join := Message{Room: room, Username: username, Message: "joined the room", Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 		b, _ := json.Marshal(join)
@@ -414,20 +432,70 @@ func notifyDMRecipient(room, sender string) {
 	pushNotification(recipient, string(notif))
 }
 
+// stopSubscriptionIfEmpty closes the room's Redis subscription once no local
+// client remains, so idle rooms don't hold a subscription and goroutine forever.
+// subLock is held across the emptiness check: a concurrent join either added its
+// client before the check (we keep the subscription) or sees the cleared flag
+// afterwards and starts a fresh one.
+func stopSubscriptionIfEmpty(room string) {
+	subLock.Lock()
+	roomsLock.RLock()
+	empty := len(rooms[room]) == 0
+	roomsLock.RUnlock()
+	if !empty || !subscriptions[room] {
+		subLock.Unlock()
+		return
+	}
+	delete(subscriptions, room)
+	delete(subGens, room)
+	roomSubsMu.Lock()
+	ps := roomSubs[room]
+	delete(roomSubs, room)
+	roomSubsMu.Unlock()
+	subLock.Unlock()
+	if ps != nil {
+		_ = ps.Close()
+	}
+}
+
+// subscribeToRoom runs the subscription for whatever generation is current.
 func subscribeToRoom(ctx context.Context, room string) {
+	subLock.Lock()
+	gen := subGens[room]
+	subLock.Unlock()
+	runSubscription(ctx, room, gen)
+}
+
+// runSubscription subscribes to the room's channel and fans messages out to local
+// clients. gen identifies the subscription this goroutine was started for: if the
+// room emptied (or was replaced) before we got going, we must not register, or we
+// would leave an orphaned subscriber delivering duplicates next to the new one.
+func runSubscription(ctx context.Context, room string, gen uint64) {
 	ps := RDB.Subscribe(ctx, "room:"+room)
 
+	subLock.Lock()
+	if !subscriptions[room] || subGens[room] != gen {
+		subLock.Unlock()
+		ps.Close()
+		return
+	}
 	roomSubsMu.Lock()
 	roomSubs[room] = ps
 	roomSubsMu.Unlock()
+	subLock.Unlock()
 
 	defer func() {
-		roomSubsMu.Lock()
-		delete(roomSubs, room)
-		roomSubsMu.Unlock()
 		ps.Close()
 		subLock.Lock()
-		delete(subscriptions, room)
+		roomSubsMu.Lock()
+		// Only clear state we still own; stopSubscriptionIfEmpty may already have
+		// removed it and a new join may have started a replacement subscription.
+		if roomSubs[room] == ps {
+			delete(roomSubs, room)
+			delete(subscriptions, room)
+			delete(subGens, room)
+		}
+		roomSubsMu.Unlock()
 		subLock.Unlock()
 		if debugEnabled {
 			log.Printf("[Room %s] subscription stopped", room)

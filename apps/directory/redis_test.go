@@ -100,3 +100,43 @@ func TestRelease_NonOwner(t *testing.T) {
 		t.Fatalf("expected app-1 to still own the room, got %q", owner)
 	}
 }
+
+func TestTakeover_FromStaleOwner(t *testing.T) {
+	setupRedis(t)
+	_, _ = TryClaim("gaming", "app-1")
+
+	ok, err := Takeover("gaming", "app-1", "app-2")
+	if err != nil || !ok {
+		t.Fatalf("expected takeover to succeed, ok=%v err=%v", ok, err)
+	}
+	if owner, _ := Owner("gaming"); owner != "app-2" {
+		t.Fatalf("expected app-2 to own the room, got %q", owner)
+	}
+}
+
+func TestTakeover_DoesNotStealFromOtherOwner(t *testing.T) {
+	setupRedis(t)
+	_, _ = TryClaim("gaming", "app-3")
+
+	ok, err := Takeover("gaming", "app-1", "app-2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ok {
+		t.Fatal("takeover must not steal a lease held by a different app")
+	}
+	if owner, _ := Owner("gaming"); owner != "app-3" {
+		t.Fatalf("expected app-3 to keep the lease, got %q", owner)
+	}
+}
+
+func TestTakeover_ExpiredLease(t *testing.T) {
+	s := setupRedis(t)
+	_, _ = TryClaim("gaming", "app-1")
+	s.FastForward(2 * leaseTTL)
+
+	ok, err := Takeover("gaming", "app-1", "app-2")
+	if err != nil || !ok {
+		t.Fatalf("expected takeover of expired lease, ok=%v err=%v", ok, err)
+	}
+}
