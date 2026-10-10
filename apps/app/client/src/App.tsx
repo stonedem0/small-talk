@@ -137,7 +137,21 @@ const App = () => {
         // ignore malformed events
       }
     };
-    return () => es.close();
+    // Every page holds one of the browser's few connections per host for these events.
+    // A page frozen in the back/forward cache would keep it, and enough of them stall
+    // the app, so release it when the page is hidden. If the browser restores the page
+    // from that cache its connections and timers are stale: start clean.
+    const onPageHide = () => es.close();
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) window.location.reload();
+    };
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      es.close();
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("pageshow", onPageShow);
+    };
   }, [token]);
 
   const acceptFriend = async (from: string) => {

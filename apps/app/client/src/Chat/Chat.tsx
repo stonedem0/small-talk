@@ -203,11 +203,26 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
     };
     window.addEventListener("online", onOnline);
 
+    // Leaving the page for good: release the socket. A browser may keep the frozen
+    // page, and its open socket, in memory (back/forward cache), which would keep
+    // this user "in the room" on the server: no unread counts, stale presence.
+    const onPageHide = () => {
+      window.clearTimeout(retryTimer);
+      if (socket) {
+        socket.onclose = null;
+        socket.close();
+        socket = null;
+      }
+    };
+    // (App reloads the page if the browser restores it from that cache.)
+    window.addEventListener("pagehide", onPageHide);
+
     connect();
     return () => {
       cancelled = true;
       window.clearTimeout(retryTimer);
       window.removeEventListener("online", onOnline);
+      window.removeEventListener("pagehide", onPageHide);
       if (socket) {
         socket.onclose = null;
         socket.close();
