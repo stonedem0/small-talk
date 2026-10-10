@@ -413,6 +413,9 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 	onlineUsers[room][username] = true
 	onlineUsersLock.Unlock()
 	syncPresence(room)
+	if partner := dmPartner(room, username); partner != "" {
+		markDMRead(username, partner) // opening the conversation reads it
+	}
 
 	a.wg.Add(2)
 	go func() { defer a.wg.Done(); writePump(c) }()
@@ -453,26 +456,6 @@ func isChatMessage(t string) bool { return t == "" || t == "chat" }
 // chat messages and system lines (joins, leaves, renames). Typing indicators and
 // status updates are live-only; replaying them would show up as chat lines.
 func isHistoryType(t string) bool { return isChatMessage(t) || t == "system" }
-
-func notifyDMRecipient(room, sender string) {
-	if !isDMRoom(room) {
-		return
-	}
-	parts := strings.SplitN(strings.TrimPrefix(room, "dm:"), ":", 2)
-	if len(parts) != 2 {
-		return
-	}
-	recipient := parts[0]
-	if recipient == sender {
-		recipient = parts[1]
-	}
-	notif, _ := json.Marshal(map[string]string{
-		"type": "dm",
-		"from": sender,
-		"room": room,
-	})
-	pushNotification(recipient, string(notif))
-}
 
 // stopSubscriptionIfEmpty closes the room's Redis subscription once no local
 // client remains, so idle rooms don't hold a subscription and goroutine forever.
@@ -571,7 +554,7 @@ func runSubscription(ctx context.Context, room string, gen uint64) {
 				_ = RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
 			}
 			if isChatMessage(received.Type) {
-				notifyDMRecipient(room, received.Username)
+				recordUnreadDM(room, received.Username)
 			}
 
 			enqueueToRoom(room, b)
@@ -707,6 +690,7 @@ func registerRoutes(a *app, h *Handler) {
 	http.HandleFunc("/update-password", WithCORS(h.WithAuth(h.UpdatePasswordHandler)))
 	http.HandleFunc("/dm/start", WithCORS(h.StartDMHandler))
 	http.HandleFunc("/dms", WithCORS(h.GetDMListHandler))
+	http.HandleFunc("/dms/unread", WithCORS(h.GetDMUnreadHandler))
 	http.HandleFunc("/events", WithCORS(h.SSEHandler))
 	http.HandleFunc("/friends", WithCORS(h.WithAuth(h.GetFriendsHandler)))
 	http.HandleFunc("/friends/requests", WithCORS(h.WithAuth(h.GetFriendRequestsHandler)))

@@ -7,6 +7,7 @@ import DMChat from "./Chat/DMChat";
 import Rules from "./Rules/Rules";
 import Window from "./components/Window";
 import { API_URL } from "./config";
+import { authFetch } from "./utils/authFetch";
 import coinSound from "./assets/sounds/pickupCoin.wav";
 import "./App.css";
 
@@ -18,9 +19,9 @@ const App = () => {
   const [token, setToken] = useState<string | null>(null);
   const [tab, setTab] = useState("Chat");
   const [windowClosed, setWindowClosed] = useState(false);
-  const [notifications, setNotifications] = useState<{ [from: string]: { room: string; count: number } }>(() => {
-    try { return JSON.parse(localStorage.getItem("dm_notifications") ?? "{}"); } catch { return {}; }
-  });
+  // Unread DM counts per conversation partner. The server is the source of truth: it
+  // counts a message only while the recipient is away, and clears it when the DM is opened.
+  const [unreadDMs, setUnreadDMs] = useState<{ [from: string]: number }>({});
   const [friendRequests, setFriendRequests] = useState<string[]>([]);
   const [friendAcceptedToast, setFriendAcceptedToast] = useState<string | null>(null);
   const [friendsRevision, setFriendsRevision] = useState(0);
@@ -68,22 +69,31 @@ const App = () => {
 
 
   useEffect(() => {
-    localStorage.setItem("dm_notifications", JSON.stringify(notifications));
-  }, [notifications]);
+    if (!token) return;
+    localStorage.removeItem("dm_notifications"); // legacy browser-only counts
+    authFetch(`${API_URL}/dms/unread`)
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((counts: { [from: string]: number }) =>
+        // keep any live increment that raced ahead of this response
+        setUnreadDMs((prev) => {
+          const merged = { ...counts };
+          for (const [from, n] of Object.entries(prev)) merged[from] = Math.max(n, merged[from] ?? 0);
+          return merged;
+        }))
+      .catch(() => {});
+  }, [token]);
 
-  const unreadDMs = Object.fromEntries(Object.entries(notifications).map(([k, v]) => [k, v.count]));
   const clearDMNotif = (from: string) =>
-    setNotifications((prev) => { const next = { ...prev }; delete next[from]; return next; });
+    setUnreadDMs((prev) => { const next = { ...prev }; delete next[from]; return next; });
 
   const handleSignOut = useCallback(() => {
     localStorage.removeItem("username");
     localStorage.removeItem("token");
-    localStorage.removeItem("dm_notifications");
     localStorage.removeItem("rooms_selected_chat");
     localStorage.removeItem("rooms_contacts_hidden");
     setUsername(null);
     setToken(null);
-    setNotifications({});
+    setUnreadDMs({});
     navigate("/");
   }, [navigate]);
 
@@ -110,13 +120,12 @@ const App = () => {
         const msg = JSON.parse(e.data);
         if (msg.type === "dm") {
           const from: string = msg.from;
-          const room: string = msg.room;
-          setNotifications((prev) => ({
-            ...prev,
-            [from]: { room, count: (prev[from]?.count ?? 0) + 1 },
-          }));
+          setUnreadDMs((prev) => ({ ...prev, [from]: msg.unread ?? (prev[from] ?? 0) + 1 }));
           notifAudio.currentTime = 0;
           notifAudio.play().catch(() => {});
+        } else if (msg.type === "dm_read") {
+          // the conversation was opened (possibly in another tab or device)
+          clearDMNotif(msg.from);
         } else if (msg.type === "friend_request") {
           setFriendRequests((prev) => prev.includes(msg.from) ? prev : [...prev, msg.from]);
         } else if (msg.type === "friend_accepted") {
@@ -128,7 +137,21 @@ const App = () => {
         // ignore malformed events
       }
     };
-    return () => es.close();
+    // Every page holds one of the browser's few connections per host for these events.
+    // A page frozen in the back/forward cache would keep it, and enough of them stall
+    // the app, so release it when the page is hidden. If the browser restores the page
+    // from that cache its connections and timers are stale: start clean.
+    const onPageHide = () => es.close();
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) window.location.reload();
+    };
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      es.close();
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("pageshow", onPageShow);
+    };
   }, [token]);
 
   const acceptFriend = async (from: string) => {
@@ -228,7 +251,7 @@ const App = () => {
         </div>
       )}
 
-      {(Object.keys(notifications).length > 0 || friendRequests.length > 0) && (
+      {(Object.keys(unreadDMs).length > 0 || friendRequests.length > 0) && (
         <div className="notifications">
           {friendRequests.map((from) => (
             <div key={`fr-${from}`} className="notification-toast friend-request-toast">
@@ -239,9 +262,9 @@ const App = () => {
               </div>
             </div>
           ))}
-          {Object.entries(notifications).map(([from, { count }]) => (
+          {Object.entries(unreadDMs).map(([from, count]) => (
             <div key={from} className="notification-toast" onClick={() => {
-              setNotifications((prev) => { const next = { ...prev }; delete next[from]; return next; });
+              clearDMNotif(from);
               navigate(`/dm/${from}`);
             }}>
               <strong>{from}</strong> — {count} new {count === 1 ? "message" : "messages"}

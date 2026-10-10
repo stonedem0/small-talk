@@ -179,6 +179,8 @@ const Rooms = ({ unreadDMs = {}, onDMOpen, friendsRevision = 0 }: RoomsProps) =>
     }).catch(() => {});
   };
 
+  const totalUnread = Object.values(unreadDMs).reduce((sum, n) => sum + n, 0);
+
   const openDM = (partner: string) => {
     onDMOpen?.(partner);
     setSelectedChat({ type: "dm", target: partner });
@@ -273,7 +275,8 @@ const Rooms = ({ unreadDMs = {}, onDMOpen, friendsRevision = 0 }: RoomsProps) =>
               <div className="contact-group">
                 <button className="contact-group-header" onClick={() => setDmsCollapsed(v => !v)}>
                   <span className={`contact-arrow ${dmsCollapsed ? "contact-arrow--closed" : ""}`} />
-                  messages ({dmMessages.length})
+                  messages
+                  {totalUnread > 0 && <span className="contact-unread">{totalUnread}</span>}
                 </button>
                 {!dmsCollapsed && (
                   <ul className="contact-list">
