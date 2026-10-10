@@ -267,6 +267,28 @@ func main() {
 	extra := sseOnA.count(`"type":"dm"`) - before
 	check("bob gets no DM notification for alice's status change", extra == 0, fmt.Sprintf("%d extra dm notification(s)", extra))
 
+	fmt.Println("\n6. Unread DM counts work when the API node does not host the DM")
+	unreadVia := func(base string) map[string]int {
+		_, out := req("GET", base+"/dms/unread", tb, nil)
+		var m map[string]int
+		_ = json.Unmarshal(out, &m)
+		return m
+	}
+	check("bob's unread count for alice is visible through API node A", unreadVia(nodeA)[alice] == 1, fmt.Sprint(unreadVia(nodeA)))
+	check("the notification carried the count", sseOnA.saw(`"unread":1`, wait), "")
+	bobInDM, _ := dialWS(dmURL, tb) // bob opens the conversation, on node B
+	defer bobInDM.Close()
+	check("opening the DM on node B clears the count seen through node A", func() bool {
+		for i := 0; i < 20; i++ {
+			if len(unreadVia(nodeA)) == 0 {
+				return true
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		return false
+	}(), fmt.Sprint(unreadVia(nodeA)))
+	check("bob's other session on node A was told live (dm_read)", sseOnA.saw(`"type":"dm_read"`, wait), "")
+
 	fmt.Println()
 	if failures > 0 {
 		fmt.Printf("%d check(s) failed\n", failures)
