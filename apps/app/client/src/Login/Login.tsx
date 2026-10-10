@@ -67,7 +67,7 @@ const Popup = ({ setUsername, setToken }: PopupProps) => {
         setError(data.error);
         return;
       }
-    } catch {}
+    } catch { /* body is not JSON: fall through to the status check */ }
     if (response.ok) {
       setRegisterSuccess(true);
       setError("");

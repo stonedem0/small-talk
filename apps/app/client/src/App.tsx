@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Popup from "./Login/Login";
 import Rooms from "./Rooms/Rooms";
@@ -75,7 +75,7 @@ const App = () => {
   const clearDMNotif = (from: string) =>
     setNotifications((prev) => { const next = { ...prev }; delete next[from]; return next; });
 
-  const handleSignOut = () => {
+  const handleSignOut = useCallback(() => {
     localStorage.removeItem("username");
     localStorage.removeItem("token");
     localStorage.removeItem("dm_notifications");
@@ -85,12 +85,12 @@ const App = () => {
     setToken(null);
     setNotifications({});
     navigate("/");
-  };
+  }, [navigate]);
 
   useEffect(() => {
     window.addEventListener("auth:expired", handleSignOut);
     return () => window.removeEventListener("auth:expired", handleSignOut);
-  }, []);
+  }, [handleSignOut]);
 
   useEffect(() => {
     if (!token) return;
