@@ -27,3 +27,18 @@ jobs:
           cache-dependency-path: apps/directory/go.sum
       - run: go test ./...
         working-directory: apps/directory
+
+  build-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/app/client/package-lock.json
+      - run: npm ci
+        working-directory: apps/app/client
+      # tsc -b (type check) then vite build
+      - run: npm run build
+        working-directory: apps/app/client
