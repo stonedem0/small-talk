@@ -181,14 +181,7 @@ func TestGetRoomsWithCategoriesHandler_MultipleRoomsPerCategory(t *testing.T) {
 func TestGetOnlineUsersHandler_SpecificRoom(t *testing.T) {
 	setupHandlerRedis(t)
 
-	onlineUsersLock.Lock()
-	onlineUsers["gaming"] = map[string]bool{"rei": true, "shinji": true}
-	onlineUsersLock.Unlock()
-	t.Cleanup(func() {
-		onlineUsersLock.Lock()
-		delete(onlineUsers, "gaming")
-		onlineUsersLock.Unlock()
-	})
+	seedPresence(t, "gaming", "rei", "shinji")
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/online-users?room=gaming", nil)
@@ -221,16 +214,8 @@ func TestGetOnlineUsersHandler_EmptyRoom(t *testing.T) {
 func TestGetOnlineUsersHandler_AllRooms(t *testing.T) {
 	setupHandlerRedis(t)
 
-	onlineUsersLock.Lock()
-	onlineUsers["gaming"] = map[string]bool{"rei": true}
-	onlineUsers["music"] = map[string]bool{"shinji": true, "asuka": true}
-	onlineUsersLock.Unlock()
-	t.Cleanup(func() {
-		onlineUsersLock.Lock()
-		delete(onlineUsers, "gaming")
-		delete(onlineUsers, "music")
-		onlineUsersLock.Unlock()
-	})
+	seedPresence(t, "gaming", "rei")
+	seedPresence(t, "music", "shinji", "asuka")
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/online-users", nil)
