@@ -10,6 +10,8 @@ import avatar from "../assets/avatar.png";
 interface RoomsProps {
   unreadDMs?: { [from: string]: number };
   onDMOpen?: (from: string) => void;
+  /** Bump to make the friends list refetch (friend accepted, request accepted). */
+  friendsRevision?: number;
 }
 
 type SelectedChat =
@@ -17,7 +19,7 @@ type SelectedChat =
   | { type: "dm"; target: string }
   | null;
 
-const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
+const Rooms = ({ unreadDMs = {}, onDMOpen, friendsRevision = 0 }: RoomsProps) => {
   const [grouped, setGrouped] = useState<{ [category: string]: string[] }>({});
   const [collapsed, setCollapsed] = useState<{ [category: string]: boolean }>({});
   const [userCounts, setUserCounts] = useState<{ [room: string]: number }>({});
@@ -117,20 +119,20 @@ const Rooms = ({ unreadDMs = {}, onDMOpen }: RoomsProps) => {
       .then((data: string[]) => setDmMessages(data || []))
       .catch(() => {});
 
-    authFetch(`${API_URL}/friends`)
-      .then((r) => r.json())
-      .then((data: string[]) => {
-        setFriends(data || []);
-        // TEST: seed fake online status for first friend
-        if (data && data.length > 0) setOnlineSet(new Set([data[0]]));
-      })
-      .catch(() => {});
-
     authFetch(`${API_URL}/favorites/list`)
       .then((r) => r.json())
       .then((data: string[]) => setFavorites(data || []))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    authFetch(`${API_URL}/friends`)
+      .then((r) => r.json())
+      .then((data: string[]) => setFriends(data || []))
+      .catch(() => {});
+  }, [friendsRevision]);
 
   useEffect(() => {
     const fetchOnline = () => {
