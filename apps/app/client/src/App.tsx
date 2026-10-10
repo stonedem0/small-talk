@@ -23,6 +23,7 @@ const App = () => {
   });
   const [friendRequests, setFriendRequests] = useState<string[]>([]);
   const [friendAcceptedToast, setFriendAcceptedToast] = useState<string | null>(null);
+  const [friendsRevision, setFriendsRevision] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -121,6 +122,7 @@ const App = () => {
         } else if (msg.type === "friend_accepted") {
           setFriendAcceptedToast(`${msg.from} accepted your friend request! ♥`);
           setTimeout(() => setFriendAcceptedToast(null), 4000);
+          setFriendsRevision((v) => v + 1);
         }
       } catch {
         // ignore malformed events
@@ -136,6 +138,7 @@ const App = () => {
       body: JSON.stringify({ from }),
     });
     setFriendRequests((prev) => prev.filter((r) => r !== from));
+    setFriendsRevision((v) => v + 1);
   };
 
   const declineFriend = async (from: string) => {
@@ -195,8 +198,8 @@ const App = () => {
           )}
           {tab === "Chat" && (
             <Routes>
-              <Route path="/" element={<Rooms unreadDMs={unreadDMs} onDMOpen={clearDMNotif} />} />
-              <Route path="/home" element={<Rooms unreadDMs={unreadDMs} onDMOpen={clearDMNotif} />} />
+              <Route path="/" element={<Rooms unreadDMs={unreadDMs} onDMOpen={clearDMNotif} friendsRevision={friendsRevision} />} />
+              <Route path="/home" element={<Rooms unreadDMs={unreadDMs} onDMOpen={clearDMNotif} friendsRevision={friendsRevision} />} />
               <Route path="/rules" element={<Rules />} />
               <Route path="dm/:targetUsername" element={username ? <DMChat username={username} /> : <div>Loading...</div>} />
               <Route path=":roomName" element={username ? <Chat username={username} /> : <div>Loading...</div>} />
