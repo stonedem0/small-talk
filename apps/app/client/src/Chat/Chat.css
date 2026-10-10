@@ -592,3 +592,10 @@
     opacity: 0;
   }
 }
+
+.chat-reconnecting {
+  padding: 2px 8px;
+  font-size: 0.85em;
+  color: #c084fc;
+  font-style: italic;
+}

@@ -29,6 +29,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
 
   const [isValidRoom, setIsValidRoom] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
+  const [connection, setConnection] = useState<"connecting" | "open" | "reconnecting">("connecting");
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
@@ -88,7 +89,28 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
   useEffect(() => {
     if (!isValidRoom) return;
 
-    const setupChat = async () => {
+    // The room connection is history -> directory /join -> WebSocket. When the
+    // socket closes unexpectedly (node restart or drain, network drop, a 409 from
+    // a node that no longer owns the room) the whole sequence runs again, so the
+    // directory can point us at the right node and history fills any gap.
+    let cancelled = false;
+    let socket: WebSocket | null = null;
+    let retryTimer: number | undefined;
+    let inFlight = false;
+    let failures = 0;
+    let openedAt = 0;
+
+    const scheduleReconnect = () => {
+      if (cancelled) return;
+      setConnection("reconnecting");
+      const delay = Math.min(10000, 500 * 2 ** failures) * (0.75 + Math.random() * 0.5);
+      failures++;
+      retryTimer = window.setTimeout(connect, delay);
+    };
+
+    const connect = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
       try {
         const response = await authFetch(`${API_URL}/history?room=${roomName}`, {
           headers: {
@@ -98,6 +120,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
         if (response.status === 403 || response.status === 404) { navigate("/"); return; }
         if (!response.ok) throw new Error("Failed to fetch history");
         const data: Message[] = await response.json();
+        if (cancelled) return;
         if ( data && data.length > 0) {
           setMessages(data);
         } else {
@@ -109,59 +132,87 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
         });
         if (!joinRes.ok) throw new Error(`join failed: ${joinRes.status}`);
         const { wss_url, app_id } = await joinRes.json();
+        if (cancelled) return;
         console.log("directory/join →", { wss_url, app_id });
-        ws.current = new WebSocket(wss_url, [token]);
-        
-        ws.current.onopen = () => {
+        const s = new WebSocket(wss_url, [token]);
+        socket = s;
+        ws.current = s;
+        (window as any).currentWebSocket = s;
+
+        s.onopen = () => {
+          if (cancelled || socket !== s) return;
+          openedAt = Date.now();
           setIsLoadingMessages(false);
+          setConnection("open");
         };
-        ws.current.onerror = (e) => {
+        s.onerror = (e) => {
           console.error("WebSocket error", e);
         };
-        
-        (window as any).currentWebSocket = ws.current;
+          s.onmessage = (event) => {
+            const newMessage: Message = JSON.parse(event.data);
 
-        ws.current.onmessage = (event) => {
-          const newMessage: Message = JSON.parse(event.data);
-
-          if (newMessage.type === "typing") {
-            if (newMessage.username !== username) {
+            if (newMessage.type === "typing") {
+              if (newMessage.username !== username) {
+                setTypingUsers((prev) => {
+                  if (prev[newMessage.username]) clearTimeout(prev[newMessage.username]);
+                  const timer = setTimeout(() => {
+                    setTypingUsers((p) => { const n = { ...p }; delete n[newMessage.username]; return n; });
+                  }, 3000);
+                  return { ...prev, [newMessage.username]: timer };
+                });
+              }
+              return;
+            }
+            if (newMessage.type === "stop_typing") {
               setTypingUsers((prev) => {
                 if (prev[newMessage.username]) clearTimeout(prev[newMessage.username]);
-                const timer = setTimeout(() => {
-                  setTypingUsers((p) => { const n = { ...p }; delete n[newMessage.username]; return n; });
-                }, 3000);
-                return { ...prev, [newMessage.username]: timer };
+                const n = { ...prev }; delete n[newMessage.username]; return n;
               });
+              return;
             }
-            return;
-          }
-          if (newMessage.type === "stop_typing") {
-            setTypingUsers((prev) => {
-              if (prev[newMessage.username]) clearTimeout(prev[newMessage.username]);
-              const n = { ...prev }; delete n[newMessage.username]; return n;
-            });
-            return;
-          }
-          if (newMessage.type === "status_update") {
-            return; // statuses are not shown in the room, and must not appear as chat
-          }
+            if (newMessage.type === "status_update") {
+              return; // statuses are not shown in the room, and must not appear as chat
+            }
 
-          setMessages((prev) => [...prev, newMessage]);
+            setMessages((prev) => [...prev, newMessage]);
+          };
+
+        s.onclose = () => {
+          // ignore sockets we already replaced or closed on purpose
+          if (cancelled || socket !== s) return;
+          // a connection that stayed up for a while was healthy: restart the backoff
+          if (openedAt && Date.now() - openedAt > 5000) failures = 0;
+          openedAt = 0;
+          scheduleReconnect();
         };
-
-        ws.current.onclose = () => {};
       } catch (error) {
         console.error("Failed to setup chat", error);
+        scheduleReconnect();
+      } finally {
+        inFlight = false;
       }
     };
-    setupChat();
+
+    // Coming back online: don't wait out the backoff or a dead socket's timeout.
+    const onOnline = () => {
+      if (cancelled || inFlight) return;
+      if (socket && socket.readyState === WebSocket.OPEN) return;
+      window.clearTimeout(retryTimer);
+      failures = 0;
+      connect();
+    };
+    window.addEventListener("online", onOnline);
+
+    connect();
     return () => {
-      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-        ws.current.close();
-      } else {
-        ws.current?.close();
+      cancelled = true;
+      window.clearTimeout(retryTimer);
+      window.removeEventListener("online", onOnline);
+      if (socket) {
+        socket.onclose = null;
+        socket.close();
       }
+      ws.current = null;
       // Clean up global WebSocket reference
       delete (window as any).currentWebSocket;
     };
@@ -257,7 +308,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
 
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (ws.current && message.trim()) {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN && message.trim()) {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       ws.current.send(JSON.stringify({ type: "stop_typing", username }));
       ws.current.send(JSON.stringify({ username, message }));
@@ -544,6 +595,9 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
               </div>
             )}
             <div className="message-input-container">
+            {connection === "reconnecting" && (
+              <div className="chat-reconnecting" role="status">reconnecting…</div>
+            )}
             <form onSubmit={sendMessage} id="submit" className="message-input-form">
               <input
                 ref={(input) => { inputRef.current = input; }}
