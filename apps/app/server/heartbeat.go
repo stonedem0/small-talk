@@ -94,6 +94,7 @@ func startHeartbeat(ctx context.Context) {
 				return
 			case <-t.C:
 				sendHeartbeat()
+				syncAllPresence()
 			}
 		}
 	}()

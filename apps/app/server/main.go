@@ -210,8 +210,12 @@ func readPump(c *client) {
 		onlineUsersLock.Lock()
 		if onlineUsers[c.room] != nil {
 			delete(onlineUsers[c.room], c.username)
+			if len(onlineUsers[c.room]) == 0 {
+				delete(onlineUsers, c.room)
+			}
 		}
 		onlineUsersLock.Unlock()
+		syncPresence(c.room)
 
 		leave := Message{Room: c.room, Username: c.username, Message: "left the room", Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 		b, _ := json.Marshal(leave)
@@ -255,6 +259,7 @@ func readPump(c *client) {
 			}
 			onlineUsersLock.Unlock()
 			c.username = newU
+			syncPresence(c.room)
 			change := Message{Room: c.room, Username: oldU, Message: fmt.Sprintf("changed username to %s", newU), Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 			b, _ := json.Marshal(change)
 			RDB.Publish(ctx, "room:"+c.room, string(b))
@@ -407,6 +412,7 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 	}
 	onlineUsers[room][username] = true
 	onlineUsersLock.Unlock()
+	syncPresence(room)
 
 	a.wg.Add(2)
 	go func() { defer a.wg.Done(); writePump(c) }()

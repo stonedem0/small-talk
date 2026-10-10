@@ -239,27 +239,48 @@ func (h *Handler) GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 // fix this function to return the online users for a specific room
+// broadcastStatusUpdate publishes the user's new status to every room they are
+// in. Room membership comes from the shared presence data, so rooms hosted on
+// other nodes are reached too: publishing to a room channel is delivered by
+// whichever node hosts it.
+func broadcastStatusUpdate(c context.Context, username, status string) {
+	rooms, err := userRooms(c, username)
+	if err != nil {
+		log.Printf("status broadcast: %v", err)
+		return
+	}
+	msg := Message{Username: username, Message: status, Type: "status_update", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	b, _ := json.Marshal(msg)
+	for _, room := range rooms {
+		RDB.Publish(c, "room:"+room, string(b))
+	}
+}
+
 func (h *Handler) GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	room := r.URL.Query().Get("room")
-	onlineUsersLock.Lock()
-	if room != "" {
-		count := 0
-		if users, ok := onlineUsers[room]; ok {
-			count = len(users)
+	if room := r.URL.Query().Get("room"); room != "" {
+		n, err := RDB.SCard(r.Context(), presenceKey(room)).Result()
+		if err != nil {
+			log.Printf("online-users: %v", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
 		}
-		onlineUsersLock.Unlock()
-		_ = json.NewEncoder(w).Encode(map[string]int{"count": count})
+		_ = json.NewEncoder(w).Encode(map[string]int64{"count": n})
 		return
 	}
-	userCounts := make(map[string]int)
-	for rm, users := range onlineUsers {
-		userCounts[rm] = len(users)
+	all, err := readPresence(r.Context())
+	if err != nil {
+		log.Printf("online-users: %v", err)
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
 	}
-	onlineUsersLock.Unlock()
+	userCounts := make(map[string]int, len(all))
+	for room, users := range all {
+		userCounts[room] = len(users)
+	}
 	_ = json.NewEncoder(w).Encode(userCounts)
 }
 
@@ -268,17 +289,13 @@ func (h *Handler) GetRoomUsernamesHandler(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	onlineUsersLock.Lock()
-	roomUsernames := make(map[string][]string)
-	for room, users := range onlineUsers {
-		list := make([]string, 0, len(users))
-		for u := range users {
-			list = append(list, u)
-		}
-		roomUsernames[room] = list
+	all, err := readPresence(r.Context())
+	if err != nil {
+		log.Printf("room-usernames: %v", err)
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
 	}
-	onlineUsersLock.Unlock()
-	_ = json.NewEncoder(w).Encode(roomUsernames)
+	_ = json.NewEncoder(w).Encode(all)
 }
 
 func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -532,11 +549,15 @@ func (h *Handler) UpdateUsernameHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	onlineUsersLock.Lock()
-	if onlineUsers[req.Room] != nil {
+	hostsRoom := onlineUsers[req.Room] != nil
+	if hostsRoom {
 		delete(onlineUsers[req.Room], req.OldUsername)
 		onlineUsers[req.Room][req.NewUsername] = true
 	}
 	onlineUsersLock.Unlock()
+	if hostsRoom { // only the hosting node owns the room's presence
+		syncPresence(req.Room)
+	}
 	change := Message{Room: req.Room, Username: req.OldUsername, Message: fmt.Sprintf("changed username to %s", req.NewUsername), Type: "system", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 	b, _ := json.Marshal(change)
 	RDB.Publish(r.Context(), "room:"+req.Room, string(b))
@@ -662,16 +683,8 @@ func (h *Handler) SetStatusHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to update status"})
 		return
 	}
-	// Broadcast to all rooms the user is in so sidebars update in real-time.
-	msg := Message{Username: username, Message: req.Status, Type: "status_update", Timestamp: time.Now().UTC().Format(time.RFC3339)}
-	b, _ := json.Marshal(msg)
-	onlineUsersLock.Lock()
-	for room, users := range onlineUsers {
-		if users[username] {
-			RDB.Publish(r.Context(), "room:"+room, string(b))
-		}
-	}
-	onlineUsersLock.Unlock()
+	// Broadcast to all rooms the user is in, on any node, so sidebars update in real-time.
+	broadcastStatusUpdate(r.Context(), username, req.Status)
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Status updated"})
 }
 
