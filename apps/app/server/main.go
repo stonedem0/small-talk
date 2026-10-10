@@ -443,6 +443,17 @@ func handleConnections(a *app, w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
+// isChatMessage reports whether a room event is a message a person wrote. Clients
+// send chat messages without a type, so the empty type counts. Everything else
+// (typing, status_update, system, ...) is an event, not a message: it must not
+// raise a DM notification.
+func isChatMessage(t string) bool { return t == "" || t == "chat" }
+
+// isHistoryType reports whether a room event belongs in the room's history:
+// chat messages and system lines (joins, leaves, renames). Typing indicators and
+// status updates are live-only; replaying them would show up as chat lines.
+func isHistoryType(t string) bool { return isChatMessage(t) || t == "system" }
+
 func notifyDMRecipient(room, sender string) {
 	if !isDMRoom(room) {
 		return
@@ -553,15 +564,14 @@ func runSubscription(ctx context.Context, room string, gen uint64) {
 				continue
 			}
 			b, _ := json.Marshal(received)
-			if received.Type != "typing" && received.Type != "stop_typing" {
+			if isHistoryType(received.Type) {
 				if err := RDB.LPush(ctx, "chat_history:"+room, b).Err(); err != nil {
 					log.Printf("redis LPush error in %s: %v", room, err)
 				}
 				_ = RDB.LTrim(ctx, "chat_history:"+room, 0, 99)
-
-				if received.Type != "system" {
-					notifyDMRecipient(room, received.Username)
-				}
+			}
+			if isChatMessage(received.Type) {
+				notifyDMRecipient(room, received.Username)
 			}
 
 			enqueueToRoom(room, b)

@@ -233,6 +233,9 @@ func (h *Handler) GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) 
 		if err := json.Unmarshal([]byte(messages[i]), &m); err != nil {
 			continue
 		}
+		if !isHistoryType(m.Type) {
+			continue // status updates stored before they were excluded from history
+		}
 		history = append(history, m)
 	}
 	_ = json.NewEncoder(w).Encode(history)

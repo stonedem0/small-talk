@@ -106,6 +106,18 @@ type listener struct {
 }
 
 func (l *listener) add(s string) { l.mu.Lock(); l.msgs = append(l.msgs, s); l.mu.Unlock() }
+func (l *listener) count(substr string) int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	n := 0
+	for _, m := range l.msgs {
+		if strings.Contains(m, substr) {
+			n++
+		}
+	}
+	return n
+}
+
 func (l *listener) saw(substr string, d time.Duration) bool {
 	deadline := time.Now().Add(d)
 	for time.Now().Before(deadline) {
@@ -247,6 +259,13 @@ func main() {
 	_ = dmConn.WriteMessage(websocket.TextMessage, []byte(`{"type":"chat","message":"hello bob"}`))
 	check("control: bob's SSE on node B (the room's node) is notified", sseOnB.saw(`"type":"dm"`, wait), "")
 	check("bob's SSE on API node A is notified", sseOnA.saw(`"type":"dm"`, wait), "")
+
+	fmt.Println("\n5. Changing status inside a DM window must not ping the partner as a new DM")
+	before := sseOnA.count(`"type":"dm"`)
+	req("POST", nodeA+"/status", ta, map[string]string{"status": "just a status"})
+	time.Sleep(1500 * time.Millisecond)
+	extra := sseOnA.count(`"type":"dm"`) - before
+	check("bob gets no DM notification for alice's status change", extra == 0, fmt.Sprintf("%d extra dm notification(s)", extra))
 
 	fmt.Println()
 	if failures > 0 {
