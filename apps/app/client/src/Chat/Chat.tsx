@@ -7,55 +7,9 @@ import { authFetch } from "../utils/authFetch";
 import { format } from 'date-fns';
 import PrimaryButton from "../components/PrimaryButton";
 import DropdownMenu from "../components/DropdownMenu";
+import { sanitizeHtml } from "./sanitize";
 
 const DIR_URL = (import.meta as any).env?.VITE_DIRECTORY_URL || "http://localhost:8081";
-// Simple sanitizer that whitelists a small set of tags/attrs
-const sanitizeHtml = (dirty: string): string => {
-  const allowedTags = new Set(["STRONG","EM","U","DEL","CODE","A"]);
-  const allowedAttrs = new Set(["href","target","rel","class"]);
-  const container = document.createElement("div");
-  container.innerHTML = dirty;
-
-  const walk = (node: Node) => {
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const el = node as HTMLElement;
-      const tag = el.tagName;
-      if (!allowedTags.has(tag)) {
-        const text = document.createTextNode(el.textContent || "");
-        el.replaceWith(text);
-        return; 
-      }
-      for (const attr of Array.from(el.attributes)) {
-        if (!allowedAttrs.has(attr.name)) {
-          el.removeAttribute(attr.name);
-          continue;
-        }
-        if (el.tagName === "A" && attr.name === "href") {
-          const value = attr.value.trim();
-          if (!/^https?:\/\//i.test(value)) {
-            el.removeAttribute("href");
-          }
-        }
-      }
-      if (el.tagName === "A") {
-        el.setAttribute("rel", "noopener noreferrer");
-        if (el.getAttribute("target") !== "_blank") {
-          el.setAttribute("target", "_blank");
-        }
-        el.classList.add("msg-link");
-      }
-      if (el.tagName === "CODE") {
-        el.classList.add("msg-code");
-      }
-    }
-    for (const child of Array.from(node.childNodes)) {
-      walk(child);
-    }
-  };
-  walk(container);
-  return container.innerHTML;
-};
-
 interface ChatProps {
   username: string;
   roomNameOverride?: string;
