@@ -952,15 +952,16 @@ func (h *Handler) VerifyToken(r *http.Request) (string, error) {
 	return username, nil
 }
 
-// pushNotification sends a notification event to all SSE connections for a user.
+// notifyChannel is the Redis channel carrying a user's notifications. Every node
+// forwards it to the SSE connections it holds, so a notification reaches the user
+// whichever node produced it and whichever node their browser is connected to.
+func notifyChannel(username string) string { return "notify:" + username }
+
+// pushNotification sends a notification event to all SSE connections for a user,
+// on any node. Delivery is best effort: users with no open connection miss it.
 func pushNotification(username, payload string) {
-	sseClientsMu.Lock()
-	defer sseClientsMu.Unlock()
-	for ch := range sseClients[username] {
-		select {
-		case ch <- payload:
-		default: // drop if channel full
-		}
+	if err := RDB.Publish(ctx, notifyChannel(username), payload).Err(); err != nil {
+		log.Printf("notify publish error for %s: %v", username, err)
 	}
 }
 
@@ -999,26 +1000,20 @@ func (h *Handler) SSEHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ps := RDB.Subscribe(r.Context(), notifyChannel(username))
+	defer ps.Close()
+	// Wait for Redis to confirm the subscription before telling the client the
+	// stream is open, so nothing published right after connect is missed.
+	if _, err := ps.Receive(r.Context()); err != nil {
+		log.Printf("sse subscribe error for %s: %v", username, err)
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	msgs := ps.Channel()
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-
-	ch := make(chan string, 8)
-	sseClientsMu.Lock()
-	if sseClients[username] == nil {
-		sseClients[username] = make(map[chan string]struct{})
-	}
-	sseClients[username][ch] = struct{}{}
-	sseClientsMu.Unlock()
-
-	defer func() {
-		sseClientsMu.Lock()
-		delete(sseClients[username], ch)
-		if len(sseClients[username]) == 0 {
-			delete(sseClients, username)
-		}
-		sseClientsMu.Unlock()
-	}()
 
 	// Flush headers immediately so the browser doesn't see ERR_EMPTY_RESPONSE.
 	fmt.Fprintf(w, ": ok\n\n")
@@ -1029,8 +1024,11 @@ func (h *Handler) SSEHandler(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		select {
-		case payload := <-ch:
-			fmt.Fprintf(w, "data: %s\n\n", payload)
+		case m, ok := <-msgs:
+			if !ok {
+				return
+			}
+			fmt.Fprintf(w, "data: %s\n\n", m.Payload)
 			flusher.Flush()
 		case <-ticker.C:
 			// Heartbeat comment keeps the connection alive through proxies.
