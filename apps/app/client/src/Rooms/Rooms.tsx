@@ -48,7 +48,7 @@ const Rooms = ({ unreadDMs = {}, onDMOpen, friendsRevision = 0 }: RoomsProps) =>
 
   const location = useLocation();
   useEffect(() => {
-    if ((location.state as any)?.goHome) {
+    if ((location.state as { goHome?: boolean } | null)?.goHome) {
       setSelectedChat(null);
       setContactsHidden(false);
     }

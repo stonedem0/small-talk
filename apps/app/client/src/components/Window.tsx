@@ -188,7 +188,7 @@ const Window = ({
             localStorage.setItem("token", responseData.token);
             
             if (currentRoom && currentRoom !== 'home' && currentRoom !== '') {
-              const ws = (window as any).currentWebSocket;
+              const ws = window.currentWebSocket;
               if (ws && ws.readyState === WebSocket.OPEN) {
                 const updateMessage = {
                   type: "username_update",
@@ -422,7 +422,7 @@ const Window = ({
                 {showChatMenu && (
                   <DropdownMenu>
                     <button role="menuitem" onClick={openCreateRoomForm}>Create room</button>
-                    <button role="menuitem" onClick={() => { onSignOut && onSignOut(); setShowChatMenu(false); }}>Sign out</button>
+                    <button role="menuitem" onClick={() => { onSignOut?.(); setShowChatMenu(false); }}>Sign out</button>
                   </DropdownMenu>
                 )}
               </div>

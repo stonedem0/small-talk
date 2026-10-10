@@ -9,7 +9,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import DropdownMenu from "../components/DropdownMenu";
 import { sanitizeHtml } from "./sanitize";
 
-const DIR_URL = (import.meta as any).env?.VITE_DIRECTORY_URL || "http://localhost:8081";
+const DIR_URL = import.meta.env.VITE_DIRECTORY_URL || "http://localhost:8081";
 interface ChatProps {
   username: string;
   roomNameOverride?: string;
@@ -84,7 +84,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
     };
 
     fetchRooms();
-  }, [roomName, navigate]);
+  }, [roomName, roomNameOverride, navigate]);
 
   useEffect(() => {
     if (!isValidRoom) return;
@@ -137,7 +137,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
         const s = new WebSocket(wss_url, [token]);
         socket = s;
         ws.current = s;
-        (window as any).currentWebSocket = s;
+        window.currentWebSocket = s;
 
         s.onopen = () => {
           if (cancelled || socket !== s) return;
@@ -214,14 +214,13 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
       }
       ws.current = null;
       // Clean up global WebSocket reference
-      delete (window as any).currentWebSocket;
+      delete window.currentWebSocket;
     };
-  }, [isValidRoom, roomName, username]);
+  }, [isValidRoom, roomName, username, navigate]);
 
   useEffect(() => {
     if (!isValidRoom) return;
 
-    let interval: number;
     const fetchOnlineUsers = async () => {
       try {
         const response = await authFetch(`${API_URL}/room-usernames`);
@@ -234,7 +233,7 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
       }
     };
     fetchOnlineUsers();
-    interval = window.setInterval(fetchOnlineUsers, 1000); // refresh every 1s
+    const interval = window.setInterval(fetchOnlineUsers, 1000); // refresh every 1s
     return () => clearInterval(interval);
   }, [isValidRoom, roomName]);
 
@@ -441,12 +440,12 @@ const Chat = ({ username, roomNameOverride }: ChatProps) => {
             ) : (
               messages.map((msg, index) => {
                 let timeStr = '';
-                if ((msg as any).timestamp) {
+                if (msg.timestamp) {
                   try {
-                    timeStr = format(new Date((msg as any).timestamp), 'HH:mm:ss');
-                  } catch {}
+                    timeStr = format(new Date(msg.timestamp), 'HH:mm:ss');
+                  } catch { /* unparseable timestamp: show no time */ }
                 }
-                if ((msg as any).type === "system") {
+                if (msg.type === "system") {
                   return (
                     <p key={index} style={{ background: "linear-gradient(90deg, rgba(139, 92, 246, 0.5), rgba(236, 72, 153, 0.5))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", fontStyle: "italic", opacity: 0.8 }}>
                       {timeStr && <span>[{timeStr}] </span>}

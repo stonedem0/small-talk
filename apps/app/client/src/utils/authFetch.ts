@@ -15,7 +15,7 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
     // This keeps /join (directory) simple: credentials: 'omit' avoids extra CORS requirements.
     const credentials = init.credentials ?? "omit";
 
-    let res = await fetch(input, { ...init, headers, credentials });
+    const res = await fetch(input, { ...init, headers, credentials });
     if (res.status !== 401) return res;
 
     // Try refresh (cookie-based). This always uses credentials: 'include'.
@@ -25,7 +25,7 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
         return res;
     }
 
-    const data = await refresh.json().catch(() => ({} as any));
+    const data = await refresh.json().catch(() => ({} as { token?: string }));
     if (data?.token) {
         localStorage.setItem("token", data.token);
         headers.set("Authorization", `Bearer ${data.token}`);
