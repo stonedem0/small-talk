@@ -1127,3 +1127,22 @@ func TestGetFavoritesHandler_IsolatedByUser(t *testing.T) {
 
 // suppress unused import warning when POSTGRES_TEST_URL is not set
 var _ = fmt.Sprintf
+
+func TestHealthHandler(t *testing.T) {
+	s := miniredis.RunT(t)
+	RDB = redis.NewClient(&redis.Options{Addr: s.Addr()})
+	h := NewHandler(RDB, testSecret, testSecret)
+
+	rec := httptest.NewRecorder()
+	h.HealthHandler(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("redis up: got %d, want 200", rec.Code)
+	}
+
+	s.Close()
+	rec = httptest.NewRecorder()
+	h.HealthHandler(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("redis down: got %d, want 503", rec.Code)
+	}
+}
