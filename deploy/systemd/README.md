@@ -49,3 +49,10 @@ Notes
 - Open security groups for PORT (default 8080) and DIRECTORY_PORT (default 8081) as needed.
 - You can deploy via Terraform/user_data as well; render these files in cloud-init and use the same steps.
 
+
+Automated deploys
+- `.github/workflows/deploy.yml` builds on GitHub, uploads the build over SSH and runs `deploy/deploy.sh` on the box after the `test` workflow passes on master.
+- `deploy.sh` swaps in the new binaries/client, restarts `app` and `directory`, and polls `/health` on both. If either fails it restores the previous build.
+- Previous builds are kept as `*.prev` next to the live ones. Undo a bad deploy with `bash deploy.sh --rollback`.
+- Needs passwordless `sudo systemctl` for the deploy user (the default on Ubuntu EC2).
+- Repo secrets: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`. Repo variables: `VITE_API_HOST`, `VITE_WS_HOST`, `VITE_DIRECTORY_URL`.

@@ -1,0 +1,70 @@
+name: deploy
+
+# Deploys master to the EC2 box after the test workflow passes.
+# One-time setup (repo Settings -> Secrets and variables -> Actions):
+#   secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS
+#   variables: VITE_API_HOST, VITE_WS_HOST, VITE_DIRECTORY_URL
+on:
+  workflow_run:
+    workflows: [test]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/app/server/go.mod
+          cache-dependency-path: |
+            apps/app/server/go.sum
+            apps/directory/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/app/client/package-lock.json
+
+      - name: Build
+        run: |
+          mkdir -p build
+          (cd apps/app/server && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ../../../build/app)
+          (cd apps/directory && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ../../build/directory)
+          (cd apps/app/client && npm ci && npm run build)
+          cp -r apps/app/client/dist build/client-dist
+        env:
+          VITE_API_HOST: ${{ vars.VITE_API_HOST }}
+          VITE_WS_HOST: ${{ vars.VITE_WS_HOST }}
+          VITE_DIRECTORY_URL: ${{ vars.VITE_DIRECTORY_URL }}
+
+      - name: Set up SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Upload and deploy
+        env:
+          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+        run: |
+          SSH="ssh -i ~/.ssh/deploy_key"
+          STAGE=/tmp/small-talk-deploy-${{ github.run_id }}
+          rsync -az -e "$SSH" build/ "$TARGET:$STAGE/"
+          scp -i ~/.ssh/deploy_key deploy/deploy.sh "$TARGET:$STAGE.sh"
+          $SSH "$TARGET" "bash $STAGE.sh $STAGE; rc=\$?; rm -f $STAGE.sh; exit \$rc"
