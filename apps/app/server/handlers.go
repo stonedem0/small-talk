@@ -134,6 +134,19 @@ func (h *Handler) PingHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{}`))
 }
 
+// HealthHandler reports 200 when Redis answers, 503 otherwise. Used by deploys.
+func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	ctx, cancel := context.WithTimeout(h.Ctx, 2*time.Second)
+	defer cancel()
+	if err := h.RDB.Ping(ctx).Err(); err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "unavailable"})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
 func (h *Handler) GetRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	rooms, err := h.RDB.SMembers(h.Ctx, "rooms").Result()
 	if err != nil {
