@@ -232,11 +232,23 @@ func readPump(c *client) {
 		return nil
 	})
 
+	limiter := newConnLimiter()
 	for {
 		_, data, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Printf("read error: %v", err)
 			return
+		}
+		if ok, kick := limiter.allow(); !ok {
+			messagesTotal.WithLabelValues("rate_limited").Inc()
+			if kick {
+				log.Printf("[Room %s] closing %s: rate limit exceeded", c.room, c.username)
+				c.conn.WriteControl(websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "rate limit exceeded"),
+					time.Now().Add(time.Second))
+				return
+			}
+			continue
 		}
 		var msg Message
 		if err := json.Unmarshal(data, &msg); err != nil {

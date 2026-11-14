@@ -69,3 +69,35 @@ func RateLimitAuth(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
+
+const (
+	// connBurst / connRefill bound how fast one websocket client may send.
+	// Typing indicators count too, so the budget is generous for real use.
+	connBurst  = 20
+	connRefill = 10 // messages per second, sustained
+
+	// connMaxDrops is how many over-limit messages we tolerate on one
+	// connection before closing it.
+	connMaxDrops = 100
+)
+
+// connLimiter is a per-connection token bucket for inbound websocket messages.
+// It is owned by a single readPump goroutine, so it needs no locking.
+type connLimiter struct {
+	l     *rate.Limiter
+	drops int
+}
+
+func newConnLimiter() *connLimiter {
+	return &connLimiter{l: rate.NewLimiter(rate.Limit(connRefill), connBurst)}
+}
+
+// allow reports whether the message may be processed. kick is true once the
+// connection has been over the limit too many times and should be closed.
+func (c *connLimiter) allow() (ok, kick bool) {
+	if c.l.Allow() {
+		return true, false
+	}
+	c.drops++
+	return false, c.drops >= connMaxDrops
+}

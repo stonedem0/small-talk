@@ -70,3 +70,29 @@ func TestRateLimitAuth_IndependentBuckets(t *testing.T) {
 		t.Fatalf("ipB: expected 200 (independent bucket), got %d", wB.Code)
 	}
 }
+
+func TestConnLimiter_AllowsBurstThenDrops(t *testing.T) {
+	l := newConnLimiter()
+	for i := 0; i < connBurst; i++ {
+		if ok, _ := l.allow(); !ok {
+			t.Fatalf("message %d within burst was dropped", i+1)
+		}
+	}
+	if ok, kick := l.allow(); ok || kick {
+		t.Fatalf("expected drop without kick right after burst, got ok=%v kick=%v", ok, kick)
+	}
+}
+
+func TestConnLimiter_KicksAfterRepeatedDrops(t *testing.T) {
+	l := newConnLimiter()
+	for i := 0; i < connBurst; i++ {
+		l.allow()
+	}
+	var kicked bool
+	for i := 0; i < connMaxDrops; i++ {
+		_, kicked = l.allow()
+	}
+	if !kicked {
+		t.Fatalf("expected kick after %d drops", connMaxDrops)
+	}
+}
