@@ -64,7 +64,12 @@ if [ "${1:-}" = "--rollback" ]; then
   restore "$DIR_BIN"
   restore "$CLIENT_DIST" || true
   restart
-  wait_healthy && log "rollback ok" || { log "rollback is unhealthy too"; exit 1; }
+  if wait_healthy; then
+    log "rollback ok"
+  else
+    log "rollback is unhealthy too"
+    exit 1
+  fi
   exit 0
 fi
 
@@ -91,6 +96,10 @@ else
   restore "$DIR_BIN"
   restore "$CLIENT_DIST" || true
   restart
-  wait_healthy && log "rolled back, previous build is serving" || log "still unhealthy after rollback"
+  if wait_healthy; then
+    log "rolled back, previous build is serving"
+  else
+    log "still unhealthy after rollback"
+  fi
   exit 1
 fi
