@@ -47,3 +47,11 @@ jobs:
       # tsc -b (type check) then vite build
       - run: npm run build
         working-directory: apps/app/client
+
+  lint-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # shellcheck is preinstalled on ubuntu-latest
+      - run: find deploy -name '*.sh' -print0 | xargs -0 shellcheck
+      - run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.7 -color
