@@ -7,6 +7,15 @@ updates:
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # typescript-eslint and eslint-plugin-react-hooks don't support these
+      # majors yet (npm ERESOLVE). Remove once they do.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: gomod
     directory: /apps/app/server
